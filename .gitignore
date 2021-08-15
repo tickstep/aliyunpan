@@ -1,0 +1,44 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+aliyunpan
+aliyunpan.exe
+cmd/AndroidNDKBuild/AndroidNDKBuild
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+out/
+*.dl
+
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
+.glide/
+
+# Others
+.DS_Store
+*.proc
+*.txt
+*.log
+*.gz
+captcha.png
+aliyunpan_config.json
+aliyunpan_command_history.txt
+aliyunpan_uploading.json
+test/
+download/
+*-downloading
+
+# GoLand
+.idea/
+
+demos/
+tests.sh
+main_test.go
+license_header.sh
+account.txt
+main_test.go
+git_push.sh
