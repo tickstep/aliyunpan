@@ -16,12 +16,14 @@ package utils
 import (
 	"compress/gzip"
 	"flag"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http/cookiejar"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // TrimPathPrefix 去除目录的前缀
@@ -111,4 +113,27 @@ func parseInt(numStr string) int {
 		return 0
 	}
 	return num
+}
+
+func ConvertTime(t time.Duration) string {
+	seconds := int64(t.Seconds())
+
+	MT := int64(1 * 60)
+	HT := int64(1 * 60 * 60)
+
+	if seconds <= 0 {
+		return "0秒"
+	}
+	if seconds < MT {
+		return fmt.Sprintf("%d秒", seconds)
+	}
+	if seconds >= MT && seconds < HT {
+		return fmt.Sprintf("%d分%d秒", seconds / MT, seconds % MT)
+	}
+	if seconds >= HT {
+		h := seconds / HT
+		tmp := seconds % HT
+		return fmt.Sprintf("%d小时%d分%d秒", h, tmp / MT, tmp % MT)
+	}
+	return "0秒"
 }

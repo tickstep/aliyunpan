@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder"
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"io/ioutil"
 	"os"
 	"path"
@@ -427,7 +428,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	}
 
 	fmt.Printf("\n")
-	fmt.Printf("上传结束, 时间: %s, 总大小: %s\n", statistic.Elapsed()/1e6*1e6, converter.ConvertFileSize(statistic.TotalSize()))
+	fmt.Printf("上传结束, 时间: %s, 总大小: %s\n", utils.ConvertTime(statistic.Elapsed()), converter.ConvertFileSize(statistic.TotalSize()))
 
 	// 输出上传失败的文件列表
 	for _, failed := range failedList {

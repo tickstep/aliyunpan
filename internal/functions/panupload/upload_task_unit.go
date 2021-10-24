@@ -15,6 +15,7 @@ package panupload
 
 import (
 	"fmt"
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"os"
 	"path"
 	"path/filepath"
@@ -285,7 +286,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		} else {
 			msg = result.ResultMessage
 		}
-		fmt.Printf("%s [%s] 文件上传结果：%s  耗时 %.2fs\n", time.Now().Format("2006-01-02 15:04:06"), utu.taskInfo.Id(), msg, time.Now().Sub(timeStart).Seconds())
+		fmt.Printf("%s [%s] 文件上传结果：%s  耗时 %s\n", time.Now().Format("2006-01-02 15:04:06"), utu.taskInfo.Id(), msg, utils.ConvertTime(time.Now().Sub(timeStart)))
 	}()
 	// 准备文件
 	utu.prepareFile()
