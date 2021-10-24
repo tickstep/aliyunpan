@@ -15,6 +15,7 @@ package panupload
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -126,7 +127,7 @@ func (utu *UploadTaskUnit) rapidUpload() (isContinue bool, result *taskframework
 	result = &taskframework.TaskUnitRunResult{}
 	fmt.Printf("[%s] 检测秒传中, 请稍候...\n", utu.taskInfo.Id())
 	if utu.LocalFileChecksum.UploadOpEntity.RapidUpload {
-		fmt.Printf("[%s] 秒传成功, 保存到网盘路径: %s\n\n", utu.taskInfo.Id(), utu.SavePath)
+		fmt.Printf("[%s] 秒传成功, 保存到网盘路径: %s\n", utu.taskInfo.Id(), utu.SavePath)
 		result.Succeed = true
 		return false, result
 	} else {
@@ -284,7 +285,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		} else {
 			msg = result.ResultMessage
 		}
-		fmt.Printf("%s [%s] 文件上传结果：%s  耗时 %s\n", time.Now().Format("2006-01-02 15:04:06"), utu.taskInfo.Id(), msg, time.Now().Sub(timeStart))
+		fmt.Printf("%s [%s] 文件上传结果：%s  耗时 %.2fs\n", time.Now().Format("2006-01-02 15:04:06"), utu.taskInfo.Id(), msg, time.Now().Sub(timeStart).Seconds())
 	}()
 	// 准备文件
 	utu.prepareFile()
@@ -296,6 +297,9 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	var saveFilePath string
 	var testFileMeta = &UploadedFileMeta{}
 	var uploadOpEntity *aliyunpan.CreateFileUploadResult
+	var proofCode = ""
+	var localFileInfo os.FileInfo
+	var localFile *os.File
 
 	switch utu.Step {
 	case StepUploadPrepareUpload:
@@ -378,6 +382,12 @@ StepUploadPrepareUpload:
 		sha1Str = aliyunpan.DefaultZeroSizeFileContentHash
 	}
 
+	// proof code
+	localFile, _ = os.Open(utu.LocalFileChecksum.Path)
+	localFileInfo,_ = localFile.Stat()
+	proofCode = aliyunpan.CalcProofCode(utu.PanClient.GetAccessToken(), rio.NewFileReaderAtLen64(localFile), localFileInfo.Size())
+	localFile.Close()
+
 	appCreateUploadFileParam = &aliyunpan.CreateFileUploadParam{
 		DriveId:      utu.DriveId,
 		Name:         filepath.Base(utu.LocalFileChecksum.Path),
@@ -385,6 +395,8 @@ StepUploadPrepareUpload:
 		ContentHash:  sha1Str,
 		ParentFileId: rs.FileId,
 		BlockSize: utu.BlockSize,
+		ProofCode: proofCode,
+		ProofVersion: "v1",
 	}
 
 	uploadOpEntity, apierr = utu.PanClient.CreateUploadFile(appCreateUploadFileParam)
