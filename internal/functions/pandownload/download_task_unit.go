@@ -181,7 +181,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	})
 
 	der.OnExecute(func() {
-		fmt.Printf("[%s] 下载开始\n\n", dtu.taskInfo.Id())
+		fmt.Printf("[%s] 下载开始\n", dtu.taskInfo.Id())
 	})
 
 	err = der.Execute()
@@ -396,7 +396,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		return
 	}
 
-	fmt.Printf("[%s] 将会下载到路径: %s\n\n", dtu.taskInfo.Id(), dtu.SavePath)
+	fmt.Printf("[%s] 将会下载到路径: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
 
 	var ok bool
 	er := dtu.download()
