@@ -403,16 +403,16 @@ func main() {
 		command.CmdUpload(),
 
 		// 手动秒传
-		command.CmdRapidUpload(),
+		//command.CmdRapidUpload(),
 
 		// 下载文件/目录 download
 		command.CmdDownload(),
 
 		// 导出文件/目录元数据 export
-		command.CmdExport(),
+		//command.CmdExport(),
 
 		// 导入文件 import
-		command.CmdImport(),
+		//command.CmdImport(),
 
 		// 回收站
 		command.CmdRecycle(),
