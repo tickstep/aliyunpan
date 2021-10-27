@@ -47,7 +47,7 @@ const (
 
 var (
 	// Version 版本号
-	Version = "v0.0.3"
+	Version = "v0.0.4-dev"
 
 	historyFilePath = filepath.Join(config.GetConfigDir(), "aliyunpan_command_history.txt")
 
@@ -365,6 +365,9 @@ func main() {
 
 		// 获取当前帐号空间配额 quota
 		command.CmdQuota(),
+
+		// Token操作
+		command.CmdToken(),
 
 		// 切换工作目录 cd
 		command.CmdCd(),
