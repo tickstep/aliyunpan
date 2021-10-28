@@ -40,5 +40,5 @@ tests.sh
 main_test.go
 license_header.sh
 account.txt
-main_test.go
 git_push.sh
+git_pull.sh
