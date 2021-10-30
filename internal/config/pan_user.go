@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
+	"github.com/tickstep/library-go/expires/cachemap"
 	"github.com/tickstep/library-go/logger"
 	"path"
 	"path/filepath"
@@ -47,6 +48,7 @@ type PanUser struct {
 	WebToken aliyunpan.WebLoginToken `json:"webToken"`
 
 	panClient *aliyunpan.PanClient
+	cacheOpMap cachemap.CacheOpMap
 }
 
 type PanUserList []*PanUser
