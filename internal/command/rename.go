@@ -102,4 +102,5 @@ func RunRename(driveId string, oldName string, newName string) {
 		return
 	}
 	fmt.Printf("重命名文件成功：%s -> %s\n", path.Base(oldName), path.Base(newName))
+	activeUser.DeleteOneCache(path.Dir(newName))
 }

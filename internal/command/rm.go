@@ -73,6 +73,7 @@ func CmdRm() cli.Command {
 func RunRemove(driveId string, paths ...string) {
 	activeUser := GetActiveUser()
 
+	cacheCleanDirs := []string{}
 	failedRmPaths := make([]string, 0, len(paths))
 	delFileInfos := []*aliyunpan.FileBatchActionParam{}
 	fileId2FileEntity := map[string]*aliyunpan.FileEntity{}
@@ -90,6 +91,7 @@ func RunRemove(driveId string, paths ...string) {
 			FileId:fe.FileId,
 		})
 		fileId2FileEntity[fe.FileId] = fe
+		cacheCleanDirs = append(cacheCleanDirs, path.Dir(fe.Path))
 	}
 
 	// delete
@@ -116,6 +118,7 @@ func RunRemove(driveId string, paths ...string) {
 	if len(successDelFileEntity) > 0 {
 		fmt.Println("操作成功, 以下文件/目录已删除, 可在云盘文件回收站找回: ")
 		pnt()
+		activeUser.DeleteCache(cacheCleanDirs)
 	}
 
 	if len(successDelFileEntity) == 0 && err != nil {

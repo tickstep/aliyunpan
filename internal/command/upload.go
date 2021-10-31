@@ -442,7 +442,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			tb.Render()
 		}
 	}
-
+	activeUser.DeleteCache(GetAllPathFolderByPath(savePath))
 }
 
 // 是否是排除上传的文件

@@ -68,6 +68,9 @@ func RunMkdir(driveId, name string) {
 
 	if rs.FileId != "" {
 		fmt.Println("创建文件夹成功: ", fullpath)
+
+		// cache
+		activeUser.DeleteCache(GetAllPathFolderByPath(fullpath))
 	} else {
 		fmt.Println("创建文件夹失败: ", fullpath)
 	}

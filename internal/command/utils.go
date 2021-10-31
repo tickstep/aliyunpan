@@ -93,3 +93,15 @@ func RandomStr(count int) string {
 	}
 	return str.String()
 }
+
+func GetAllPathFolderByPath(pathStr string) []string {
+	dirNames := strings.Split(pathStr, "/")
+	dirs := []string{}
+	p := "/"
+	dirs = append(dirs, p)
+	for _,s := range dirNames {
+		p = path.Join(p, s)
+		dirs = append(dirs, p)
+	}
+	return dirs
+}

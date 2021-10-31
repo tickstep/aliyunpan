@@ -64,6 +64,7 @@ func CmdMv() cli.Command {
 // RunMove 执行移动文件/目录
 func RunMove(driveId string, paths ...string) {
 	activeUser := GetActiveUser()
+	cacheCleanPaths := []string{}
 	opFileList, targetFile, _, err := getFileInfo(driveId, paths...)
 	if err !=  nil {
 		fmt.Println(err)
@@ -77,6 +78,7 @@ func RunMove(driveId string, paths ...string) {
 		fmt.Println("没有有效的文件可移动")
 		return
 	}
+	cacheCleanPaths = append(cacheCleanPaths, targetFile.Path)
 
 	failedMoveFiles := []*aliyunpan.FileEntity{}
 	moveFileParamList := []*aliyunpan.FileMoveParam{}
@@ -90,6 +92,7 @@ func RunMove(driveId string, paths ...string) {
 				ToDriveId: driveId,
 				ToParentFileId: targetFile.FileId,
 			})
+		cacheCleanPaths = append(cacheCleanPaths, path.Dir(mfi.Path))
 	}
 	fmr,er := activeUser.PanClient().FileMove(moveFileParamList)
 
@@ -108,6 +111,7 @@ func RunMove(driveId string, paths ...string) {
 	}
 	if er == nil {
 		fmt.Println("操作成功, 已移动文件到目标目录: ", targetFile.Path)
+		activeUser.DeleteCache(cacheCleanPaths)
 	} else {
 		fmt.Println("无法移动文件，请稍后重试")
 	}

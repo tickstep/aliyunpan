@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-// deleteCache 删除含有 dirs 的缓存
-func (pu *PanUser) deleteCache(dirs []string) {
+// DeleteCache 删除含有 dirs 的缓存
+func (pu *PanUser) DeleteCache(dirs []string) {
 	cache := pu.cacheOpMap.LazyInitCachePoolOp(pu.ActiveDriveId)
 	for _, v := range dirs {
 		key := v + "_" + "OrderByName"
@@ -18,6 +18,12 @@ func (pu *PanUser) deleteCache(dirs []string) {
 			cache.Delete(key)
 		}
 	}
+}
+
+// DeleteOneCache 删除缓存
+func (pu *PanUser) DeleteOneCache(dirPath string) {
+	ps := []string{dirPath}
+	pu.DeleteCache(ps)
 }
 
 // CacheFilesDirectoriesList 缓存获取
