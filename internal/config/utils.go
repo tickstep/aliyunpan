@@ -75,7 +75,7 @@ func EncryptString(text string) string {
 		return ""
 	}
 	d := []byte(text)
-	key := []byte(ids.GetUniqueId("cloudpan189", 16))
+	key := []byte(ids.GetUniqueId("aliyunpan", 16))
 	r, e := crypto.EncryptAES(d, key)
 	if e != nil {
 		return text
@@ -98,7 +98,7 @@ func DecryptString(text string) string {
 
 	// use the machine unique id as the key
 	// but in some OS, this key will be changed if you reinstall the OS
-	key := []byte(ids.GetUniqueId("cloudpan189", 16))
+	key := []byte(ids.GetUniqueId("aliyunpan", 16))
 	r, e := crypto.DecryptAES(d, key)
 	if e != nil {
 		return text

@@ -67,7 +67,7 @@ const (
 	// DefaultPrintFormat 默认的下载进度输出格式
 	DefaultPrintFormat = "\r[%s] ↓ %s/%s %s/s in %s, left %s ............"
 	//DownloadSuffix 文件下载后缀
-	DownloadSuffix = ".cloudpan189-downloading"
+	DownloadSuffix = ".aliyunpan-downloading"
 	//StrDownloadInitError 初始化下载发生错误
 	StrDownloadInitError = "初始化下载发生错误"
 	// StrDownloadFailed 下载文件失败
