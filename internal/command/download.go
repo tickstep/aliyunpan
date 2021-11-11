@@ -44,6 +44,7 @@ type (
 		NoCheck              bool
 		ShowProgress         bool
 		DriveId             string
+		UseInternalUrl bool // 是否使用内置链接
 	}
 
 	// LocateDownloadOption 获取下载链接可选参数
@@ -208,6 +209,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		MaxRate:                    config.Config.MaxDownloadRate,
 		InstanceStateStorageFormat: downloader.InstanceStateStorageFormatJSON,
 		ShowProgress: options.ShowProgress,
+		UseInternalUrl: config.Config.TransferUrlType == 2,
 	}
 	if cfg.CacheSize == 0 {
 		cfg.CacheSize = int(DownloadCacheSize)

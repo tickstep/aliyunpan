@@ -38,6 +38,7 @@ type Config struct {
 	InstanceStatePath          string                     // 断点续传信息路径
 	TryHTTP                    bool                       // 是否尝试使用 http 连接
 	ShowProgress               bool                       // 是否展示下载进度条
+	UseInternalUrl             bool // 是否使用内置链接
 }
 
 //NewConfig 返回默认配置

@@ -389,7 +389,11 @@ func (der *Downloader) Execute() error {
 		client.SetKeepAlive(true)
 		client.SetTimeout(10 * time.Minute)
 
-		worker := NewWorker(k, der.driveId, der.fileInfo.FileId, durl.Url, writer)
+		realUrl := durl.Url
+		if der.config.UseInternalUrl {
+			realUrl = durl.InternalUrl
+		}
+		worker := NewWorker(k, der.driveId, der.fileInfo.FileId, realUrl, writer)
 		worker.SetClient(client)
 		worker.SetPanClient(der.panClient)
 		worker.SetWriteMutex(writeMu)

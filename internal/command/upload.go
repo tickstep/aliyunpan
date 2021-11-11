@@ -62,6 +62,7 @@ type (
 		DriveId      string
 		ExcludeNames []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行上传，支持正则表达式
 		BlockSize    int64 // 分片大小
+		UseInternalUrl bool // 是否使用内置链接
 	}
 )
 
@@ -259,10 +260,10 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	if opt.Parallel <= 0 {
 		opt.Parallel = 1
 	}
-
 	if opt.MaxRetry < 0 {
 		opt.MaxRetry = DefaultUploadMaxRetry
 	}
+	opt.UseInternalUrl = config.Config.TransferUrlType == 2
 
 	savePath = activeUser.PathJoin(opt.DriveId, savePath)
 	_, err1 := activeUser.PanClient().FileInfoByPath(opt.DriveId, savePath)
@@ -409,6 +410,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 				ShowProgress:      opt.ShowProgress,
 				IsOverwrite:       opt.IsOverwrite,
 				FolderSyncDb:      db,
+				UseInternalUrl:    opt.UseInternalUrl,
 			}, opt.MaxRetry)
 
 			fmt.Printf("%s [%s] 加入上传队列: %s\n", time.Now().Format("2006-01-02 15:04:05"), taskinfo.Id(), file)

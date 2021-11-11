@@ -37,6 +37,7 @@ type (
 
 		// 网盘上传参数
 		uploadOpEntity *aliyunpan.CreateFileUploadResult
+		useInternalUrl bool
 	}
 
 	UploadedFileMeta struct {
@@ -69,12 +70,13 @@ func (e EmptyReaderLen64) Len() int64 {
 	return 0
 }
 
-func NewPanUpload(panClient *aliyunpan.PanClient, targetPath, driveId string, uploadOpEntity *aliyunpan.CreateFileUploadResult) uploader.MultiUpload {
+func NewPanUpload(panClient *aliyunpan.PanClient, targetPath, driveId string, uploadOpEntity *aliyunpan.CreateFileUploadResult, useInternalUrl bool) uploader.MultiUpload {
 	return &PanUpload{
 		panClient:     panClient,
 		targetPath:    targetPath,
 		driveId:      driveId,
 		uploadOpEntity: uploadOpEntity,
+		useInternalUrl: useInternalUrl,
 	}
 }
 
@@ -154,7 +156,11 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 	}
 
 	// 上传一个分片数据
-	apiError := pu.panClient.UploadFileData(pu.uploadOpEntity.PartInfoList[partseq].UploadURL, uploadFunc)
+	uploadUrl := pu.uploadOpEntity.PartInfoList[partseq].UploadURL
+	if pu.useInternalUrl {
+		uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].InternalUploadURL
+	}
+	apiError := pu.panClient.UploadFileData(uploadUrl, uploadFunc)
 
 	if respErr != nil {
 		if respErr.Err == uploadUrlExpired {
@@ -173,7 +179,11 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 
 			// 获取新的上传URL重试一次
 			pu.uploadOpEntity.PartInfoList[partseq] = guur.PartInfoList[0]
-			apiError = pu.panClient.UploadFileData(pu.uploadOpEntity.PartInfoList[partseq].UploadURL, uploadFunc)
+			uploadUrl := pu.uploadOpEntity.PartInfoList[partseq].UploadURL
+			if pu.useInternalUrl {
+				uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].InternalUploadURL
+			}
+			apiError = pu.panClient.UploadFileData(uploadUrl, uploadFunc)
 		} else if respErr.Err == uploadPartAlreadyExist {
 			// already upload
 			// success

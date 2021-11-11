@@ -64,6 +64,9 @@ type (
 
 		ShowProgress bool
 		IsOverwrite  bool // 覆盖已存在的文件，如果同名文件已存在则移到回收站里
+
+		// 是否使用内置链接
+		UseInternalUrl bool
 	}
 )
 
@@ -147,7 +150,7 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 	// 阿里云盘默认就是分片上传，每一个分片对应一个part_info
 	// 但是不支持分片同时上传，必须单线程，并且按照顺序从1开始一个一个上传
 	muer := uploader.NewMultiUploader(
-		NewPanUpload(utu.PanClient, utu.SavePath, utu.DriveId, utu.LocalFileChecksum.UploadOpEntity),
+		NewPanUpload(utu.PanClient, utu.SavePath, utu.DriveId, utu.LocalFileChecksum.UploadOpEntity, utu.UseInternalUrl),
 		rio.NewFileReaderAtLen64(utu.LocalFileChecksum.GetFile()), &uploader.MultiUploaderConfig{
 			Parallel:  utu.Parallel,
 			BlockSize: utu.BlockSize,
