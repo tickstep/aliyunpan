@@ -556,6 +556,10 @@ aliyunpan config set -max_download_parallel 15
 
 # 组合设置
 aliyunpan config set -max_download_parallel 15 -savedir D:/Downloads
+
+# 设置使用阿里云内部URL链接，专供阿里云ECS环境使用
+# 开启内部URL链接可以使用阿里云ECS私网带宽流量，而不用使用宝贵的公网带宽流量，如果你在阿里ECS环境中使用本工具，建议开启
+aliyunpan config set -transfer_url_type 2
 ```
 
 # 常见问题Q&A
