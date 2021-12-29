@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/logger"
 	"math/rand"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -104,4 +105,15 @@ func GetAllPathFolderByPath(pathStr string) []string {
 		dirs = append(dirs, p)
 	}
 	return dirs
+}
+
+// EscapeStr 转义字符串
+func EscapeStr(s string) string {
+	return url.PathEscape(s)
+}
+
+// UnescapeStr 反转义字符串
+func UnescapeStr(s string) string {
+	r,_ := url.PathUnescape(s)
+	return r
 }
