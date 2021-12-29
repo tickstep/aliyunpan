@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
+	"github.com/tickstep/aliyunpan/internal/webdav"
 	"os"
 	"path"
 	"path/filepath"
@@ -519,35 +520,49 @@ func main() {
 		},
 
 		// 调试用 debug
-		//{
-		//	Name:        "debug",
-		//	Aliases:     []string{"dg"},
-		//	Usage:       "开发调试用",
-		//	Description: "",
-		//	Category:    "debug",
-		//	Before:      cmder.ReloadConfigFunc,
-		//	Action: func(c *cli.Context) error {
-		//		os.Setenv(config.EnvVerbose, c.String("verbose"))
-		//		fmt.Println("显示调试日志", logger.IsVerbose)
-		//
-		//		user := config.Config.ActiveUser()
-		//		fdl,_ := user.CacheFilesDirectoriesList("/tmp")
-		//		fmt.Println(fdl)
-		//		return nil
-		//	},
-		//	Flags: []cli.Flag{
-		//		cli.StringFlag{
-		//			Name:  "param",
-		//			Usage: "参数",
-		//		},
-		//		cli.BoolFlag{
-		//			Name:        "verbose",
-		//			Destination: &logger.IsVerbose,
-		//			EnvVar:      config.EnvVerbose,
-		//			Usage:       "显示调试信息",
-		//		},
-		//	},
-		//},
+		{
+			Name:        "debug",
+			Aliases:     []string{"dg"},
+			Usage:       "开发调试用",
+			Description: "",
+			Category:    "debug",
+			Before:      cmder.ReloadConfigFunc,
+			Action: func(c *cli.Context) error {
+				os.Setenv(config.EnvVerbose, c.String("verbose"))
+				fmt.Println("显示调试日志", logger.IsVerbose)
+
+				//user := config.Config.ActiveUser()
+				//fdl,_ := user.CacheFilesDirectoriesList("/tmp")
+				//fmt.Println(fdl)
+
+				// webdav
+				webdav := &webdav.WebdavConfig{
+					PanUserId: "",
+					Address:   "0.0.0.0",
+					Port:      23077,
+					Prefix:    "/",
+					Users:     []webdav.WebdavUser{{
+						Username: "admin",
+						Password: "admin",
+						Scope:    "D:/smb/feny/pyprojects/comic",
+					}},
+				}
+				webdav.StartServer()
+				return nil
+			},
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "param",
+					Usage: "参数",
+				},
+				cli.BoolFlag{
+					Name:        "verbose",
+					Destination: &logger.IsVerbose,
+					EnvVar:      config.EnvVerbose,
+					Usage:       "显示调试信息",
+				},
+			},
+		},
 	}
 
 	sort.Sort(cli.FlagsByName(app.Flags))

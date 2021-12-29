@@ -10,11 +10,12 @@ require (
 	github.com/oleiade/lane v0.0.0-20160817071224-3053869314bb
 	github.com/olekukonko/tablewriter v0.0.2-0.20190618033246-cc27d85e17ce
 	github.com/peterh/liner v1.2.1
-	github.com/tickstep/bolt v1.3.3
 	github.com/tickstep/aliyunpan-api v0.0.3
+	github.com/tickstep/bolt v1.3.3
 	github.com/tickstep/library-go v0.0.5
 	github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
+	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
+	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 )
 
 //replace github.com/tickstep/bolt => /Users/tickstep/Documents/Workspace/go/projects/bolt
