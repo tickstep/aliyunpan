@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/library-go/logger"
+	"io"
 	"mime"
 	"os"
 	"path"
@@ -166,11 +167,18 @@ type WebDavFile struct {
 }
 
 func (f WebDavFile) Close() error {
+	f.readPos = 0
+	f.writePos = 0
 	return nil
 }
 
 func (f WebDavFile) Read(p []byte) (int, error) {
-	return 0, nil
+	count, err := f.panClientProxy.DownloadFilePart(f.nameSnapshot.fileId, f.readPos, p)
+	if err != nil {
+		return 0, err
+	}
+	f.readPos += int64(count)
+	return count, nil
 }
 
 // Readdir 获取文件目录
@@ -205,8 +213,13 @@ func (f WebDavFile) Readdir(count int) (fis []os.FileInfo, err error) {
 }
 
 func (f WebDavFile) Seek(off int64, whence int) (int64, error) {
-	f.readPos += off
-	return f.readPos, nil
+	if whence == io.SeekEnd {
+		return f.nameSnapshot.size - f.readPos, nil
+	} else if whence == io.SeekStart{
+		f.readPos += off
+		return f.readPos, nil
+	}
+	return 0, nil
 }
 
 func (f WebDavFile) Stat() (os.FileInfo, error) {

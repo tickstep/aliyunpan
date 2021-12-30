@@ -7,6 +7,8 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/expires"
 	"github.com/tickstep/library-go/expires/cachemap"
+	"github.com/tickstep/library-go/requester"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -199,4 +201,66 @@ func (p *PanClientProxy) Move(oldpath, newpath string) error {
 	p.deleteOneFilesDirectoriesListCache(path.Dir(newpath))
 
 	return nil
+}
+
+func (p *PanClientProxy) DownloadFilePart(fileId string, offset int64, buffer []byte) (int, error) {
+	urlResult, err1 := p.PanUser.PanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+		DriveId:   p.PanDriveId,
+		FileId:    fileId,
+	})
+	if err1 != nil {
+		return 0, err1
+	}
+
+	var resp *http.Response
+	var err error
+	var client = requester.NewHTTPClient()
+	apierr := p.PanUser.PanClient().DownloadFileData(
+		urlResult.Url,
+		aliyunpan.FileDownloadRange{
+			Offset: offset,
+			End:    offset + int64(len(buffer)),
+		},
+		func(httpMethod, fullUrl string, headers map[string]string) (*http.Response, error) {
+			resp, err = client.Req(httpMethod, fullUrl, nil, headers)
+			if err != nil {
+				return nil, err
+			}
+			return resp, err
+		})
+
+	if apierr != nil {
+		return 0, apierr
+	}
+
+	// close socket defer
+	if resp != nil {
+		defer func() {
+			resp.Body.Close()
+		}()
+	}
+
+	switch resp.StatusCode {
+	case 200, 206:
+		// do nothing, continue
+		break
+	case 416: //Requested Range Not Satisfiable
+		fallthrough
+	case 403: // Forbidden
+		fallthrough
+	case 406: // Not Acceptable
+		return 0, apierror.NewFailedApiError("")
+	case 404:
+		return 0, apierror.NewFailedApiError("")
+	case 429, 509: // Too Many Requests
+		return 0, apierror.NewFailedApiError("")
+	default:
+		return 0, apierror.NewApiErrorWithError(fmt.Errorf("unexpected http status code, %d, %s", resp.StatusCode, resp.Status))
+	}
+
+	readByteCount, readErr := resp.Body.Read(buffer)
+	if readErr != nil && readErr.Error() != "EOF"{
+		return 0, readErr
+	}
+	return readByteCount, nil
 }
