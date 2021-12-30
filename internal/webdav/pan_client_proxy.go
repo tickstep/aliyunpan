@@ -168,3 +168,35 @@ func (p *PanClientProxy) Rename(oldpath, newpath string) error {
 
 	return nil
 }
+
+
+func (p *PanClientProxy) Move(oldpath, newpath string) error {
+	oldFile, er := p.cacheFilePath(oldpath)
+	if er != nil {
+		return os.ErrNotExist
+	}
+
+	newFileParentDir,er := p.cacheFilePath(path.Dir(newpath))
+	if er != nil {
+		return os.ErrNotExist
+	}
+
+	param := aliyunpan.FileMoveParam{
+		DriveId:        p.PanDriveId,
+		FileId:         oldFile.FileId,
+		ToDriveId:      p.PanDriveId,
+		ToParentFileId: newFileParentDir.FileId,
+	}
+	params := []*aliyunpan.FileMoveParam{}
+	params = append(params, &param)
+	_,e := p.PanUser.PanClient().FileMove(params)
+	if e != nil {
+		return os.ErrInvalid
+	}
+
+	// invalidate parent folder cache
+	p.deleteOneFilesDirectoriesListCache(path.Dir(oldpath))
+	p.deleteOneFilesDirectoriesListCache(path.Dir(newpath))
+
+	return nil
+}
