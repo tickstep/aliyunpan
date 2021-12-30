@@ -147,3 +147,24 @@ func (p *PanClientProxy) Mkdir(pathStr string, perm os.FileMode) error {
 	}
 	return fmt.Errorf("unknown error")
 }
+
+func (p *PanClientProxy) Rename(oldpath, newpath string) error {
+	oldFile, er := p.cacheFilePath(oldpath)
+	if er != nil {
+		return os.ErrNotExist
+	}
+	_,e := p.PanUser.PanClient().FileRename(p.PanDriveId, oldFile.FileId, path.Base(newpath))
+	if e != nil {
+		return os.ErrInvalid
+	}
+
+	// invalidate parent folder cache
+	p.deleteOneFilesDirectoriesListCache(path.Dir(oldpath))
+
+	// add new name cache
+	oldFile.Path = newpath
+	oldFile.FileName = path.Base(newpath)
+	p.cacheFilePathEntity(oldFile)
+
+	return nil
+}

@@ -126,7 +126,7 @@ func (d WebDavDir) Rename(ctx context.Context, oldName, newName string) error {
 		// Prohibit renaming from or to the virtual root directory.
 		return os.ErrInvalid
 	}
-	return os.Rename(oldName, newName)
+	return d.panClientProxy.Rename(oldName, newName)
 }
 
 func (d WebDavDir) Stat(ctx context.Context, name string) (os.FileInfo, error) {
@@ -135,7 +135,7 @@ func (d WebDavDir) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 		fileItem,e := d.panClientProxy.FileInfoByPath(d.formatAbsoluteName(name))
 		if e != nil {
 			logger.Verboseln("file path not existed: " + d.formatAbsoluteName(name))
-			return nil, e
+			return nil, os.ErrNotExist
 		}
 		*f = NewWebDavFileInfo(fileItem)
 	}
