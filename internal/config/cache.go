@@ -46,7 +46,7 @@ func (pu *PanUser) CacheFilesDirectoriesList(pathStr string) (fdl aliyunpan.File
 		for _, f := range fdl {
 			f.Path = path.Join(pathStr, f.FileName)
 		}
-		return expires.NewDataExpires(fdl, 1*time.Minute)
+		return expires.NewDataExpires(fdl, 10*time.Minute)
 	})
 	if apiError != nil {
 		return

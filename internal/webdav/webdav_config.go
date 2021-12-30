@@ -1,12 +1,14 @@
 package webdav
 
 import (
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/logger"
 	"golang.org/x/net/webdav"
 	"log"
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type WebdavUser struct {
@@ -18,6 +20,8 @@ type WebdavUser struct {
 type WebdavConfig struct {
 	// 指定Webdav使用哪个账号的云盘资源
 	PanUserId string `json:"panUserId"`
+	PanDriveId string `json:"panDriveId"`
+	PanUser     *config.PanUser `json:"-"`
 
 	Address string `json:"address"`
 	Port       int `json:"port"`
@@ -28,6 +32,15 @@ type WebdavConfig struct {
 func (w *WebdavConfig) StartServer() {
 	users := map[string]*User{}
 	for _,u := range w.Users {
+		fileItem,e := w.PanUser.PanClient().FileInfoByPath(w.PanDriveId, u.Scope)
+		if e != nil {
+			logger.Verboseln("scope not existed, shutting server")
+			return
+		}
+		wdfi := NewWebDavFileInfo(fileItem)
+		if wdfi.fullPath != "/" && strings.Index(wdfi.fullPath, "/") != 0 {
+			wdfi.fullPath = "/" + wdfi.fullPath
+		}
 		users[u.Username] = &User{
 			Username: u.Username,
 			Password: u.Password,
@@ -39,6 +52,11 @@ func (w *WebdavConfig) StartServer() {
 				FileSystem: WebDavDir{
 					Dir:     webdav.Dir(u.Scope),
 					NoSniff: false,
+					panClientProxy: &PanClientProxy{
+						PanUser:    w.PanUser,
+						PanDriveId: w.PanDriveId,
+					},
+					fileInfo: wdfi,
 				},
 				LockSystem: webdav.NewMemLS(),
 			},
