@@ -2,6 +2,7 @@ package webdav
 
 import (
 	"context"
+	"errors"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/library-go/logger"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,6 +58,14 @@ func (d WebDavDir) formatAbsoluteName(pathStr string) string {
 	return pathStr
 }
 
+func (d WebDavDir) getSessionId(ctx context.Context) string {
+	v := ctx.Value("sessionId")
+	if v != nil{
+		return v.(string)
+	}
+	return ""
+}
+
 func (d WebDavDir) resolve(name string) string {
 	// This implementation is based on Dir.Open's code in the standard net/http package.
 	if filepath.Separator != '/' && strings.IndexRune(name, filepath.Separator) >= 0 ||
@@ -78,7 +88,7 @@ func (d WebDavDir) Mkdir(ctx context.Context, name string, perm os.FileMode) err
 
 func (d WebDavDir) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
 	if name == "" {
-		return WebDavFile{
+		return &WebDavFile{
 			panClientProxy:   d.panClientProxy,
 			nameSnapshot:     d.fileInfo,
 			childrenSnapshot: nil,
@@ -95,13 +105,14 @@ func (d WebDavDir) OpenFile(ctx context.Context, name string, flag int, perm os.
 	}
 	wdfi := NewWebDavFileInfo(fileItem)
 	wdfi.fullPath = d.formatAbsoluteName(name)
-	return WebDavFile{
+	return &WebDavFile{
 		panClientProxy:   d.panClientProxy,
 		nameSnapshot:     wdfi,
 		childrenSnapshot: nil,
 		listPos:          0,
 		readPos:          0,
 		writePos:         0,
+		sessionId: d.getSessionId(ctx),
 	}, nil
 }
 
@@ -164,16 +175,18 @@ type WebDavFile struct {
 	listPos int
 	readPos int64
 	writePos int64
+
+	sessionId string
 }
 
-func (f WebDavFile) Close() error {
+func (f *WebDavFile) Close() error {
 	f.readPos = 0
 	f.writePos = 0
 	return nil
 }
 
-func (f WebDavFile) Read(p []byte) (int, error) {
-	count, err := f.panClientProxy.DownloadFilePart(f.nameSnapshot.fileId, f.readPos, p)
+func (f *WebDavFile) Read(p []byte) (int, error) {
+	count, err := f.panClientProxy.DownloadFilePart(f.sessionId, f.nameSnapshot.fileId, f.readPos, p)
 	if err != nil {
 		return 0, err
 	}
@@ -182,7 +195,7 @@ func (f WebDavFile) Read(p []byte) (int, error) {
 }
 
 // Readdir 获取文件目录
-func (f WebDavFile) Readdir(count int) (fis []os.FileInfo, err error) {
+func (f *WebDavFile) Readdir(count int) (fis []os.FileInfo, err error) {
 	if f.childrenSnapshot == nil || len(f.childrenSnapshot) == 0 {
 		fileList, e := f.panClientProxy.FileListGetAll(f.nameSnapshot.fullPath)
 		if e != nil {
@@ -212,21 +225,33 @@ func (f WebDavFile) Readdir(count int) (fis []os.FileInfo, err error) {
 	return fis, nil
 }
 
-func (f WebDavFile) Seek(off int64, whence int) (int64, error) {
-	if whence == io.SeekEnd {
-		return f.nameSnapshot.size - f.readPos, nil
-	} else if whence == io.SeekStart{
-		f.readPos += off
-		return f.readPos, nil
+func (f *WebDavFile) Seek(offset int64, whence int) (int64, error) {
+	var abs int64
+	switch whence {
+	case io.SeekStart:
+		abs = offset
+		logger.Verboseln(f.sessionId + " SeekStart offset = " + strconv.Itoa(int(offset)) + " return offset = " + strconv.Itoa(int(abs)))
+	case io.SeekCurrent:
+		abs = f.readPos + offset
+		logger.Verboseln(f.sessionId + " SeekCurrent offset = " + strconv.Itoa(int(offset)) + " return offset = " + strconv.Itoa(int(abs)))
+	case io.SeekEnd:
+		abs = f.nameSnapshot.size + offset
+		logger.Verboseln(f.sessionId + " SeekEnd offset = " + strconv.Itoa(int(offset)) + " return offset = " + strconv.Itoa(int(abs)))
+	default:
+		return 0, errors.New("invalid whence")
 	}
-	return 0, nil
+	if abs < 0 {
+		return 0, os.ErrInvalid
+	}
+	f.readPos = abs
+	return f.readPos, nil
 }
 
-func (f WebDavFile) Stat() (os.FileInfo, error) {
+func (f *WebDavFile) Stat() (os.FileInfo, error) {
 	return &f.nameSnapshot, nil
 }
 
-func (f WebDavFile) Write(p []byte) (int, error) {
+func (f *WebDavFile) Write(p []byte) (int, error) {
 	return 0, nil
 }
 

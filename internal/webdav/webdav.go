@@ -142,10 +142,9 @@ func (c *Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-
 	// Runs the WebDAV.
 	//u.Handler.LockSystem = webdav.NewMemLS()
-	u.Handler.ServeHTTP(w, r)
+	u.Handler.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "sessionId", r.RemoteAddr)))
 }
 
 // responseWriterNoBody is a wrapper used to suprress the body of the response
