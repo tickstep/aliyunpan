@@ -168,14 +168,24 @@ func (d WebDavDir) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 type WebDavFile struct {
 	webdav.File
 
+	// 网盘Client
 	panClientProxy *PanClientProxy
+
+	// nameSnapshot 文件关联的网盘文件信息
 	nameSnapshot WebDavFileInfo
+
+	// childrenSnapshot 目录下的子文件信息列表
 	childrenSnapshot []WebDavFileInfo
 
 	listPos int
+
+	// 读取偏移值
 	readPos int64
+
+	// 写入偏移值
 	writePos int64
 
+	// 会话ID
 	sessionId string
 }
 

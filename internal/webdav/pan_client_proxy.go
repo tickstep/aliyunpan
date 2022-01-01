@@ -241,14 +241,17 @@ func (p *PanClientProxy) cacheFileDownloadStream(sessionId, fileId string, offse
 	return data.Data().(*FileDownloadStream), nil
 }
 
+// FileInfoByPath 通过文件路径获取网盘文件信息
 func (p *PanClientProxy) FileInfoByPath(pathStr string) (fileInfo *aliyunpan.FileEntity, error *apierror.ApiError) {
 	return p.cacheFilePath(pathStr)
 }
 
+// FileListGetAll 获取文件路径下的所有子文件列表
 func (p *PanClientProxy) FileListGetAll(pathStr string) (aliyunpan.FileList, *apierror.ApiError)  {
 	return p.cacheFilesDirectoriesList(pathStr)
 }
 
+// Mkdir 创建目录
 func (p *PanClientProxy) Mkdir(pathStr string, perm os.FileMode) error {
 	if pathStr == "" {
 		return fmt.Errorf("unknown error")
@@ -272,6 +275,7 @@ func (p *PanClientProxy) Mkdir(pathStr string, perm os.FileMode) error {
 	return fmt.Errorf("unknown error")
 }
 
+// Rename 重命名文件
 func (p *PanClientProxy) Rename(oldpath, newpath string) error {
 	oldpath = formatPathStyle(oldpath)
 	newpath = formatPathStyle(newpath)
@@ -296,7 +300,7 @@ func (p *PanClientProxy) Rename(oldpath, newpath string) error {
 	return nil
 }
 
-
+// Move 移动文件
 func (p *PanClientProxy) Move(oldpath, newpath string) error {
 	oldpath = formatPathStyle(oldpath)
 	newpath = formatPathStyle(newpath)
@@ -331,6 +335,7 @@ func (p *PanClientProxy) Move(oldpath, newpath string) error {
 	return nil
 }
 
+// DownloadFilePart 下载文件指定数据片段
 func (p *PanClientProxy) DownloadFilePart(sessionId, fileId string, offset int64, buffer []byte) (int, error) {
 	fds, err1 := p.cacheFileDownloadStream(sessionId, fileId, offset)
 	if err1 != nil {
