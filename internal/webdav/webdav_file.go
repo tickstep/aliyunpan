@@ -124,7 +124,7 @@ func (d WebDavDir) RemoveAll(ctx context.Context, name string) error {
 		// Prohibit removing the virtual root directory.
 		return os.ErrInvalid
 	}
-	return os.RemoveAll(name)
+	return d.panClientProxy.RemoveAll(name)
 }
 
 func (d WebDavDir) Rename(ctx context.Context, oldName, newName string) error {

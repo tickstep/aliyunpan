@@ -109,6 +109,16 @@ func (p *PanClientProxy) cacheFilesDirectoriesList(pathStr string) (fdl aliyunpa
 	return data.Data().(aliyunpan.FileList), nil
 }
 
+// deleteOneFilePathCache 删除缓存
+func (p *PanClientProxy) deleteOneFilePathCache(pathStr string) {
+	key := formatPathStyle(pathStr)
+	cache := p.filePathCacheMap.LazyInitCachePoolOp(p.PanDriveId)
+	_, ok := cache.Load(key)
+	if ok {
+		cache.Delete(key)
+	}
+}
+
 // cacheFilePath 缓存文件绝对路径到网盘文件信息
 func (p *PanClientProxy) cacheFilePath(pathStr string) (fe *aliyunpan.FileEntity, apiError *apierror.ApiError) {
 	pathStr = formatPathStyle(pathStr)
@@ -167,7 +177,7 @@ func (p *PanClientProxy) cacheFileDownloadUrl(sessionId, fileId string) (urlResu
 }
 
 
-// DeleteOneCache 删除缓存
+// deleteOneFileDownloadStreamCache 删除缓存文件下载流缓存
 func (p *PanClientProxy) deleteOneFileDownloadStreamCache(sessionId, fileId string) {
 	key := sessionId + "-" + fileId
 	cache := p.fileIdDownloadStreamCacheMap.LazyInitCachePoolOp(p.PanDriveId)
@@ -385,4 +395,29 @@ func (p *PanClientProxy) DownloadFilePart(sessionId, fileId string, offset int64
 	}
 	fds.readOffset += int64(readByteCount)
 	return readByteCount, nil
+}
+
+// RemoveAll 删除文件
+func (p *PanClientProxy) RemoveAll(pathStr string) error {
+	fi,er := p.FileInfoByPath(pathStr)
+	if er != nil {
+		return er
+	}
+	if fi == nil {
+		return nil
+	}
+
+	param := &aliyunpan.FileBatchActionParam{
+		DriveId: p.PanDriveId,
+		FileId:  fi.FileId,
+	}
+	_, e := p.PanUser.PanClient().FileDelete(append([]*aliyunpan.FileBatchActionParam{}, param))
+	if e != nil {
+		return e
+	}
+
+	// delete cache
+	p.deleteOneFilesDirectoriesListCache(path.Dir(pathStr))
+
+	return nil
 }
