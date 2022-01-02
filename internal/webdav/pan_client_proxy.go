@@ -67,17 +67,17 @@ type PanClientProxy struct {
 	filePathUploadStreamCacheMap cachemap.CacheOpMap
 }
 
-// 默认上传的文件块大小，10MB
-const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024
+// DefaultChunkSize 默认上传的文件块大小，10MB
+const DefaultChunkSize = 10 * 1024 * 1024
 
-// CACHE_EXPIRED_MINUTE  缓存过期分钟
-const CACHE_EXPIRED_MINUTE = 60
+// CacheExpiredMinute  缓存过期分钟
+const CacheExpiredMinute = 60
 
-// FILE_DOWNLOAD_URL_EXPIRED_MINUTE 文件下载URL过期时间
-const FILE_DOWNLOAD_URL_EXPIRED_SECONDS = 14400
+// FileDownloadUrlExpiredSeconds 文件下载URL过期时间
+const FileDownloadUrlExpiredSeconds = 14400
 
-// FILE_UPLOAD_EXPIRED_MINUTE 文件上传过期时间
-const FILE_UPLOAD_EXPIRED_MINUTE = 1440 // 24小时
+// FileUploadExpiredMinute 文件上传过期时间
+const FileUploadExpiredMinute = 1440 // 24小时
 
 func formatPathStyle(pathStr string) string {
 	pathStr = strings.ReplaceAll(pathStr, "\\", "/")
@@ -130,7 +130,7 @@ func (p *PanClientProxy) cacheFilesDirectoriesList(pathStr string) (fdl aliyunpa
 			f.Path = path.Join(pathStr, f.FileName)
 		}
 		p.cacheFilePathEntityList(fdl)
-		return expires.NewDataExpires(fdl, CACHE_EXPIRED_MINUTE*time.Minute)
+		return expires.NewDataExpires(fdl, CacheExpiredMinute*time.Minute)
 	})
 	if apiError != nil {
 		return
@@ -160,7 +160,7 @@ func (p *PanClientProxy) cacheFilePath(pathStr string) (fe *aliyunpan.FileEntity
 		if apiError != nil {
 			return nil
 		}
-		return expires.NewDataExpires(fi, CACHE_EXPIRED_MINUTE*time.Minute)
+		return expires.NewDataExpires(fi, CacheExpiredMinute*time.Minute)
 	})
 	if apiError != nil {
 		return nil, apiError
@@ -174,7 +174,7 @@ func (p *PanClientProxy) cacheFilePath(pathStr string) (fe *aliyunpan.FileEntity
 func (p *PanClientProxy) cacheFilePathEntity(fe *aliyunpan.FileEntity) {
 	pathStr := formatPathStyle(fe.Path)
 	p.filePathCacheMap.CacheOperation(p.PanDriveId, pathStr, func() expires.DataExpires {
-		return expires.NewDataExpires(fe, CACHE_EXPIRED_MINUTE*time.Minute)
+		return expires.NewDataExpires(fe, CacheExpiredMinute*time.Minute)
 	})
 }
 
@@ -182,7 +182,7 @@ func (p *PanClientProxy) cacheFilePathEntityList(fdl aliyunpan.FileList) {
 	for _,entity := range fdl {
 		pathStr := formatPathStyle(entity.Path)
 		p.filePathCacheMap.CacheOperation(p.PanDriveId, pathStr, func() expires.DataExpires {
-			return expires.NewDataExpires(entity, CACHE_EXPIRED_MINUTE*time.Minute)
+			return expires.NewDataExpires(entity, CacheExpiredMinute*time.Minute)
 		})
 	}
 }
@@ -194,12 +194,12 @@ func (p *PanClientProxy) cacheFileDownloadUrl(sessionId, fileId string) (urlResu
 		urlResult, err1 := p.PanUser.PanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
 			DriveId:   p.PanDriveId,
 			FileId:    fileId,
-			ExpireSec: FILE_DOWNLOAD_URL_EXPIRED_SECONDS,
+			ExpireSec: FileDownloadUrlExpiredSeconds,
 		})
 		if err1 != nil {
 			return nil
 		}
-		return expires.NewDataExpires(urlResult, (FILE_DOWNLOAD_URL_EXPIRED_SECONDS-60)*time.Second)
+		return expires.NewDataExpires(urlResult, (FileDownloadUrlExpiredSeconds-60)*time.Second)
 	})
 	if data == nil {
 		return nil, nil
@@ -272,7 +272,7 @@ func (p *PanClientProxy) cacheFileDownloadStream(sessionId, fileId string, offse
 			readOffset: offset,
 			resp: resp,
 			timestamp:  time.Now().Unix(),
-		}, CACHE_EXPIRED_MINUTE*time.Minute)
+		}, CacheExpiredMinute*time.Minute)
 	})
 
 	if data == nil {
@@ -377,7 +377,7 @@ func (p *PanClientProxy) cacheFileUploadStream(userId, pathStr string, fileSize 
 			chunkPos:               0,
 			chunkSize:              chunkSize,
 			timestamp:              time.Now().Unix(),
-		}, FILE_UPLOAD_EXPIRED_MINUTE*time.Minute)
+		}, FileUploadExpiredMinute*time.Minute)
 	})
 
 	if data == nil {
@@ -386,7 +386,7 @@ func (p *PanClientProxy) cacheFileUploadStream(userId, pathStr string, fileSize 
 	return data.Data().(*FileUploadStream), nil
 }
 
-	// FileInfoByPath 通过文件路径获取网盘文件信息
+// FileInfoByPath 通过文件路径获取网盘文件信息
 func (p *PanClientProxy) FileInfoByPath(pathStr string) (fileInfo *aliyunpan.FileEntity, error *apierror.ApiError) {
 	return p.cacheFilePath(pathStr)
 }
@@ -571,7 +571,7 @@ func (p *PanClientProxy) UploadFilePrepare(userId, pathStr string, fileSize int6
 
 	cs := chunkSize
 	if cs == 0 {
-		cs = DEFAULT_CHUNK_SIZE
+		cs = DefaultChunkSize
 	}
 
 	// remove old file cache
@@ -622,6 +622,7 @@ func (p *PanClientProxy) needToUploadChunk(fus *FileUploadStream) bool {
 	return false
 }
 
+// UploadFilePart 上传文件数据块
 func (p *PanClientProxy) UploadFilePart(userId, pathStr string, offset int64, buffer []byte) (int, error) {
 	fus, err := p.UploadFileCache(userId, pathStr)
 	if err != nil {
@@ -669,7 +670,6 @@ func (p *PanClientProxy) UploadFilePart(userId, pathStr string, offset int64, bu
 
 			// reset chunk buffer
 			fus.chunkPos = 0
-			//sliceClear(&fus.chunkBuffer)
 		}
 	}
 

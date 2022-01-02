@@ -32,7 +32,6 @@ func (w NoSniffFileInfo) ContentType(ctx context.Context) (contentType string, e
 	}
 }
 
-
 // 文件系统
 type WebDavDir struct {
 	webdav.Dir
@@ -109,10 +108,10 @@ func (d WebDavDir) OpenFile(ctx context.Context, name string, flag int, perm os.
 	}
 	name = d.formatAbsoluteName(d.formatAbsoluteName(name))
 
-	logger.Verbosef("OpenFile file %s flag:\n O_RDONLY=%t\n O_WRONLY=%t\n O_RDWR=%t\n O_APPEND=%t\n O_CREATE=%t\n O_EXCL=%t\n O_SYNC=%t\n O_TRUNC=%t\n",
-		name,
-		flag&os.O_RDONLY == 0, flag&os.O_WRONLY != 0, flag&os.O_RDWR != 0, flag&os.O_APPEND != 0,
-		flag&os.O_CREATE != 0, flag&os.O_EXCL != 0, flag&os.O_SYNC != 0, flag&os.O_TRUNC != 0)
+	//logger.Verbosef("OpenFile file %s flag:\n O_RDONLY=%t\n O_WRONLY=%t\n O_RDWR=%t\n O_APPEND=%t\n O_CREATE=%t\n O_EXCL=%t\n O_SYNC=%t\n O_TRUNC=%t\n",
+	//	name,
+	//	flag&os.O_RDONLY == 0, flag&os.O_WRONLY != 0, flag&os.O_RDWR != 0, flag&os.O_APPEND != 0,
+	//	flag&os.O_CREATE != 0, flag&os.O_EXCL != 0, flag&os.O_SYNC != 0, flag&os.O_TRUNC != 0)
 
 	if name == d.fileInfo.fullPath {
 		return &WebDavFile{
@@ -230,10 +229,6 @@ func (d WebDavDir) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 	return f, nil
 }
 
-
-
-
-
 // WebDavFile 文件实例
 type WebDavFile struct {
 	webdav.File
@@ -342,11 +337,6 @@ func (f *WebDavFile) Write(p []byte) (int, error) {
 	f.writePos += int64(count)
 	return count, nil
 }
-
-
-
-
-
 
 // WebDavFileInfo 文件信息
 type WebDavFileInfo struct {
