@@ -31,9 +31,9 @@ func CmdWebdav() cli.Command {
 		After:       cmder.SaveConfigFunc,
 		Action: func(c *cli.Context) error {
 			fmt.Print(`
-本文命令可以让阿里云盘变身为webdav协议的文件服务器。 这样你可以把阿里云盘挂载为Windows、Linux、Mac系统的磁盘，可以通过NAS系统做文件管理或文件同步等等。
-当把阿里云盘作为webdav文件服务器进行使用的时候，上传文件是不支持秒传的，所以当你挂载为网络磁盘使用的时候，不建议在webdav挂载目录中上传或者下载过大的文件，不然体验会非常差。
-建议只作为文档，图片等小文件的同步网盘。
+本文命令可以让阿里云盘变身为webdav协议的文件服务器。这样你可以把阿里云盘挂载为Windows、Linux、Mac系统的磁盘，可以通过NAS系统做文件管理或文件同步等等。
+当把阿里云盘作为webdav文件服务器进行使用的时候，上传文件是不支持秒传的，所以当你挂载为网络磁盘使用的时候，不建议在webdav挂载目录中上传、下载过大的文件，不然体验会非常差。
+建议作为文档，图片等小文件的同步网盘。
 
 请输入以下命令查看如何启动
 aliyunpan webdav start -h
