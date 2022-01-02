@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/tickstep/library-go/logger"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -144,7 +145,36 @@ func (c *Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// Runs the WebDAV.
 	//u.Handler.LockSystem = webdav.NewMemLS()
-	u.Handler.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "sessionId", r.RemoteAddr)))
+	u.Handler.ServeHTTP(w, addContextValue(r))
+}
+
+// addContextValue 增加context键值对
+func addContextValue(r *http.Request) *http.Request {
+	// add sessionId
+	ctx := context.WithValue(r.Context(), KeySessionId, r.RemoteAddr)
+
+	// add userId
+	username, _, _ := r.BasicAuth()
+	ctx = context.WithValue(ctx, KeyUserId, username)
+
+	// add context length
+	length := r.ContentLength
+	if length == 0 {
+		contentLength := r.Header.Get("content-length")
+		if contentLength == "" {
+			contentLength = r.Header.Get("X-Expected-Entity-Length")
+			if contentLength == "" {
+				contentLength = "0"
+			}
+		}
+		if cl,ok := strconv.ParseInt(contentLength, 10, 64);ok == nil{
+			length = cl
+		}
+	}
+	ctx = context.WithValue(ctx, KeyContentLength, length)
+
+	req := r.WithContext(ctx)
+	return req
 }
 
 // responseWriterNoBody is a wrapper used to suprress the body of the response

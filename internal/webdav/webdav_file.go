@@ -39,11 +39,12 @@ type WebDavDir struct {
 	NoSniff bool
 	panClientProxy *PanClientProxy
 	fileInfo WebDavFileInfo
+	uploadChunkSize int
 }
 
-// slashClean is equivalent to but slightly more efficient than
+// sliceClean is equivalent to but slightly more efficient than
 // path.Clean("/" + name).
-func slashClean(name string) string {
+func sliceClean(name string) string {
 	if name == "" || name[0] != '/' {
 		name = "/" + name
 	}
@@ -59,11 +60,27 @@ func (d WebDavDir) formatAbsoluteName(pathStr string) string {
 }
 
 func (d WebDavDir) getSessionId(ctx context.Context) string {
-	v := ctx.Value("sessionId")
+	v := ctx.Value(KeySessionId)
 	if v != nil{
 		return v.(string)
 	}
 	return ""
+}
+
+func (d WebDavDir) getContentLength(ctx context.Context) int64 {
+	v := ctx.Value(KeyContentLength)
+	if v != nil{
+		return v.(int64)
+	}
+	return 0
+}
+
+func (d WebDavDir) getUserId(ctx context.Context) string {
+	v := ctx.Value(KeyUserId)
+	if v != nil{
+		return v.(string)
+	}
+	return "anonymous"
 }
 
 func (d WebDavDir) resolve(name string) string {
@@ -76,7 +93,7 @@ func (d WebDavDir) resolve(name string) string {
 	if dir == "" {
 		dir = "."
 	}
-	return filepath.Join(dir, filepath.FromSlash(slashClean(name)))
+	return filepath.Join(dir, filepath.FromSlash(sliceClean(name)))
 }
 
 func (d WebDavDir) Mkdir(ctx context.Context, name string, perm os.FileMode) error {
@@ -87,7 +104,17 @@ func (d WebDavDir) Mkdir(ctx context.Context, name string, perm os.FileMode) err
 }
 
 func (d WebDavDir) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
-	if name == "" {
+	if name = d.resolve(name); name == "" {
+		return nil, os.ErrNotExist
+	}
+	name = d.formatAbsoluteName(d.formatAbsoluteName(name))
+
+	logger.Verbosef("OpenFile file %s flag:\n O_RDONLY=%t\n O_WRONLY=%t\n O_RDWR=%t\n O_APPEND=%t\n O_CREATE=%t\n O_EXCL=%t\n O_SYNC=%t\n O_TRUNC=%t\n",
+		name,
+		flag&os.O_RDONLY == 0, flag&os.O_WRONLY != 0, flag&os.O_RDWR != 0, flag&os.O_APPEND != 0,
+		flag&os.O_CREATE != 0, flag&os.O_EXCL != 0, flag&os.O_SYNC != 0, flag&os.O_TRUNC != 0)
+
+	if name == d.fileInfo.fullPath {
 		return &WebDavFile{
 			panClientProxy:   d.panClientProxy,
 			nameSnapshot:     d.fileInfo,
@@ -98,9 +125,51 @@ func (d WebDavDir) OpenFile(ctx context.Context, name string, flag int, perm os.
 		}, nil
 	}
 
-	fileItem,e := d.panClientProxy.FileInfoByPath(d.formatAbsoluteName(name))
+	if flag&(os.O_SYNC|os.O_APPEND) != 0 {
+		// doesn't support these flags
+		return nil, os.ErrInvalid
+	}
+	if flag&os.O_CREATE != 0 {
+		if flag&os.O_EXCL != 0 {
+			return nil, os.ErrExist
+		}
+		// create file instance for writing
+		_, e := d.panClientProxy.UploadFilePrepare(d.getUserId(ctx), name, d.getContentLength(ctx), int64(d.uploadChunkSize))
+		if e != nil {
+			return nil, e
+		}
+	}
+	if flag&(os.O_WRONLY|os.O_RDWR) != 0 && flag&os.O_TRUNC != 0 {
+		// file must be created ready
+		// get ready to write data to file stream
+		logger.Verboseln("get ready to write data to file stream")
+		fus,err2 := d.panClientProxy.UploadFileCache(d.getUserId(ctx), name)
+		if err2 != nil {
+			return nil, err2
+		}
+		return &WebDavFile{
+			panClientProxy:   d.panClientProxy,
+			nameSnapshot:     WebDavFileInfo{
+				fileId:   fus.fileId,
+				name:     path.Base(fus.filePath),
+				size:     fus.fileSize,
+				mode:     0,
+				modTime:  time.Unix(fus.timestamp, 0),
+				fullPath: fus.filePath,
+			},
+			childrenSnapshot: nil,
+			listPos:          0,
+			readPos:          0,
+			writePos:         fus.fileWritePos,
+			sessionId: d.getSessionId(ctx),
+			userId: d.getUserId(ctx),
+		}, nil
+	}
+
+	// default action, open file to read
+	fileItem,e := d.panClientProxy.FileInfoByPath(name)
 	if e != nil {
-		logger.Verboseln("OpenFile failed, file path not existed: " + d.formatAbsoluteName(name))
+		logger.Verboseln("OpenFile failed, file path not existed: " + name)
 		return nil, e
 	}
 	wdfi := NewWebDavFileInfo(fileItem)
@@ -113,6 +182,7 @@ func (d WebDavDir) OpenFile(ctx context.Context, name string, flag int, perm os.
 		readPos:          0,
 		writePos:         0,
 		sessionId: d.getSessionId(ctx),
+		userId: d.getUserId(ctx),
 	}, nil
 }
 
@@ -187,6 +257,9 @@ type WebDavFile struct {
 
 	// 会话ID
 	sessionId string
+
+	// 用户ID
+	userId string
 }
 
 func (f *WebDavFile) Close() error {
@@ -262,7 +335,12 @@ func (f *WebDavFile) Stat() (os.FileInfo, error) {
 }
 
 func (f *WebDavFile) Write(p []byte) (int, error) {
-	return 0, nil
+	count,err := f.panClientProxy.UploadFilePart(f.userId, f.nameSnapshot.fullPath, f.writePos, p)
+	if err != nil {
+		return 0, err
+	}
+	f.writePos += int64(count)
+	return count, nil
 }
 
 

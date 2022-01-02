@@ -22,6 +22,7 @@ type WebdavConfig struct {
 	PanUserId string `json:"panUserId"`
 	PanDriveId string `json:"panDriveId"`
 	PanUser     *config.PanUser `json:"-"`
+	UploadChunkSize int `json:"uploadChunkSize"`
 
 	Address string `json:"address"`
 	Port       int `json:"port"`
@@ -56,7 +57,8 @@ func (w *WebdavConfig) StartServer() {
 						PanUser:    w.PanUser,
 						PanDriveId: w.PanDriveId,
 					},
-					fileInfo: wdfi,
+					fileInfo:        wdfi,
+					uploadChunkSize: w.UploadChunkSize,
 				},
 				LockSystem: webdav.NewMemLS(),
 			},

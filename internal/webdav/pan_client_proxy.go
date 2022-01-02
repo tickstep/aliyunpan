@@ -1,6 +1,7 @@
 package webdav
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
@@ -12,8 +13,10 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,9 +27,29 @@ type FileDownloadStream struct {
 	timestamp int64
 }
 
+type FileUploadStream struct {
+	createFileUploadResult *aliyunpan.CreateFileUploadResult
+
+	filePath string
+	fileSize int64
+	fileId string
+	fileWritePos int64
+	fileUploadUrlIndex int
+
+	chunkBuffer []byte
+	chunkPos int64
+	chunkSize int64
+
+	timestamp int64
+
+	mutex sync.Mutex
+}
+
 type PanClientProxy struct {
 	PanUser *config.PanUser
 	PanDriveId string
+
+	mutex sync.Mutex
 
 	// 网盘文件路径到网盘文件信息实体映射缓存
 	filePathCacheMap          cachemap.CacheOpMap
@@ -39,13 +62,22 @@ type PanClientProxy struct {
 
 	// 网盘文件ID到文件下载数据流映射缓存
 	fileIdDownloadStreamCacheMap cachemap.CacheOpMap
+
+	// 网盘文件到文件上传数据流映射缓存
+	filePathUploadStreamCacheMap cachemap.CacheOpMap
 }
+
+// 默认上传的文件块大小，10MB
+const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024
 
 // CACHE_EXPIRED_MINUTE  缓存过期分钟
 const CACHE_EXPIRED_MINUTE = 60
 
-// FILE_DOWNLOAD_URL_EXPIRED_MINUTE  文件下载URL过期分钟,
+// FILE_DOWNLOAD_URL_EXPIRED_MINUTE 文件下载URL过期时间
 const FILE_DOWNLOAD_URL_EXPIRED_SECONDS = 14400
+
+// FILE_UPLOAD_EXPIRED_MINUTE 文件上传过期时间
+const FILE_UPLOAD_EXPIRED_MINUTE = 1440 // 24小时
 
 func formatPathStyle(pathStr string) string {
 	pathStr = strings.ReplaceAll(pathStr, "\\", "/")
@@ -131,7 +163,7 @@ func (p *PanClientProxy) cacheFilePath(pathStr string) (fe *aliyunpan.FileEntity
 		return expires.NewDataExpires(fi, CACHE_EXPIRED_MINUTE*time.Minute)
 	})
 	if apiError != nil {
-		return
+		return nil, apiError
 	}
 	if data == nil {
 		return nil, nil
@@ -155,7 +187,6 @@ func (p *PanClientProxy) cacheFilePathEntityList(fdl aliyunpan.FileList) {
 	}
 }
 
-
 // cacheFileDownloadStream 缓存文件下载路径
 func (p *PanClientProxy) cacheFileDownloadUrl(sessionId, fileId string) (urlResult *aliyunpan.GetFileDownloadUrlResult, apiError *apierror.ApiError) {
 	k := sessionId + "-" + fileId
@@ -175,7 +206,6 @@ func (p *PanClientProxy) cacheFileDownloadUrl(sessionId, fileId string) (urlResu
 	}
 	return data.Data().(*aliyunpan.GetFileDownloadUrlResult), nil
 }
-
 
 // deleteOneFileDownloadStreamCache 删除缓存文件下载流缓存
 func (p *PanClientProxy) deleteOneFileDownloadStreamCache(sessionId, fileId string) {
@@ -251,7 +281,112 @@ func (p *PanClientProxy) cacheFileDownloadStream(sessionId, fileId string, offse
 	return data.Data().(*FileDownloadStream), nil
 }
 
-// FileInfoByPath 通过文件路径获取网盘文件信息
+// deleteOneFileUploadStreamCache 删除缓存文件下载流缓存
+func (p *PanClientProxy) deleteOneFileUploadStreamCache(userId, pathStr string) {
+	pathStr = formatPathStyle(pathStr)
+	key := userId + "-" + pathStr
+	cache := p.filePathUploadStreamCacheMap.LazyInitCachePoolOp(p.PanDriveId)
+	_, ok := cache.Load(key)
+	if ok {
+		cache.Delete(key)
+	}
+}
+
+// cacheFileUploadStream 缓存创建的文件上传流
+func (p *PanClientProxy) cacheFileUploadStream(userId, pathStr string, fileSize int64, chunkSize int64) (*FileUploadStream, *apierror.ApiError) {
+	pathStr = formatPathStyle(pathStr)
+	k := userId + "-" + pathStr
+	// TODO: add locker for upload file create
+	data := p.filePathUploadStreamCacheMap.CacheOperation(p.PanDriveId, k, func() expires.DataExpires {
+		// check parent dir is existed or not
+		parentFileId := ""
+		parentFileEntity, err1 := p.cacheFilePath(path.Dir(pathStr))
+		if err1 != nil {
+			return nil
+		}
+		if parentFileEntity == nil {
+			// create parent folder
+			mkr, err2 := p.mkdir(path.Dir(pathStr), 0)
+			if err2 != nil {
+				return nil
+			}
+			parentFileId = mkr.FileId
+		} else {
+			parentFileId = parentFileEntity.FileId
+		}
+
+
+		// 检查同名文件是否存在
+		efi, apierr := p.PanUser.PanClient().FileInfoByPath(p.PanDriveId, pathStr)
+		if apierr != nil {
+			if apierr.Code == apierror.ApiCodeFileNotFoundCode {
+				// file not existed
+				logger.Verbosef("%s 没有存在同名文件，直接上传: %s", userId, pathStr)
+			} else {
+				// TODO: handle error
+				return nil
+			}
+		} else {
+			if efi != nil && efi.FileId != "" {
+				// existed, delete it
+				var fileDeleteResult []*aliyunpan.FileBatchActionResult
+				var err *apierror.ApiError
+				fileDeleteResult, err = p.PanUser.PanClient().FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId:efi.DriveId, FileId:efi.FileId}})
+				if err != nil || len(fileDeleteResult) == 0 {
+					logger.Verbosef("%s 同名无法删除文件，请稍后重试: %s", userId, pathStr)
+					return nil
+				}
+				time.Sleep(time.Duration(500) * time.Millisecond)
+				logger.Verbosef("%s 检测到同名文件，已移动到回收站: %s", userId, pathStr)
+
+				// clear cache
+				p.deleteOneFilePathCache(pathStr)
+				p.deleteOneFilesDirectoriesListCache(path.Dir(pathStr))
+			}
+		}
+
+		// create new upload file
+		appCreateUploadFileParam := &aliyunpan.CreateFileUploadParam{
+			DriveId:      p.PanDriveId,
+			Name:         filepath.Base(pathStr),
+			Size:         fileSize,
+			ContentHash:  "",
+			ContentHashName: "none",
+			CheckNameMode: "refuse",
+			ParentFileId: parentFileId,
+			BlockSize: chunkSize,
+			ProofCode: "",
+			ProofVersion: "v1",
+		}
+
+		uploadOpEntity, apierr := p.PanUser.PanClient().CreateUploadFile(appCreateUploadFileParam)
+		if apierr != nil {
+			logger.Verbosef("%s 创建上传任务失败: %s", userId, pathStr)
+			return nil
+		}
+
+		logger.Verbosef("%s create new upload cache for path = %s", userId, pathStr)
+		return expires.NewDataExpires(&FileUploadStream{
+			createFileUploadResult: uploadOpEntity,
+			filePath:               pathStr,
+			fileSize:               fileSize,
+			fileId:                 uploadOpEntity.FileId,
+			fileWritePos:           0,
+			fileUploadUrlIndex:     0,
+			chunkBuffer:            make([]byte, chunkSize, chunkSize),
+			chunkPos:               0,
+			chunkSize:              chunkSize,
+			timestamp:              time.Now().Unix(),
+		}, FILE_UPLOAD_EXPIRED_MINUTE*time.Minute)
+	})
+
+	if data == nil {
+		return nil, nil
+	}
+	return data.Data().(*FileUploadStream), nil
+}
+
+	// FileInfoByPath 通过文件路径获取网盘文件信息
 func (p *PanClientProxy) FileInfoByPath(pathStr string) (fileInfo *aliyunpan.FileEntity, error *apierror.ApiError) {
 	return p.cacheFilePath(pathStr)
 }
@@ -261,16 +396,13 @@ func (p *PanClientProxy) FileListGetAll(pathStr string) (aliyunpan.FileList, *ap
 	return p.cacheFilesDirectoriesList(pathStr)
 }
 
-// Mkdir 创建目录
-func (p *PanClientProxy) Mkdir(pathStr string, perm os.FileMode) error {
-	if pathStr == "" {
-		return fmt.Errorf("unknown error")
-	}
+func (p *PanClientProxy) mkdir(pathStr string, perm os.FileMode) (*aliyunpan.MkdirResult, error) {
 	pathStr = formatPathStyle(pathStr)
 	r,er := p.PanUser.PanClient().MkdirByFullPath(p.PanDriveId, pathStr)
 	if er != nil {
-		return er
+		return nil, er
 	}
+
 	// invalidate cache
 	p.deleteOneFilesDirectoriesListCache(path.Dir(pathStr))
 
@@ -280,9 +412,19 @@ func (p *PanClientProxy) Mkdir(pathStr string, perm os.FileMode) error {
 			fe.Path = pathStr
 			p.cacheFilePathEntity(fe)
 		}
-		return nil
+		return r, nil
 	}
-	return fmt.Errorf("unknown error")
+	return nil, fmt.Errorf("unknown error")
+}
+
+// Mkdir 创建目录
+func (p *PanClientProxy) Mkdir(pathStr string, perm os.FileMode) error {
+	if pathStr == "" {
+		return fmt.Errorf("unknown error")
+	}
+	pathStr = formatPathStyle(pathStr)
+	_, er := p.mkdir(pathStr, perm)
+	return er
 }
 
 // Rename 重命名文件
@@ -420,4 +562,137 @@ func (p *PanClientProxy) RemoveAll(pathStr string) error {
 	p.deleteOneFilesDirectoriesListCache(path.Dir(pathStr))
 
 	return nil
+}
+
+// UploadFilePrepare 创建文件上传
+func (p *PanClientProxy) UploadFilePrepare(userId, pathStr string, fileSize int64, chunkSize int64) (*FileUploadStream, error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	cs := chunkSize
+	if cs == 0 {
+		cs = DEFAULT_CHUNK_SIZE
+	}
+
+	// remove old file cache
+	oldFus,err := p.UploadFileCache(userId, pathStr)
+	if err != nil {
+		logger.Verboseln("query upload file cache error: ", err)
+	}
+	if oldFus != nil {
+		// remove old upload stream cache
+		oldFus.mutex.Lock()
+		p.deleteOneFileUploadStreamCache(userId, pathStr)
+		oldFus.mutex.Unlock()
+	}
+
+	// create new one
+	fus, er := p.cacheFileUploadStream(userId, pathStr, fileSize, cs)
+	if er != nil {
+		return nil, er
+	}
+	return fus, nil
+}
+
+func (p *PanClientProxy) UploadFileCache(userId, pathStr string) (*FileUploadStream, error) {
+	key := userId + "-" + formatPathStyle(pathStr)
+	cache := p.filePathUploadStreamCacheMap.LazyInitCachePoolOp(p.PanDriveId)
+	v, ok := cache.Load(key)
+	if ok {
+		return v.Data().(*FileUploadStream), nil
+	}
+	return nil, fmt.Errorf("upload file not found")
+}
+
+func (p *PanClientProxy) needToUploadChunk(fus *FileUploadStream) bool {
+	if fus.chunkPos == fus.chunkSize {
+		return true
+	}
+
+	// maybe the final part
+	if fus.fileUploadUrlIndex == (len(fus.createFileUploadResult.PartInfoList)-1) {
+		finalPartSize := fus.fileSize % fus.chunkSize
+		if finalPartSize == 0 {
+			finalPartSize = fus.chunkSize
+		}
+		if fus.chunkPos == finalPartSize {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *PanClientProxy) UploadFilePart(userId, pathStr string, offset int64, buffer []byte) (int, error) {
+	fus, err := p.UploadFileCache(userId, pathStr)
+	if err != nil {
+		return 0, err
+	}
+	fus.mutex.Lock()
+	defer fus.mutex.Unlock()
+
+	if fus.fileWritePos != offset {
+		// error
+		return 0, fmt.Errorf("file write offset position mismatch")
+	}
+
+	// write buffer to chunk buffer
+	uploadCount := 0
+	for _,b := range buffer {
+		fus.chunkBuffer[fus.chunkPos] = b
+		fus.chunkPos += 1
+		fus.fileWritePos += 1
+		uploadCount += 1
+
+		if p.needToUploadChunk(fus) {
+			// upload chunk to drive
+			uploadBuffer := fus.chunkBuffer
+			if fus.chunkPos < fus.chunkSize {
+				uploadBuffer = make([]byte, fus.chunkPos)
+				copy(uploadBuffer, fus.chunkBuffer)
+			}
+			uploadChunk := bytes.NewReader(uploadBuffer)
+			if fus.fileUploadUrlIndex >= len(fus.createFileUploadResult.PartInfoList) {
+				return uploadCount, fmt.Errorf("upload file uploading status mismatch")
+			}
+			uploadPartInfo := fus.createFileUploadResult.PartInfoList[fus.fileUploadUrlIndex]
+			cd := &aliyunpan.FileUploadChunkData{
+				Reader: uploadChunk,
+				ChunkSize: uploadChunk.Size(),
+			}
+			e := p.PanUser.PanClient().UploadDataChunk(uploadPartInfo.UploadURL, cd)
+			if e != nil {
+				// upload error
+				// TODO: handle error, retry upload
+				return uploadCount, nil
+			}
+			fus.fileUploadUrlIndex += 1
+
+			// reset chunk buffer
+			fus.chunkPos = 0
+			//sliceClear(&fus.chunkBuffer)
+		}
+	}
+
+	// check file upload completely or not
+	if fus.fileSize == fus.fileWritePos {
+		// complete file upload
+		cufr,err := p.PanUser.PanClient().CompleteUploadFile(&aliyunpan.CompleteUploadFileParam{
+			DriveId: p.PanDriveId,
+			FileId: fus.fileId,
+			UploadId: fus.createFileUploadResult.UploadId,
+		})
+		logger.Verbosef("%s complete upload file: %+v\n", userId, cufr)
+
+		if err != nil {
+			logger.Verbosef("%s complete upload file error: %s\n", userId, err)
+			return 0, err
+		}
+
+		// remove cache
+		p.deleteOneFileUploadStreamCache(userId, pathStr)
+		p.deleteOneFilePathCache(pathStr)
+		p.deleteOneFilesDirectoriesListCache(path.Dir(pathStr))
+	}
+
+	return uploadCount, nil
 }
