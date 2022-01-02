@@ -21,7 +21,6 @@ import (
 )
 
 type FileDownloadStream struct {
-	fileUrl string
 	readOffset  int64
 	resp *http.Response
 	timestamp int64
@@ -48,6 +47,7 @@ type FileUploadStream struct {
 type PanClientProxy struct {
 	PanUser *config.PanUser
 	PanDriveId string
+	PanTransferUrlType int
 
 	mutex sync.Mutex
 
@@ -83,6 +83,26 @@ func formatPathStyle(pathStr string) string {
 	pathStr = strings.ReplaceAll(pathStr, "\\", "/")
 	pathStr = strings.TrimSuffix(pathStr, "/")
 	return pathStr
+}
+
+// getDownloadFileUrl 获取文件下载URL
+func (p *PanClientProxy) getFileDownloadUrl(urlResult *aliyunpan.GetFileDownloadUrlResult) string {
+	if urlResult == nil {
+		return ""
+	}
+
+	if p.PanTransferUrlType == 2 { // 阿里ECS内网链接
+		return urlResult.InternalUrl
+	}
+	return urlResult.Url
+}
+
+// getFileUploadUrl 获取文件上传URL
+func (p *PanClientProxy) getFileUploadUrl(urlResult aliyunpan.FileUploadPartInfoResult) string {
+	if p.PanTransferUrlType == 2 { // 阿里ECS内网链接
+		return urlResult.InternalUploadURL
+	}
+	return urlResult.UploadURL
 }
 
 // DeleteCache 删除含有 dirs 的缓存
@@ -232,7 +252,7 @@ func (p *PanClientProxy) cacheFileDownloadStream(sessionId, fileId string, offse
 		// set to no timeout
 		client.Timeout = 0
 		apierr := p.PanUser.PanClient().DownloadFileData(
-			urlResult.Url,
+			p.getFileDownloadUrl(urlResult),
 			aliyunpan.FileDownloadRange{
 				Offset: offset,
 				End:    0,
@@ -660,7 +680,7 @@ func (p *PanClientProxy) UploadFilePart(userId, pathStr string, offset int64, bu
 				Reader: uploadChunk,
 				ChunkSize: uploadChunk.Size(),
 			}
-			e := p.PanUser.PanClient().UploadDataChunk(uploadPartInfo.UploadURL, cd)
+			e := p.PanUser.PanClient().UploadDataChunk(p.getFileUploadUrl(uploadPartInfo), cd)
 			if e != nil {
 				// upload error
 				// TODO: handle error, retry upload

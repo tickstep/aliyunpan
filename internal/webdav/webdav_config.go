@@ -22,7 +22,8 @@ type WebdavConfig struct {
 	PanUserId string `json:"panUserId"`
 	PanDriveId string `json:"panDriveId"`
 	PanUser     *config.PanUser `json:"-"`
-	UploadChunkSize int `json:"uploadChunkSize"`
+	UploadChunkSize int `json:"uploadChunkSize"` // 上传文件分片数据块大小，该数值不能太小，建议大于等于512KB
+	TransferUrlType  int `json:"transferUrlType"`   // 上传/下载URL类别，1-默认，2-阿里云ECS
 
 	Address string `json:"address"`
 	Port       int `json:"port"`
@@ -56,6 +57,7 @@ func (w *WebdavConfig) StartServer() {
 					panClientProxy: &PanClientProxy{
 						PanUser:    w.PanUser,
 						PanDriveId: w.PanDriveId,
+						PanTransferUrlType: w.TransferUrlType,
 					},
 					fileInfo:        wdfi,
 					uploadChunkSize: w.UploadChunkSize,
