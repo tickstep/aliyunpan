@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
-	"github.com/tickstep/aliyunpan/internal/webdav"
 	"os"
 	"path"
 	"path/filepath"
@@ -460,6 +459,9 @@ func main() {
 		// 导入文件 import
 		//command.CmdImport(),
 
+		// webdav服务
+		command.CmdWebdav(),
+
 		// 回收站
 		command.CmdRecycle(),
 
@@ -528,26 +530,9 @@ func main() {
 			Category:    "debug",
 			Before:      cmder.ReloadConfigFunc,
 			Action: func(c *cli.Context) error {
-				os.Setenv(config.EnvVerbose, c.String("verbose"))
+				os.Setenv(config.EnvVerbose, "1")
+				logger.IsVerbose = true
 				fmt.Println("显示调试日志", logger.IsVerbose)
-
-				//user := config.Config.ActiveUser()
-				//fdl,_ := user.CacheFilesDirectoriesList("/tmp")
-				//fmt.Println(fdl)
-
-				// webdav
-				webdav := &webdav.WebdavConfig{
-					PanUserId: "",
-					Address:   "0.0.0.0",
-					Port:      23077,
-					Prefix:    "/",
-					Users:     []webdav.WebdavUser{{
-						Username: "admin",
-						Password: "admin",
-						Scope:    "D:/smb/feny/pyprojects/comic",
-					}},
-				}
-				webdav.StartServer()
 				return nil
 			},
 			Flags: []cli.Flag{

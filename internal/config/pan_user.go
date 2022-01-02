@@ -30,6 +30,15 @@ type DriveInfo struct {
 }
 type DriveInfoList []*DriveInfo
 
+func (d DriveInfoList) GetFileDriveId() string {
+	for _,drive := range d {
+		if drive.DriveTag == "File" {
+			return drive.DriveId
+		}
+	}
+	return ""
+}
+
 type PanUser struct {
 	UserId      string `json:"userId"`
 	Nickname string `json:"nickname"`
