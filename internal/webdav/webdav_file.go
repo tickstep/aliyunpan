@@ -53,7 +53,11 @@ func sliceClean(name string) string {
 // formatAbsoluteName 将name名称更改为绝对路径
 func (d WebDavDir) formatAbsoluteName(pathStr string) string {
 	if strings.Index(pathStr, "/") != 0 {
-		pathStr = d.fileInfo.fullPath + "/" + pathStr
+		if d.fileInfo.fullPath != "/" {
+			pathStr = d.fileInfo.fullPath + "/" + pathStr
+		} else {
+			pathStr = d.fileInfo.fullPath + pathStr
+		}
 	}
 	return pathStr
 }

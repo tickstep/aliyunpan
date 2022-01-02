@@ -81,7 +81,9 @@ const FileUploadExpiredMinute = 1440 // 24小时
 
 func formatPathStyle(pathStr string) string {
 	pathStr = strings.ReplaceAll(pathStr, "\\", "/")
-	pathStr = strings.TrimSuffix(pathStr, "/")
+	if pathStr != "/" {
+		pathStr = strings.TrimSuffix(pathStr, "/")
+	}
 	return pathStr
 }
 

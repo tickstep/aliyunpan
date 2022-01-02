@@ -43,6 +43,11 @@ func (w *WebdavConfig) StartServer() {
 		if wdfi.fullPath != "/" && strings.Index(wdfi.fullPath, "/") != 0 {
 			wdfi.fullPath = "/" + wdfi.fullPath
 		}
+		panClientProxy := &PanClientProxy{
+			PanUser:    w.PanUser,
+			PanDriveId: w.PanDriveId,
+			PanTransferUrlType: w.TransferUrlType,
+		}
 		users[u.Username] = &User{
 			Username: u.Username,
 			Password: u.Password,
@@ -54,17 +59,15 @@ func (w *WebdavConfig) StartServer() {
 				FileSystem: WebDavDir{
 					Dir:     webdav.Dir(u.Scope),
 					NoSniff: false,
-					panClientProxy: &PanClientProxy{
-						PanUser:    w.PanUser,
-						PanDriveId: w.PanDriveId,
-						PanTransferUrlType: w.TransferUrlType,
-					},
+					panClientProxy: panClientProxy,
 					fileInfo:        wdfi,
 					uploadChunkSize: w.UploadChunkSize,
 				},
 				LockSystem: webdav.NewMemLS(),
 			},
 		}
+		// load & cache root folder info
+		_, _ = panClientProxy.FileListGetAll(u.Scope)
 	}
 	cfg := &Config{
 		Auth:      true,
