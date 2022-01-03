@@ -63,6 +63,8 @@ github.com/tickstep/aliyunpan-api v0.0.2 h1:aXChXeb1vmpINqV2qf60Bi3SGKgZPdmV7D8E
 github.com/tickstep/aliyunpan-api v0.0.2/go.mod h1:EdciagdVeAHfqvzStVEVp1UVtySaq1DFd5RSucDfKWY=
 github.com/tickstep/aliyunpan-api v0.0.3 h1:DBxRIjRUuebIjAgAPtS7rYZ4tafzOEF6J2949V2FeDY=
 github.com/tickstep/aliyunpan-api v0.0.3/go.mod h1:EdciagdVeAHfqvzStVEVp1UVtySaq1DFd5RSucDfKWY=
+github.com/tickstep/aliyunpan-api v0.0.4 h1:+ct8x6F6vpkezi3EMLb8zDBoWdQBA+BFuzWiYWf8q1s=
+github.com/tickstep/aliyunpan-api v0.0.4/go.mod h1:EdciagdVeAHfqvzStVEVp1UVtySaq1DFd5RSucDfKWY=
 github.com/tickstep/bolt v1.3.3 h1:3abb88T5JJocnBlYTJE3EqKvwWV6+D/JZD2Fsdt1QHI=
 github.com/tickstep/bolt v1.3.3/go.mod h1:Y24RwCywbOsKAyHiVcJ4K2QQfED+q67x7PEOH9OG7Q4=
 github.com/tickstep/cloudpan189-api v0.0.3 h1:L8woe6XSUjQOsa7XRC7zH8VZj8SNKo/1qQb1k2ttLkU=
