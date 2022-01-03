@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  webdav:
+    image: tickstep/aliyunpan-webdav:v0.0.6
+    container_name: aliyunpan-webdav
+    restart: always
+    ports:
+      - 23077:23077
+    environment:
+      - TZ=Asia/Shanghai
+      # refresh token
+      - ALIYUNPAN_REFRESH_TOKEN=b9123...13e66a1
+      # webdav 登录用户名
+      - ALIYUNPAN_AUTH_USER=admin
+      # webdav 登录密码
+      - ALIYUNPAN_AUTH_PASSWORD=admin
+      # 指定网盘文件夹作为webdav服务根目录
+      - ALIYUNPAN_PAN_DIR=/
+      # 上传下载链接类型：1-默认 2-阿里ECS环境
+      - ALIYUNPAN_TRANSFER_URL_TYPE=1
+      # 上传数据块大小，单位为KB，默认为1024KB，建议范围512KB~2048KB
+      - ALIYUNPAN_BLOCK_SIZE=1024
+
+
+
+
+
