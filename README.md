@@ -750,7 +750,8 @@ Windows
 ![](./assets/images/debug-log-screenshot.png)
 
 ## 3 解决 missing Location in call to Date 问题
-golang中的time.LoadLocation()依赖于 IANA Time Zone Database，一般linux系统都带了，但是有部分系统没有带有这个数据文件则出现该问题。   
+在使用webdav文件服务的过程中可能会出现该问题。   
+原因是golang中的time.LoadLocation()依赖于 IANA Time Zone Database，一般linux系统都带了，但是有部分系统没有带有这个数据文件则出现该问题。   
 解决方法：
 1. 下载文件 ./assets/binary/tzdata.zip 文件并保存到系统中，记下保存的文件路径
 2. 设置环境变量 ZONEINFO 
