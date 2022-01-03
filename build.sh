@@ -70,6 +70,8 @@ Pack() {
   fi
 
   cp README.md "$output/$1"
+  cp webdav.sh "$output/$1"
+  cp webdav.bat "$output/$1"
 
   cd $output
   zip -q -r "$1.zip" "$1"

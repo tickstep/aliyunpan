@@ -1,5 +1,17 @@
 # 关于
-阿里云盘CLI。仿 Linux shell 文件处理命令的阿里云盘命令行客户端。
+阿里云盘CLI。仿 Linux shell 文件处理命令的阿里云盘命令行客户端，支持webdav文件协议。
+
+# 特色
+1. 多平台支持, 支持 Windows, macOS, linux(x86/x64/arm), android, iOS 等
+2. 阿里云盘多用户支持
+3. 支持文件网盘，相册网盘无缝切换
+4. ~~支持导入/导出功能，快速备份（导出）和恢复（导入）网盘的文件~~
+5. [下载](#下载文件目录)网盘内文件, 支持多个文件或目录下载, 支持断点续传和单文件并行下载
+6. [上传](#上传文件目录)本地文件, 支持多个文件或目录上传，支持排除指定文件夹/文件（正则表达式）功能
+7. [备份本地文件](#备份本地文件目录)支持备份本地文件夹到网盘中，保持本地文件和网盘文件同步。常用于嵌入式或者NAS等设备。
+8. 命令和文件路径输入支持Tab键自动补全
+9. 支持阿里云ECS环境下使用内网链接上传/下载，速度更快，还可以节省公网带宽流量(配置transfer_url_type=2即可)
+10. 支持webdav文件协议，可以将阿里云盘当做webdav文件网盘挂载到Windows, macOS, linux的磁盘中进行使用。webdav部署支持docker镜像，镜像只有不到10MB非常小巧。
 
 # 重要提示
 ***由于阿里上传接口更改，目前上传文件需要原始文件的片段信息，故之前的"手动秒传"，"导入"，"导出"，"秒传链接分享"功能全部无法使用。新版本暂时屏蔽了该功能，请知悉。***
@@ -54,24 +66,18 @@
     + [列出已分享文件/目录](#列出已分享文件目录)
     + [取消分享文件/目录](#取消分享文件目录)
     + [分享秒传链接](#分享秒传链接)
+  * [webdav文件服务](#webdav文件服务)   
+    + [常用命令说明](#常用命令说明)
+    + [命令行启动](#命令行启动)
+    + [Linux后台启动](#Linux后台启动)
+    + [Docker运行](#Docker运行)
+    + [HTTPS配置](#HTTPS配置)
   * [显示和修改程序配置项](#显示和修改程序配置项)
 - [常见问题Q&A](#常见问题Q&A)  
   * [1. 如何获取RefreshToken](#1-如何获取RefreshToken)
   * [2. 如何开启Debug调试日志](#1-如何开启Debug调试日志)
 - [交流反馈](#交流反馈)
 - [鸣谢](#鸣谢)
-
-
-# 特色
-1. 多平台支持, 支持 Windows, macOS, linux(x86/x64/arm), android, iOS 等
-2. 阿里云盘多用户支持
-3. 支持文件网盘，相册网盘无缝切换
-4. ~~支持导入/导出功能，快速备份（导出）和恢复（导入）网盘的文件~~
-5. [下载](#下载文件目录)网盘内文件, 支持多个文件或目录下载, 支持断点续传和单文件并行下载
-6. [上传](#上传文件目录)本地文件, 支持多个文件或目录上传，支持排除指定文件夹/文件（正则表达式）功能
-7. [备份本地文件](#备份本地文件目录)支持备份本地文件夹到网盘中，保持本地文件和网盘文件同步。常用于嵌入式或者NAS等设备。
-8. 命令和文件路径输入支持Tab键自动补全
-9. 支持阿里云ECS环境下使用内网链接上传/下载，速度更快，还可以节省公网带宽流量(配置transfer_url_type=2即可)
 
 # 下载/运行说明
 
@@ -539,6 +545,151 @@ aliyunpan share mc -hp 1.mp4
 
 # 创建文件夹 share_folder 下面所有文件的秒传链接
 aliyunpan share mc share_folder/
+```
+
+
+## webdav文件服务
+本文命令可以让阿里云盘变身为webdav协议的文件服务器。这样你可以把阿里云盘挂载为Windows、Linux、Mac系统的磁盘，可以通过NAS系统做文件管理或文件同步等等。
+当把阿里云盘作为webdav文件服务器进行使用的时候，上传文件是不支持秒传的，所以当你挂载为网络磁盘使用的时候，不建议在webdav挂载目录中上传、下载过大的文件，不然体验会非常差。
+建议作为文档，图片等小文件的同步网盘。   
+效果图如下所示：   
+![](./assets/images/webdav-screenshot.png)
+
+### 常用命令说明
+```
+查看webdav说明
+aliyunpan webdav
+
+查看webdav如何启动说明
+aliyunpan webdav start -h
+
+使用默认配置启动webdav服务。
+aliyunpan webdav start
+
+启动webdav服务，并配置IP为127.0.0.1，端口为23077，登录用户名为admin，登录密码为admin123，网盘目录 /webdav_folder 作为服务的根目录
+aliyunpan webdav start -ip "127.0.0.1" -port 23077 -webdav_user "admin" -webdav_password "admin123" -pan_dir_path "/webdav_folder"
+
+正常启动后会打印出webdav链接参数，然后使用支持webdav的客户端填入下面对应的参数进行链接即可
+----------------------------------------
+webdav网盘信息：
+链接：http://localhost:23077
+用户名：admin
+密码：admin123
+网盘服务目录：/webdav_folder
+----------------------------------------
+```
+
+### 命令行启动
+需要先进行登录。然后使用以下命令运行即可，该命令是阻塞的不会退出，除非停止webdav服务。
+
+```
+./aliyunpan webdav start -port 23077 -webdav_user "admin" -webdav_password "admin123" -pan_dir_path "/webdav_folder"
+
+参数说明
+port：绑定端口
+webdav_user： webdav客户端登录用户名
+webdav_password： webdav客户端登录密码
+pan_dir_path：指定webdav使用那个阿里云盘目录作为服务根目录
+```
+
+### Linux后台启动
+建议结合nohup进行启动。
+
+先创建webdav.sh脚本，内容如下
+```
+# 请更改成你自己的目录
+cd /path/to/aliyunpan/folder
+
+chmod +x ./aliyunpan
+
+# 指定refresh token用于登录
+./aliyunpan login -RefreshToken=9078907....adg9087
+
+# 上传下载链接类型：1-默认 2-阿里ECS环境
+./aliyunpan config set -transfer_url_type 1
+
+# 指定webdav启动参数并进行启动
+./aliyunpan webdav start -ip "0.0.0.0" -port 23077 -webdav_user "admin" -webdav_password "admin" -pan_dir_path "/" -bs 1024
+```
+
+增加脚本执行权限
+```
+$ chmod +x webdav.sh
+```
+
+然后启动该脚本进行后台运行
+```
+$ nohup ./webdav.sh >/dev/null 2>&1 &
+```
+
+### Docker运行
+详情文档请参考dockerhub网址：[tickstep/aliyunpan-webdav](https://hub.docker.com/r/tickstep/aliyunpan-webdav)
+
+1. 直接运行   
+```
+docker run -d --name=aliyunpan-webdav --restart=always -p 23077:23077 -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_AUTH_USER="admin" -e ALIYUNPAN_AUTH_PASSWORD="admin" -e ALIYUNPAN_PAN_DIR="/" tickstep/aliyunpan-webdav
+
+# ALIYUNPAN_REFRESH_TOKEN RefreshToken
+# ALIYUNPAN_AUTH_USER webdav登录用户名
+# ALIYUNPAN_AUTH_PASSWORD webdav登录密码
+# ALIYUNPAN_PAN_DIR 网盘文件夹的webdav服务根目录
+```
+
+2. docker-compose运行   
+docker-compose.yml 文件如下所示，为了方便说明增加了相关的注释，部署的时候可以去掉注释。
+```
+version: '3'
+services:
+  webdav:
+    image: tickstep/aliyunpan-webdav
+    container_name: aliyunpan-webdav
+    restart: always
+    ports:
+      - 23077:23077
+    environment:
+      - TZ=Asia/Shanghai
+      # refresh token用于登录
+      - ALIYUNPAN_REFRESH_TOKEN=b9123...13e66a1
+      # webdav 登录用户名
+      - ALIYUNPAN_AUTH_USER=admin
+      # webdav 登录密码
+      - ALIYUNPAN_AUTH_PASSWORD=admin
+      # 指定网盘文件夹作为webdav服务根目录
+      - ALIYUNPAN_PAN_DIR=/
+      # 上传下载链接类型：1-默认 2-阿里ECS环境
+      - ALIYUNPAN_TRANSFER_URL_TYPE=1
+      # 上传数据块大小，单位为KB，默认为1024KB，建议范围512KB~2048KB
+      - ALIYUNPAN_BLOCK_SIZE=1024
+```
+
+### HTTPS配置
+建议使用nginx进行https的配置。样例如下：
+```
+server {
+       listen 443;
+       server_name your.host.com;
+       ssl on;
+       root html;
+       index index.html index.htm;
+       ssl_certificate /path/to/your/file.pem;
+       ssl_certificate_key /path/to/your/file.key;
+
+       ssl_session_timeout 5m;
+       ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+       ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+       ssl_prefer_server_ciphers on;
+
+       # webdav server
+       location /{
+          root html;
+          proxy_pass http://127.0.0.1:23077;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header REMOTE-HOST $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header Host $http_host;
+          proxy_redirect off;
+        }
+   }
 ```
 
 
