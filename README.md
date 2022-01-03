@@ -75,7 +75,8 @@
   * [显示和修改程序配置项](#显示和修改程序配置项)
 - [常见问题Q&A](#常见问题Q&A)  
   * [1. 如何获取RefreshToken](#1-如何获取RefreshToken)
-  * [2. 如何开启Debug调试日志](#1-如何开启Debug调试日志)
+  * [2. 如何开启Debug调试日志](#2-如何开启Debug调试日志)
+  * [3. 解决 time: missing Location in call to Date 问题](#2-解决-missing-Location-in-call-to-Date-问题)
 - [交流反馈](#交流反馈)
 - [鸣谢](#鸣谢)
 
@@ -748,6 +749,15 @@ Windows
 打开aliyunpan命令行程序，任何云盘命令都有类似如下日志输出
 ![](./assets/images/debug-log-screenshot.png)
 
+## 3 解决 missing Location in call to Date 问题
+golang中的time.LoadLocation()依赖于 IANA Time Zone Database，一般linux系统都带了，但是有部分系统没有带有这个数据文件则出现该问题。   
+解决方法：
+1. 下载文件 ./assets/binary/tzdata.zip 文件并保存到系统中，记下保存的文件路径
+2. 设置环境变量 ZONEINFO 
+```
+export ZONEINFO=/path/to/tzdata.zip
+```
+然后启动aliyunpan服务即可
 
 # 交流反馈
 
