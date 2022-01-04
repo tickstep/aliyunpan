@@ -110,7 +110,7 @@ func (d WebDavDir) OpenFile(ctx context.Context, name string, flag int, perm os.
 	if name = d.resolve(name); name == "" {
 		return nil, os.ErrNotExist
 	}
-	name = d.formatAbsoluteName(d.formatAbsoluteName(name))
+	name = d.formatAbsoluteName(name)
 
 	//logger.Verbosef("OpenFile file %s flag:\n O_RDONLY=%t\n O_WRONLY=%t\n O_RDWR=%t\n O_APPEND=%t\n O_CREATE=%t\n O_EXCL=%t\n O_SYNC=%t\n O_TRUNC=%t\n",
 	//	name,
@@ -132,12 +132,14 @@ func (d WebDavDir) OpenFile(ctx context.Context, name string, flag int, perm os.
 		// doesn't support these flags
 		return nil, os.ErrInvalid
 	}
+
+	fileSize := d.getContentLength(ctx)
 	if flag&os.O_CREATE != 0 {
 		if flag&os.O_EXCL != 0 {
 			return nil, os.ErrExist
 		}
 		// create file instance for writing
-		_, e := d.panClientProxy.UploadFilePrepare(d.getUserId(ctx), name, d.getContentLength(ctx), int64(d.uploadChunkSize))
+		_, e := d.panClientProxy.UploadFilePrepare(d.getUserId(ctx), name, fileSize, int64(d.uploadChunkSize))
 		if e != nil {
 			return nil, e
 		}
@@ -150,6 +152,13 @@ func (d WebDavDir) OpenFile(ctx context.Context, name string, flag int, perm os.
 		if err2 != nil {
 			return nil, err2
 		}
+
+		// check zero-file or not
+		if fileSize == 0 {
+			// zero file, upload and completely
+			d.panClientProxy.UploadFilePart(d.getUserId(ctx), name, 0, []byte{})
+		}
+
 		return &WebDavFile{
 			panClientProxy:   d.panClientProxy,
 			nameSnapshot:     WebDavFileInfo{

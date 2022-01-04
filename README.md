@@ -76,7 +76,7 @@
 - [常见问题Q&A](#常见问题Q&A)  
   * [1. 如何获取RefreshToken](#1-如何获取RefreshToken)
   * [2. 如何开启Debug调试日志](#2-如何开启Debug调试日志)
-  * [3. 解决 time: missing Location in call to Date 问题](#2-解决-missing-Location-in-call-to-Date-问题)
+  * [3. 解决 time: missing Location in call to Date 问题](#3-解决-missing-Location-in-call-to-Date-问题)
 - [交流反馈](#交流反馈)
 - [鸣谢](#鸣谢)
 
