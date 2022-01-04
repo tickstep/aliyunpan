@@ -335,7 +335,7 @@ func (p *PanClientProxy) cacheFileUploadStream(userId, pathStr string, fileSize 
 		if apierr != nil {
 			if apierr.Code == apierror.ApiCodeFileNotFoundCode {
 				// file not existed
-				logger.Verbosef("%s 没有存在同名文件，直接上传: %s", userId, pathStr)
+				logger.Verbosef("%s 没有存在同名文件，直接上传: %s\n", userId, pathStr)
 			} else {
 				// TODO: handle error
 				return nil
@@ -347,11 +347,11 @@ func (p *PanClientProxy) cacheFileUploadStream(userId, pathStr string, fileSize 
 				var err *apierror.ApiError
 				fileDeleteResult, err = p.PanUser.PanClient().FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId:efi.DriveId, FileId:efi.FileId}})
 				if err != nil || len(fileDeleteResult) == 0 {
-					logger.Verbosef("%s 同名无法删除文件，请稍后重试: %s", userId, pathStr)
+					logger.Verbosef("%s 同名无法删除文件，请稍后重试: %s\n", userId, pathStr)
 					return nil
 				}
 				time.Sleep(time.Duration(500) * time.Millisecond)
-				logger.Verbosef("%s 检测到同名文件，已移动到回收站: %s", userId, pathStr)
+				logger.Verbosef("%s 检测到同名文件，已移动到回收站: %s\n", userId, pathStr)
 
 				// clear cache
 				p.deleteOneFilePathCache(pathStr)
@@ -375,11 +375,11 @@ func (p *PanClientProxy) cacheFileUploadStream(userId, pathStr string, fileSize 
 
 		uploadOpEntity, apierr := p.PanUser.PanClient().CreateUploadFile(appCreateUploadFileParam)
 		if apierr != nil {
-			logger.Verbosef("%s 创建上传任务失败: %s", userId, pathStr)
+			logger.Verbosef("%s 创建上传任务失败: %s\n", userId, pathStr)
 			return nil
 		}
 
-		logger.Verbosef("%s create new upload cache for path = %s", userId, pathStr)
+		logger.Verbosef("%s create new upload cache for path = %s\n", userId, pathStr)
 		return expires.NewDataExpires(&FileUploadStream{
 			createFileUploadResult: uploadOpEntity,
 			filePath:               pathStr,
