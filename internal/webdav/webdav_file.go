@@ -363,7 +363,8 @@ type WebDavFileInfo struct {
 }
 
 func NewWebDavFileInfo(fileItem *aliyunpan.FileEntity) WebDavFileInfo  {
-	var LOC, _ = time.LoadLocation("Asia/Shanghai")
+	//var LOC, _ = time.LoadLocation("Asia/Shanghai")
+	LOC := time.FixedZone("CST", 8*3600) // 东8区
 	t,_ := time.ParseInLocation("2006-01-02 15:04:05", fileItem.UpdatedAt, LOC)
 	fm := os.FileMode(0)
 	if fileItem.IsFolder() {
