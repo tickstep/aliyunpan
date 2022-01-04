@@ -96,7 +96,7 @@ func (d WebDavDir) resolve(name string) string {
 	if dir == "" {
 		dir = "."
 	}
-	return filepath.Join(dir, filepath.FromSlash(sliceClean(name)))
+	return formatPathStyle(filepath.Join(dir, filepath.FromSlash(sliceClean(name))))
 }
 
 func (d WebDavDir) Mkdir(ctx context.Context, name string, perm os.FileMode) error {

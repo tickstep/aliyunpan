@@ -15,7 +15,6 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -79,13 +78,6 @@ const FileDownloadUrlExpiredSeconds = 14400
 // FileUploadExpiredMinute 文件上传过期时间
 const FileUploadExpiredMinute = 1440 // 24小时
 
-func formatPathStyle(pathStr string) string {
-	pathStr = strings.ReplaceAll(pathStr, "\\", "/")
-	if pathStr != "/" {
-		pathStr = strings.TrimSuffix(pathStr, "/")
-	}
-	return pathStr
-}
 
 // getDownloadFileUrl 获取文件下载URL
 func (p *PanClientProxy) getFileDownloadUrl(urlResult *aliyunpan.GetFileDownloadUrlResult) string {

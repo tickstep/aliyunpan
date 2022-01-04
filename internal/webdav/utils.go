@@ -23,3 +23,11 @@ func isAllowedHost(allowedHosts []string, origin string) bool {
 	}
 	return false
 }
+
+func formatPathStyle(pathStr string) string {
+	pathStr = strings.ReplaceAll(pathStr, "\\", "/")
+	if pathStr != "/" {
+		pathStr = strings.TrimSuffix(pathStr, "/")
+	}
+	return pathStr
+}
