@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
+	"os"
 	"strconv"
 )
 
@@ -125,7 +126,7 @@ func CmdWho() cli.Command {
 		Action: func(c *cli.Context) error {
 			if config.Config.ActiveUser() == nil {
 				fmt.Println("未登录账号")
-				return nil
+				os.Exit(1)
 			}
 			activeUser := config.Config.ActiveUser()
 			cloudName := activeUser.GetDriveById(activeUser.ActiveDriveId).DriveName
