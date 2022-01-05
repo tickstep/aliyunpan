@@ -11,6 +11,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -26,7 +27,7 @@ type FileDownloadStream struct {
 }
 
 type FileUploadStream struct {
-	createFileUploadResult *aliyunpan.CreateFileUploadResult
+	fileUploadInfoEntity *aliyunpan.CreateFileUploadResult
 
 	filePath string
 	fileSize int64
@@ -75,7 +76,7 @@ const CacheExpiredMinute = 60
 // FileDownloadUrlExpiredSeconds 文件下载URL过期时间
 const FileDownloadUrlExpiredSeconds = 14400
 
-// FileUploadExpiredMinute 文件上传过期时间
+// FileUploadExpiredMinute 文件上传数据流过期时间
 const FileUploadExpiredMinute = 1440 // 24小时
 
 
@@ -381,16 +382,16 @@ func (p *PanClientProxy) cacheFileUploadStream(userId, pathStr string, fileSize 
 
 		logger.Verbosef("%s create new upload cache for path = %s\n", userId, pathStr)
 		return expires.NewDataExpires(&FileUploadStream{
-			createFileUploadResult: uploadOpEntity,
-			filePath:               pathStr,
-			fileSize:               fileSize,
-			fileId:                 uploadOpEntity.FileId,
-			fileWritePos:           0,
-			fileUploadUrlIndex:     0,
-			chunkBuffer:            make([]byte, chunkSize, chunkSize),
-			chunkPos:               0,
-			chunkSize:              chunkSize,
-			timestamp:              time.Now().Unix(),
+			fileUploadInfoEntity: uploadOpEntity,
+			filePath:             pathStr,
+			fileSize:             fileSize,
+			fileId:               uploadOpEntity.FileId,
+			fileWritePos:         0,
+			fileUploadUrlIndex:   0,
+			chunkBuffer:          make([]byte, chunkSize, chunkSize),
+			chunkPos:             0,
+			chunkSize:            chunkSize,
+			timestamp:            time.Now().Unix(),
 		}, FileUploadExpiredMinute*time.Minute)
 	})
 
@@ -624,7 +625,7 @@ func (p *PanClientProxy) needToUploadChunk(fus *FileUploadStream) bool {
 	}
 
 	// maybe the final part
-	if fus.fileUploadUrlIndex == (len(fus.createFileUploadResult.PartInfoList)-1) {
+	if fus.fileUploadUrlIndex == (len(fus.fileUploadInfoEntity.PartInfoList)-1) {
 		finalPartSize := fus.fileSize % fus.chunkSize
 		if finalPartSize == 0 {
 			finalPartSize = fus.chunkSize
@@ -632,6 +633,22 @@ func (p *PanClientProxy) needToUploadChunk(fus *FileUploadStream) bool {
 		if fus.chunkPos == finalPartSize {
 			return true
 		}
+	}
+	return false
+}
+
+
+// isUrlExpired 上传链接是否已过期。过期返回True
+func (p *PanClientProxy) isUrlExpired(urlStr string) bool {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return true
+	}
+	expiredTimeSecStr := u.Query().Get("x-oss-expires")
+	expiredTimeSec,_ := strconv.ParseInt(expiredTimeSecStr, 10, 64)
+	if (time.Now().Unix() - 10) >= expiredTimeSec {
+		// expired
+		return true
 	}
 	return false
 }
@@ -666,15 +683,39 @@ func (p *PanClientProxy) UploadFilePart(userId, pathStr string, offset int64, bu
 				copy(uploadBuffer, fus.chunkBuffer)
 			}
 			uploadChunk := bytes.NewReader(uploadBuffer)
-			if fus.fileUploadUrlIndex >= len(fus.createFileUploadResult.PartInfoList) {
+			if fus.fileUploadUrlIndex >= len(fus.fileUploadInfoEntity.PartInfoList) {
 				return uploadCount, fmt.Errorf("upload file uploading status mismatch")
 			}
-			uploadPartInfo := fus.createFileUploadResult.PartInfoList[fus.fileUploadUrlIndex]
+			uploadPartInfo := fus.fileUploadInfoEntity.PartInfoList[fus.fileUploadUrlIndex]
 			cd := &aliyunpan.FileUploadChunkData{
 				Reader: uploadChunk,
 				ChunkSize: uploadChunk.Size(),
 			}
-			e := p.PanUser.PanClient().UploadDataChunk(p.getFileUploadUrl(uploadPartInfo), cd)
+			urlStr := p.getFileUploadUrl(uploadPartInfo)
+			if p.isUrlExpired(urlStr) {
+				// get renew upload url
+				infoList := make([]aliyunpan.FileUploadPartInfoParam, len(fus.fileUploadInfoEntity.PartInfoList))
+				for _,item := range fus.fileUploadInfoEntity.PartInfoList {
+					infoList = append(infoList, aliyunpan.FileUploadPartInfoParam{
+						PartNumber: item.PartNumber,
+					})
+				}
+				refreshUploadParam := &aliyunpan.GetUploadUrlParam{
+					DriveId:      fus.fileUploadInfoEntity.DriveId,
+					FileId:       fus.fileUploadInfoEntity.FileId,
+					PartInfoList: infoList,
+					UploadId:     fus.fileUploadInfoEntity.UploadId,
+				}
+				newUploadInfo, err := p.PanUser.PanClient().GetUploadUrl(refreshUploadParam)
+				if err != nil {
+					return 0, err
+				}
+				fus.fileUploadInfoEntity.PartInfoList = newUploadInfo.PartInfoList
+
+				// use new upload url
+				urlStr = p.getFileUploadUrl(fus.fileUploadInfoEntity.PartInfoList[fus.fileUploadUrlIndex])
+			}
+			e := p.PanUser.PanClient().UploadDataChunk(urlStr, cd)
 			if e != nil {
 				// upload error
 				// TODO: handle error, retry upload
@@ -693,7 +734,7 @@ func (p *PanClientProxy) UploadFilePart(userId, pathStr string, offset int64, bu
 		cufr,err := p.PanUser.PanClient().CompleteUploadFile(&aliyunpan.CompleteUploadFileParam{
 			DriveId: p.PanDriveId,
 			FileId: fus.fileId,
-			UploadId: fus.createFileUploadResult.UploadId,
+			UploadId: fus.fileUploadInfoEntity.UploadId,
 		})
 		logger.Verbosef("%s complete upload file: %+v\n", userId, cufr)
 
