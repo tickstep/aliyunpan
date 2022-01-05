@@ -47,7 +47,7 @@ const (
 
 var (
 	// Version 版本号
-	Version = "v0.0.8"
+	Version = "v0.0.9"
 
 	historyFilePath = filepath.Join(config.GetConfigDir(), "aliyunpan_command_history.txt")
 
