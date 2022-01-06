@@ -21,6 +21,7 @@ import (
 	"github.com/tickstep/library-go/crypto"
 	"github.com/tickstep/library-go/ids"
 	"github.com/tickstep/library-go/logger"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -104,4 +105,19 @@ func DecryptString(text string) string {
 		return text
 	}
 	return string(r)
+}
+
+// isFolderExist 判断文件夹是否存在
+func IsFolderExist(pathStr string) bool {
+	fi, err := os.Stat(pathStr)
+	if err != nil {
+		if os.IsExist(err) {
+			return fi.IsDir()
+		}
+		if os.IsNotExist(err) {
+			return false
+		}
+		return false
+	}
+	return fi.IsDir()
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil/jsonhelper"
+	"github.com/tickstep/aliyunpan/library/homedir"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"os"
@@ -250,16 +251,45 @@ func (c *PanConfig) initDefaultConfig() {
 
 // GetConfigDir 获取配置路径
 func GetConfigDir() string {
-	// 从环境变量读取
+	// 按照以下顺序依次获取配置目录
+	// 1.环境变量ALIYUNPAN_CONFIG_DIR => 2. /etc/aliyunpan/ => 3. ~/.aliyunpan/ => 4.当前程序目录
+
+	// 1. 从环境变量读取
 	configDir, ok := os.LookupEnv(EnvConfigDir)
 	if ok {
 		if filepath.IsAbs(configDir) {
+			logger.Verboseln("use config dir from ALIYUNPAN_CONFIG_DIR env: ", configDir)
 			return configDir
 		}
 		// 如果不是绝对路径, 从程序目录寻找
-		return cmdutil.ExecutablePathJoin(configDir)
+		configDir = cmdutil.ExecutablePathJoin(configDir)
+		logger.Verboseln("use config dir from ALIYUNPAN_CONFIG_DIR env: ", configDir)
+	} else {
+		// 2. /etc/aliyunpan/
+		if runtime.GOOS == "linux" {
+			cd := "/etc/aliyunpan"
+			if IsFolderExist(cd) {
+				logger.Verboseln("use config dir: ", cd)
+				return cd
+			}
+		}
+
+		// 3. ~/.aliyunpan/
+		if runtime.GOOS == "linux" || runtime.GOOS == "windows" {
+			cd,er := homedir.Expand("~/.aliyunpan")
+			if er == nil {
+				if IsFolderExist(cd) {
+					logger.Verboseln("use config dir: ", cd)
+					return cd
+				}
+			}
+		}
 	}
-	return cmdutil.ExecutablePathJoin(configDir)
+
+	// 4.当前程序所在目录
+	configDir = cmdutil.ExecutablePathJoin(configDir)
+	logger.Verboseln("use config dir: ", configDir)
+	return configDir
 }
 
 func (c *PanConfig) ActiveUser() *PanUser {
