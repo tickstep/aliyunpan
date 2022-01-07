@@ -17,6 +17,9 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
+	"net/url"
+	"strconv"
+	"time"
 )
 
 const (
@@ -40,4 +43,20 @@ func getBlockSize(fileSize int64) int64 {
 		return fileSize/999 + 1
 	}
 	return MinUploadBlockSize
+}
+
+
+// isUrlExpired 上传链接是否已过期。过期返回True
+func isUrlExpired(urlStr string) bool {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return true
+	}
+	expiredTimeSecStr := u.Query().Get("x-oss-expires")
+	expiredTimeSec,_ := strconv.ParseInt(expiredTimeSecStr, 10, 64)
+	if (time.Now().Unix() - 10) >= expiredTimeSec {
+		// expired
+		return true
+	}
+	return false
 }

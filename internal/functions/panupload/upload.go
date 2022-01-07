@@ -93,10 +93,40 @@ func (pu *PanUpload) Precreate() (err error) {
 func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int64, partEnd int64, r rio.ReaderLen64) (uploadDone bool, uperr error) {
 	pu.lazyInit()
 
+	// check url expired or not
+	uploadUrl := pu.uploadOpEntity.PartInfoList[partseq].UploadURL
+	if pu.useInternalUrl {
+		uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].InternalUploadURL
+	}
+	if isUrlExpired(uploadUrl) {
+		// get renew upload url
+		infoList := make([]aliyunpan.FileUploadPartInfoParam, len(pu.uploadOpEntity.PartInfoList))
+		for _,item := range pu.uploadOpEntity.PartInfoList {
+			infoList = append(infoList, aliyunpan.FileUploadPartInfoParam{
+				PartNumber: item.PartNumber,
+			})
+		}
+		refreshUploadParam := &aliyunpan.GetUploadUrlParam{
+			DriveId:      pu.uploadOpEntity.DriveId,
+			FileId:       pu.uploadOpEntity.FileId,
+			PartInfoList: infoList,
+			UploadId:     pu.uploadOpEntity.UploadId,
+		}
+		newUploadInfo, err := pu.panClient.GetUploadUrl(refreshUploadParam)
+		if err != nil {
+			return false, &uploader.MultiError{
+				Err: uploadUrlExpired,
+				Terminated: false,
+			}
+		}
+		pu.uploadOpEntity.PartInfoList = newUploadInfo.PartInfoList
+	}
+
 	var respErr *uploader.MultiError
 	uploadFunc := func(httpMethod, fullUrl string, headers map[string]string) (*http.Response, error) {
 		var resp *http.Response
 		var respError error = nil
+		respErr = nil
 
 		// do http upload request
 		client := requester.NewHTTPClient()
@@ -156,7 +186,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 	}
 
 	// 上传一个分片数据
-	uploadUrl := pu.uploadOpEntity.PartInfoList[partseq].UploadURL
+	uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].UploadURL
 	if pu.useInternalUrl {
 		uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].InternalUploadURL
 	}
