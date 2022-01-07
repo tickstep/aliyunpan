@@ -16,6 +16,7 @@ package panupload
 import (
 	"fmt"
 	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/library-go/requester/rio/speeds"
 	"os"
 	"path"
 	"path/filepath"
@@ -67,6 +68,9 @@ type (
 
 		// 是否使用内置链接
 		UseInternalUrl bool
+
+		// 全局速度统计
+		GlobalSpeedsStat  *speeds.Speeds
 	}
 )
 
@@ -155,7 +159,7 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 			Parallel:  utu.Parallel,
 			BlockSize: utu.BlockSize,
 			MaxRate:   config.Config.MaxUploadRate,
-		}, utu.LocalFileChecksum.UploadOpEntity)
+		}, utu.LocalFileChecksum.UploadOpEntity, utu.GlobalSpeedsStat)
 
 	// 设置断点续传
 	if utu.state != nil {
@@ -171,10 +175,11 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 		}
 
 		if utu.ShowProgress {
-			fmt.Printf("\r[%s] ↑ %s/%s %s/s in %s ............", utu.taskInfo.Id(),
+			fmt.Printf("\r[%s] ↑ %s/%s %s/s(%s/s) in %s ............", utu.taskInfo.Id(),
 				converter.ConvertFileSize(status.Uploaded(), 2),
 				converter.ConvertFileSize(status.TotalSize(), 2),
 				converter.ConvertFileSize(status.SpeedsPerSecond(), 2),
+				converter.ConvertFileSize(utu.GlobalSpeedsStat.GetSpeeds(), 2),
 				status.TimeElapsed(),
 			)
 		}

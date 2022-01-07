@@ -50,6 +50,7 @@ type (
 		workers     workerList
 		speedsStat  *speeds.Speeds
 		rateLimit   *speeds.RateLimit
+		globalSpeedsStat  *speeds.Speeds // 全局速度统计
 
 		executeTime             time.Time
 		finished                chan struct{}
@@ -70,12 +71,13 @@ type (
 )
 
 // NewMultiUploader 初始化上传
-func NewMultiUploader(multiUpload MultiUpload, file rio.ReaderAtLen64, config *MultiUploaderConfig, uploadOpEntity *aliyunpan.CreateFileUploadResult) *MultiUploader {
+func NewMultiUploader(multiUpload MultiUpload, file rio.ReaderAtLen64, config *MultiUploaderConfig, uploadOpEntity *aliyunpan.CreateFileUploadResult, globalSpeedsStat  *speeds.Speeds) *MultiUploader {
 	return &MultiUploader{
 		multiUpload: multiUpload,
 		file:        file,
 		config:      config,
 		UploadOpEntity: uploadOpEntity,
+		globalSpeedsStat: globalSpeedsStat,
 	}
 }
 

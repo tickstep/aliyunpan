@@ -18,6 +18,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/library-go/requester/rio/speeds"
 	"io/ioutil"
 	"os"
 	"path"
@@ -301,6 +302,9 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	executor.SetParallel(opt.AllParallel)
 	statistic.StartTimer() // 开始计时
 
+	// 全局速度统计
+	globalSpeedsStat := &speeds.Speeds{}
+
 	// 遍历指定的文件并创建上传任务
 	for _, curPath := range localPaths {
 		var walkFunc filepath.WalkFunc
@@ -414,6 +418,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 				IsOverwrite:       opt.IsOverwrite,
 				FolderSyncDb:      db,
 				UseInternalUrl:    opt.UseInternalUrl,
+				GlobalSpeedsStat:  globalSpeedsStat,
 			}, opt.MaxRetry)
 
 			fmt.Printf("[%s] 加入上传队列: %s\n", taskinfo.Id(), file)

@@ -38,7 +38,7 @@ func (muer *MultiUploader) getWorkerListByInstanceState(is *InstanceState) worke
 			workers = append(workers, &worker{
 				id:         blockState.ID,
 				partOffset: blockState.Range.Begin,
-				splitUnit:  NewBufioSplitUnit(muer.file, blockState.Range, muer.speedsStat, muer.rateLimit),
+				splitUnit:  NewBufioSplitUnit(muer.file, blockState.Range, muer.speedsStat, muer.rateLimit, muer.globalSpeedsStat),
 				uploadDone:   false,
 			})
 		} else {

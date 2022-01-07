@@ -36,7 +36,7 @@ func TestSplitBlock(t *testing.T) {
 func TestSplitUnitRead(t *testing.T) {
 	var size int64 = 65536*2+3432
 	buffer := rio.NewBuffer(cachepool.RawMallocByteSlice(int(size)))
-	unit := uploader.NewBufioSplitUnit(buffer, transfer.Range{Begin: 2, End: size}, nil, nil)
+	unit := uploader.NewBufioSplitUnit(buffer, transfer.Range{Begin: 2, End: size}, nil, nil, nil)
 
 	buf := cachepool.RawMallocByteSlice(1022)
 	for {
