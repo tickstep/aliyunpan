@@ -38,6 +38,9 @@ const (
 	ConfigName = "aliyunpan_config.json"
 	// ConfigVersion 配置文件版本
 	ConfigVersion string = "1.0"
+
+	// DefaultUploadParallelNum 默认的文件上传并发数量
+	DefaultFileUploadParallelNum = 20
 )
 
 var (

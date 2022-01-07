@@ -256,6 +256,9 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	// 检测opt
 	if opt.AllParallel <= 0 {
 		opt.AllParallel = config.Config.MaxUploadParallel
+		if opt.AllParallel == 0 {
+			opt.AllParallel = config.DefaultFileUploadParallelNum
+		}
 	}
 	if opt.Parallel <= 0 {
 		opt.Parallel = 1
