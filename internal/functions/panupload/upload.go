@@ -18,6 +18,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/tickstep/library-go/logger"
+	"github.com/tickstep/library-go/requester"
 	"io"
 	"net/http"
 	"strconv"
@@ -25,7 +26,6 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/internal/file/uploader"
-	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio"
 )
 
@@ -90,7 +90,7 @@ func (pu *PanUpload) Precreate() (err error) {
 	return nil
 }
 
-func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int64, partEnd int64, r rio.ReaderLen64) (uploadDone bool, uperr error) {
+func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int64, partEnd int64, r rio.ReaderLen64, uploadClient *requester.HTTPClient) (uploadDone bool, uperr error) {
 	pu.lazyInit()
 
 	// check url expired or not
@@ -129,9 +129,12 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 		respErr = nil
 
 		// do http upload request
-		client := requester.NewHTTPClient()
-		client.SetTimeout(0)
-		resp, _ = client.Req(httpMethod, fullUrl, r, headers)
+		if uploadClient == nil {
+			uploadClient = requester.NewHTTPClient()
+			uploadClient.SetTimeout(0)
+			uploadClient.SetKeepAlive(true)
+		}
+		resp, _ = uploadClient.Req(httpMethod, fullUrl, r, headers)
 
 		if resp != nil {
 			if blen, e := strconv.Atoi(resp.Header.Get("content-length")); e == nil {

@@ -315,13 +315,13 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	}
 
 StepUploadPrepareUpload:
-
 	if utu.FolderSyncDb != nil {
 		//启用了备份功能，强制使用覆盖同名文件功能
 		utu.IsOverwrite = true
 		testFileMeta = utu.FolderSyncDb.Get(utu.SavePath)
 	}
 	// 创建上传任务
+	fmt.Printf("[%s] 正在计算文件SHA1: %s\n", utu.taskInfo.Id(), utu.LocalFileChecksum.Path)
 	utu.LocalFileChecksum.Sum(localfile.CHECKSUM_SHA1)
 
 	if testFileMeta.SHA1 == utu.LocalFileChecksum.SHA1 {

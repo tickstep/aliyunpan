@@ -101,8 +101,8 @@ var UploadFlags = []cli.Flag{
 	},
 	cli.IntFlag{
 		Name:  "bs",
-		Usage: "block size，上传分片大小，单位KB。推荐值：512 ~ 2048",
-		Value: 512,
+		Usage: "block size，上传分片大小，单位KB。推荐值：1024 ~ 10240",
+		Value: 10240,
 	},
 }
 
@@ -416,7 +416,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 				UseInternalUrl:    opt.UseInternalUrl,
 			}, opt.MaxRetry)
 
-			fmt.Printf("%s [%s] 加入上传队列: %s\n", time.Now().Format("2006-01-02 15:04:05"), taskinfo.Id(), file)
+			fmt.Printf("[%s] 加入上传队列: %s\n", taskinfo.Id(), file)
 			return nil
 		}
 		if err := WalkAllFile(curPath, walkFunc); err != nil {

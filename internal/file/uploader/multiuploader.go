@@ -29,7 +29,7 @@ type (
 	// MultiUpload 支持多线程的上传, 可用于断点续传
 	MultiUpload interface {
 		Precreate() (perr error)
-		UploadFile(ctx context.Context, partseq int, partOffset int64, partEnd int64, readerlen64 rio.ReaderLen64) (uploadDone bool, terr error)
+		UploadFile(ctx context.Context, partseq int, partOffset int64, partEnd int64, readerlen64 rio.ReaderLen64, uploadClient *requester.HTTPClient) (uploadDone bool, terr error)
 		CommitFile() (cerr error)
 	}
 

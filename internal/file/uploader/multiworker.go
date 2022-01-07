@@ -17,6 +17,7 @@ import (
 	"context"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/oleiade/lane"
+	"github.com/tickstep/library-go/requester"
 	"os"
 	"strconv"
 )
@@ -59,6 +60,11 @@ func (muer *MultiUploader) upload() (uperr error) {
 		}
 	}
 
+	// 上传客户端
+	uploadClient := requester.NewHTTPClient()
+	uploadClient.SetTimeout(0)
+	uploadClient.SetKeepAlive(true)
+
 	for {
 		// 阿里云盘只支持分片按顺序上传，这里正常应该是parallel = 1
 		wg := waitgroup.NewWaitGroup(muer.config.Parallel)
@@ -82,7 +88,7 @@ func (muer *MultiUploader) upload() (uperr error) {
 				go func() {
 					if !wer.uploadDone {
 						uploaderVerbose.Info("begin to upload part: " + strconv.Itoa(wer.id))
-						uploadDone, terr = muer.multiUpload.UploadFile(ctx, int(wer.id), wer.partOffset, wer.splitUnit.Range().End, wer.splitUnit)
+						uploadDone, terr = muer.multiUpload.UploadFile(ctx, int(wer.id), wer.partOffset, wer.splitUnit.Range().End, wer.splitUnit, uploadClient)
 					} else {
 						uploadDone = true
 					}
@@ -137,6 +143,9 @@ func (muer *MultiUploader) upload() (uperr error) {
 			break
 		}
 	}
+
+	// 释放链路
+	uploadClient.CloseIdleConnections()
 
 	select {
 	case <-muer.canceled:
