@@ -267,6 +267,7 @@ func GetConfigDir() string {
 		// 如果不是绝对路径, 从程序目录寻找
 		configDir = cmdutil.ExecutablePathJoin(configDir)
 		logger.Verboseln("use config dir from ALIYUNPAN_CONFIG_DIR env: ", configDir)
+		return configDir
 	} else {
 		// 2. /etc/aliyunpan/
 		if runtime.GOOS == "linux" {
@@ -290,7 +291,7 @@ func GetConfigDir() string {
 	}
 
 	// 4.当前程序所在目录
-	configDir = cmdutil.ExecutablePathJoin(configDir)
+	configDir = cmdutil.ExecutablePathJoin("")
 	logger.Verboseln("use config dir: ", configDir)
 	return configDir
 }
