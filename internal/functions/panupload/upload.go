@@ -100,7 +100,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 	}
 	if isUrlExpired(uploadUrl) {
 		// get renew upload url
-		infoList := make([]aliyunpan.FileUploadPartInfoParam, len(pu.uploadOpEntity.PartInfoList))
+		infoList := make([]aliyunpan.FileUploadPartInfoParam, 0)
 		for _,item := range pu.uploadOpEntity.PartInfoList {
 			infoList = append(infoList, aliyunpan.FileUploadPartInfoParam{
 				PartNumber: item.PartNumber,
@@ -183,6 +183,11 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 				respErr = &uploader.MultiError{
 					Terminated: true,
 				}
+			}
+		} else {
+			respError = uploadTerminate
+			respErr = &uploader.MultiError{
+				Terminated: true,
 			}
 		}
 		return resp, respError
