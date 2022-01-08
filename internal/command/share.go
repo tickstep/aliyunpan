@@ -50,6 +50,9 @@ func CmdShare() cli.Command {
     创建文件 1.mp4 的分享链接 
 	aliyunpan share set 1.mp4
 
+    创建文件 1.mp4 的分享链接，并指定分享密码为2333
+	aliyunpan share set -sharePwd 2333 1.mp4
+
     创建文件 1.mp4 的分享链接，并指定有效期为1天
 	aliyunpan share set -time 1 1.mp4
 `,
@@ -77,12 +80,18 @@ func CmdShare() cli.Command {
 					}
 
 					sharePwd := ""
+					if c.IsSet("sharePwd") {
+						sharePwd = c.String("sharePwd")
+					}
+
 					modeFlag := "1"
 					if c.IsSet("mode") {
 						modeFlag = c.String("mode")
 					}
 					if modeFlag == "1" {
-						sharePwd = RandomStr(4)
+						if sharePwd == "" {
+							sharePwd = RandomStr(4)
+						}
 					} else {
 						sharePwd = ""
 					}
@@ -104,6 +113,11 @@ func CmdShare() cli.Command {
 						Name:  "mode",
 						Usage: "有效期，1-私密分享，2-公开分享",
 						Value: "1",
+					},
+					cli.StringFlag{
+						Name:  "sharePwd",
+						Usage: "自定义私密分享密码，4个字符，没有指定则随机生成",
+						Value: "",
 					},
 				},
 			},
