@@ -162,8 +162,8 @@ aliyunpan webdav start -h
 					},
 					cli.IntFlag{
 						Name:  "bs",
-						Usage: "block size，上传分片大小，单位KB。推荐值：512 ~ 2048",
-						Value: 1024,
+						Usage: "block size，上传分片大小，单位KB。推荐值：1024 ~ 10240",
+						Value: 10240,
 					},
 				},
 			},

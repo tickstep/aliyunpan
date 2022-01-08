@@ -663,8 +663,8 @@ services:
       - ALIYUNPAN_PAN_DIR=/
       # 上传下载链接类型：1-默认 2-阿里ECS环境
       - ALIYUNPAN_TRANSFER_URL_TYPE=1
-      # 上传数据块大小，单位为KB，默认为1024KB，建议范围512KB~2048KB
-      - ALIYUNPAN_BLOCK_SIZE=1024
+      # 上传数据块大小，单位为KB，默认为10240KB，建议范围1024KB~10240KB
+      - ALIYUNPAN_BLOCK_SIZE=10240
 ```
 
 ### HTTPS配置
