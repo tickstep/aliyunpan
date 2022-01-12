@@ -15,13 +15,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/olekukonko/tablewriter"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
+	"github.com/tickstep/aliyunpan/cmder/cmdtable"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -471,6 +475,78 @@ func main() {
 
 		// 工具箱 tool
 		command.CmdTool(),
+
+		// 显示命令历史
+		{
+			Name:        "history",
+			Aliases:     []string{},
+			Usage:       "显示命令历史",
+			UsageText:   app.Name + " history",
+			Description: `显示命令历史
+
+		示例:
+		1. 显示最近命令历史
+		aliyunpan history
+
+		2. 显示最近10条命令历史
+		aliyunpan history -n 10
+
+		3. 显示全部命令历史
+		aliyunpan history -n 0
+`,
+			Category:    "其他",
+			Action: func(c *cli.Context) error {
+				lineCount := 20
+				if c.IsSet("n") {
+					lineCount =  c.Int("n")
+				}
+				printTable := func(lines []string) {
+					tb := cmdtable.NewTable(os.Stdout)
+					tb.SetHeader([]string{"序号", "命令"})
+					tb.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+					tb.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
+					idx := 1
+					for _,line := range lines {
+						if line == "" {
+							continue
+						}
+						tb.Append([]string{strconv.Itoa(idx), line})
+						idx++
+					}
+					tb.Render()
+				}
+				if contents,err := ioutil.ReadFile(historyFilePath);err == nil {
+					result := strings.Split(string(contents), "\n")
+					if lineCount == 0 {
+						printTable(result)
+					} else {
+						outputLine := make([]string, 0)
+						for idx := len(result)-1; idx >= 0; idx-- {
+							line := result[idx]
+							if line != "" {
+								outputLine = append(outputLine, line)
+							}
+							if len(outputLine) >= lineCount {
+								break
+							}
+						}
+						lines := make([]string, 0)
+						for idx := len(outputLine)-1; idx >= 0; idx-- {
+							lines = append(lines, outputLine[idx])
+						}
+						printTable(lines)
+					}
+				}
+				return nil
+			},
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "n",
+					Usage: "显示最近历史的行数。0-代表全部，默认为20",
+					Value: 20,
+				},
+			},
+		},
 
 		// 清空控制台 clear
 		{
