@@ -88,7 +88,7 @@ var UploadFlags = []cli.Flag{
 	},
 	cli.BoolFlag{
 		Name:  "norapid",
-		Usage: "不检测秒传",
+		Usage: "不检测秒传。跳过费时的SHA1计算直接上传",
 	},
 	cli.StringFlag{
 		Name:  "driveId",

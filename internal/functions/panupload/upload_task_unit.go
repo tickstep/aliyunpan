@@ -24,8 +24,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tickstep/library-go/logger"
-
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/internal/config"
@@ -53,7 +51,7 @@ type (
 		PanClient         *aliyunpan.PanClient
 		UploadingDatabase *UploadingDatabase // 数据库
 		Parallel          int
-		NoRapidUpload     bool // 禁用秒传
+		NoRapidUpload     bool // 禁用秒传，无需计算SHA1，直接上传
 		BlockSize         int64 // 分片大小
 
 		UploadStatistic *UploadStatistic
@@ -294,7 +292,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		} else {
 			msg = result.ResultMessage
 		}
-		fmt.Printf("%s [%s] 文件上传结果：%s  耗时 %s\n", time.Now().Format("2006-01-02 15:04:06"), utu.taskInfo.Id(), msg, utils.ConvertTime(time.Now().Sub(timeStart)))
+		fmt.Printf("[%s] %s 文件上传结果：%s  耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), msg, utils.ConvertTime(time.Now().Sub(timeStart)))
 	}()
 	// 准备文件
 	utu.prepareFile()
@@ -302,7 +300,9 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	var apierr *apierror.ApiError
 	var rs *aliyunpan.MkdirResult
 	var appCreateUploadFileParam *aliyunpan.CreateFileUploadParam
-	var sha1Str string
+	var sha1Str  string
+	var contentHashName  string
+	var checkNameMode  string
 	var saveFilePath string
 	var testFileMeta = &UploadedFileMeta{}
 	var uploadOpEntity *aliyunpan.CreateFileUploadResult
@@ -320,22 +320,18 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	}
 
 StepUploadPrepareUpload:
+	// 创建上传任务
 	if utu.FolderSyncDb != nil {
 		//启用了备份功能，强制使用覆盖同名文件功能
 		utu.IsOverwrite = true
 		testFileMeta = utu.FolderSyncDb.Get(utu.SavePath)
 	}
-	// 创建上传任务
-	fmt.Printf("[%s] 正在计算文件SHA1: %s\n", utu.taskInfo.Id(), utu.LocalFileChecksum.Path)
-	utu.LocalFileChecksum.Sum(localfile.CHECKSUM_SHA1)
 
-	if testFileMeta.SHA1 == utu.LocalFileChecksum.SHA1 {
-		return ResultUpdateLocalDatabase
-	}
-
+	// 创建云盘文件夹
 	utu.FolderCreateMutex.Lock()
 	saveFilePath = path.Dir(utu.SavePath)
 	if saveFilePath != "/" {
+		fmt.Printf("[%s] 正在检测和创建云盘文件夹: %s\n", utu.taskInfo.Id(), saveFilePath)
 		//同步功能先尝试从数据库获取
 		if utu.FolderSyncDb != nil {
 			if test := utu.FolderSyncDb.Get(saveFilePath); test.FileId != "" && test.IsFolder {
@@ -357,6 +353,33 @@ StepUploadPrepareUpload:
 	time.Sleep(time.Duration(2) * time.Second)
 	utu.FolderCreateMutex.Unlock()
 
+	sha1Str = ""
+	proofCode = ""
+	contentHashName = "sha1"
+	checkNameMode = "auto_rename"
+	if !utu.NoRapidUpload {
+		// 计算文件SHA1
+		fmt.Printf("[%s] 正在计算文件SHA1: %s\n", utu.taskInfo.Id(), utu.LocalFileChecksum.Path)
+		utu.LocalFileChecksum.Sum(localfile.CHECKSUM_SHA1)
+		if testFileMeta.SHA1 == utu.LocalFileChecksum.SHA1 {
+			return ResultUpdateLocalDatabase
+		}
+		sha1Str = utu.LocalFileChecksum.SHA1
+		if utu.LocalFileChecksum.Length == 0 {
+			sha1Str = aliyunpan.DefaultZeroSizeFileContentHash
+		}
+
+		// proof code
+		localFile, _ = os.Open(utu.LocalFileChecksum.Path)
+		localFileInfo,_ = localFile.Stat()
+		proofCode = aliyunpan.CalcProofCode(utu.PanClient.GetAccessToken(), rio.NewFileReaderAtLen64(localFile), localFileInfo.Size())
+		localFile.Close()
+	} else {
+		fmt.Printf("[%s] 已经禁用秒传检测，直接上传\n", utu.taskInfo.Id())
+		contentHashName = "none"
+		checkNameMode = "auto_rename"
+	}
+
 	if utu.IsOverwrite {
 		// 标记覆盖旧同名文件
 		// 检查同名文件是否存在
@@ -367,9 +390,10 @@ StepUploadPrepareUpload:
 			return
 		}
 		if efi != nil && efi.FileId != "" {
-			if efi.ContentHash == strings.ToUpper(utu.LocalFileChecksum.SHA1) {
+			if strings.ToUpper(efi.ContentHash) == strings.ToUpper(sha1Str) {
 				result.Succeed = true
 				result.Extra = efi
+				fmt.Printf("[%s] 检测到同名文件，文件内容完全一致，无需重复上传: %s\n", utu.taskInfo.Id(), utu.SavePath)
 				return
 			}
 			// existed, delete it
@@ -382,26 +406,18 @@ StepUploadPrepareUpload:
 				return
 			}
 			time.Sleep(time.Duration(500) * time.Millisecond)
-			logger.Verbosef("[%s] 检测到同名文件，已移动到回收站: %s", utu.taskInfo.Id(), utu.SavePath)
+			fmt.Printf("[%s] 检测到同名文件，已移动到回收站: %s\n", utu.taskInfo.Id(), utu.SavePath)
 		}
 	}
 
-	sha1Str = utu.LocalFileChecksum.SHA1
-	if utu.LocalFileChecksum.Length == 0 {
-		sha1Str = aliyunpan.DefaultZeroSizeFileContentHash
-	}
-
-	// proof code
-	localFile, _ = os.Open(utu.LocalFileChecksum.Path)
-	localFileInfo,_ = localFile.Stat()
-	proofCode = aliyunpan.CalcProofCode(utu.PanClient.GetAccessToken(), rio.NewFileReaderAtLen64(localFile), localFileInfo.Size())
-	localFile.Close()
-
+	// 创建上传任务
 	appCreateUploadFileParam = &aliyunpan.CreateFileUploadParam{
 		DriveId:      utu.DriveId,
 		Name:         filepath.Base(utu.LocalFileChecksum.Path),
 		Size:         utu.LocalFileChecksum.Length,
 		ContentHash:  sha1Str,
+		ContentHashName: contentHashName,
+		CheckNameMode: checkNameMode,
 		ParentFileId: rs.FileId,
 		BlockSize: utu.BlockSize,
 		ProofCode: proofCode,
