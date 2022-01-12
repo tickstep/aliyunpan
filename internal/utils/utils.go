@@ -137,3 +137,13 @@ func ConvertTime(t time.Duration) string {
 	}
 	return "0秒"
 }
+
+// HasSuffix 判断是否以某字符串作为结尾
+func HasSuffix(s ,suffix string) bool {
+	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
+}
+
+// HasPrefix 判断是否以某字符串作为开始
+func HasPrefix(s, prefix string) bool {
+	return len(s) >= len(prefix) && s[0:len(prefix)]== prefix
+}
