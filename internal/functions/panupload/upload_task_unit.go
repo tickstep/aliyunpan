@@ -174,7 +174,7 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 		}
 
 		if utu.ShowProgress {
-			fmt.Printf("\r[%s] ↑ %s/%s %s/s(%s/s) in %s ............", utu.taskInfo.Id(),
+			fmt.Printf("\r[%s] ↑ %s/%s %s/s(%s/s) in %s ............\n", utu.taskInfo.Id(),
 				converter.ConvertFileSize(status.Uploaded(), 2),
 				converter.ConvertFileSize(status.TotalSize(), 2),
 				converter.ConvertFileSize(status.SpeedsPerSecond(), 2),
@@ -282,7 +282,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	timeStart := time.Now()
 	result = &taskframework.TaskUnitRunResult{}
 
-	fmt.Printf("[%s] %s 准备上传: %s=>%s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path, utu.SavePath)
+	fmt.Printf("[%s] %s 准备上传: %s => %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path, utu.SavePath)
 
 	defer func() {
 		var msg string
@@ -293,7 +293,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		} else {
 			msg = result.ResultMessage
 		}
-		fmt.Printf("[%s] %s 文件上传结果：%s  耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), msg, utils.ConvertTime(time.Now().Sub(timeStart)))
+		fmt.Printf("[%s] %s 文件上传结果： %s 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), msg, utils.ConvertTime(time.Now().Sub(timeStart)))
 	}()
 	// 准备文件
 	utu.prepareFile()
