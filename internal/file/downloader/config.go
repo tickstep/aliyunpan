@@ -24,7 +24,10 @@ const (
 
 var (
 	// MinParallelSize 单个线程最小的数据量
-	MinParallelSize int64 = 128 * 1024 // 128kb
+	MinParallelSize int64 = 10 * 1024 * 1024 // 10MB
+
+	// MaxParallelWorkerCount 单个文件下载最大并发线程数量
+	MaxParallelWorkerCount int = 3
 )
 
 //Config 下载配置

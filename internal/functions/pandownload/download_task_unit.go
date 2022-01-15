@@ -147,7 +147,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 			tb.SetHeader([]string{"#", "status", "range", "left", "speeds", "error"})
 			workersCallback(func(key int, worker *downloader.Worker) bool {
 				wrange := worker.GetRange()
-				tb.Append([]string{fmt.Sprint(worker.ID()), worker.GetStatus().StatusText(), wrange.ShowDetails(), strconv.FormatInt(wrange.Len(), 10), strconv.FormatInt(worker.GetSpeedsPerSecond(), 10), fmt.Sprint(worker.Err())})
+				tb.Append([]string{fmt.Sprint(worker.ID()), worker.GetStatus().StatusText(), wrange.ShowDetails(), strconv.FormatInt(wrange.Len(), 10), converter.ConvertFileSize(worker.GetSpeedsPerSecond(), 2)+"/s", fmt.Sprint(worker.Err())})
 				return true
 			})
 

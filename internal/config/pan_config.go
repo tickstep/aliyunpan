@@ -40,7 +40,10 @@ const (
 	ConfigVersion string = "1.0"
 
 	// DefaultUploadParallelNum 默认的文件上传并发数量
-	DefaultFileUploadParallelNum = 20
+	DefaultFileUploadParallelNum = 10
+
+	// DefaultFileDownloadParallelNum 默认的文件下载并发数量
+	DefaultFileDownloadParallelNum = 5
 )
 
 var (
@@ -67,9 +70,8 @@ type PanConfig struct {
 	UserList PanUserList `json:"userList"`
 
 	CacheSize           int `json:"cacheSize"`           // 下载缓存
-	MaxDownloadParallel int `json:"maxDownloadParallel"` // 最大下载并发量
+	MaxDownloadParallel int `json:"maxDownloadParallel"` // 最大下载并发量，即同时下载文件最大数量
 	MaxUploadParallel   int `json:"maxUploadParallel"`   // 最大上传并发量，即同时上传文件最大数量
-	MaxDownloadLoad     int `json:"maxDownloadLoad"`     // 同时进行下载文件的最大数量
 
 	MaxDownloadRate int64 `json:"maxDownloadRate"` // 限制最大下载速度，单位 B/s, 即字节/每秒
 	MaxUploadRate   int64 `json:"maxUploadRate"`   // 限制最大上传速度，单位 B/s, 即字节/每秒

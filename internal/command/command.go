@@ -200,9 +200,6 @@ func CmdConfig() cli.Command {
 					if c.IsSet("max_upload_parallel") {
 						config.Config.MaxUploadParallel = c.Int("max_upload_parallel")
 					}
-					if c.IsSet("max_download_load") {
-						config.Config.MaxDownloadLoad = c.Int("max_download_load")
-					}
 					if c.IsSet("max_download_rate") {
 						err := config.Config.SetMaxDownloadRateByStr(c.String("max_download_rate"))
 						if err != nil {
@@ -245,19 +242,15 @@ func CmdConfig() cli.Command {
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "cache_size",
-						Usage: "下载缓存",
+						Usage: "下载缓存，单位：KB",
 					},
 					cli.IntFlag{
 						Name:  "max_download_parallel",
-						Usage: "下载网络连接的最大并发量",
+						Usage: "下载文件最大并发量",
 					},
 					cli.IntFlag{
 						Name:  "max_upload_parallel",
-						Usage: "上传网络连接的最大并发量",
-					},
-					cli.IntFlag{
-						Name:  "max_download_load",
-						Usage: "同时进行下载文件的最大数量",
+						Usage: "上传文件最大并发量",
 					},
 					cli.StringFlag{
 						Name:  "max_download_rate",
