@@ -115,7 +115,7 @@ func CmdDownload() cli.Command {
 				IsOverwrite:          c.Bool("ow"),
 				SaveTo:               saveTo,
 				Parallel:             c.Int("p"),
-				Load:                 c.Int("l"),
+				Load:                 0,
 				MaxRetry:             c.Int("retry"),
 				NoCheck:              c.Bool("nocheck"),
 				ShowProgress:         !c.Bool("np"),
@@ -149,10 +149,6 @@ func CmdDownload() cli.Command {
 			cli.IntFlag{
 				Name:  "p",
 				Usage: "指定同时进行下载文件的数量",
-			},
-			cli.IntFlag{
-				Name:  "l",
-				Usage: "指定单文件下载线程数",
 			},
 			cli.IntFlag{
 				Name:  "retry",
