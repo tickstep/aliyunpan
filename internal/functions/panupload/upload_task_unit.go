@@ -174,7 +174,7 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 		}
 
 		if utu.ShowProgress {
-			fmt.Printf("\r[%s] ↑ %s/%s %s/s(%s/s) in %s ............\n", utu.taskInfo.Id(),
+			fmt.Printf("\r[%s] ↑ %s/%s %s/s(%s/s) in %s ............", utu.taskInfo.Id(),
 				converter.ConvertFileSize(status.Uploaded(), 2),
 				converter.ConvertFileSize(status.TotalSize(), 2),
 				converter.ConvertFileSize(status.SpeedsPerSecond(), 2),
@@ -333,7 +333,6 @@ StepUploadPrepareUpload:
 	}
 
 	// 创建云盘文件夹
-	fmt.Printf("[%s] %s 检测和创建云盘文件夹开始\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 	timeStart2 = time.Now()
 	// utu.FolderCreateMutex.Lock()
 	saveFilePath = path.Dir(utu.SavePath)
@@ -351,7 +350,7 @@ StepUploadPrepareUpload:
 		}
 		if rs == nil {
 			timeStart4 = time.Now()
-			fmt.Printf("[%s] %s 文件夹 MkdirRecursive: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
+			fmt.Printf("[%s] %s 创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
 			utu.FolderCreateMutex.Lock()
 			// rs, apierr = utu.PanClient.MkdirRecursive(utu.DriveId, "", "", 0, strings.Split(path.Clean(saveFilePath), "/"))
 			// 可以直接创建的，不用循环创建
@@ -362,7 +361,7 @@ StepUploadPrepareUpload:
 				result.ResultMessage = "创建云盘文件夹失败"
 				return
 			}
-			fmt.Printf("[%s] %s 文件夹 MkdirRecursive end, 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart4)))
+			fmt.Printf("[%s] %s 创建云盘文件夹, 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart4)))
 		}
 	} else {
 		rs = &aliyunpan.MkdirResult{}
