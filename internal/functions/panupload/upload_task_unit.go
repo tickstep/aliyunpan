@@ -349,6 +349,7 @@ StepUploadPrepareUpload:
 			fmt.Printf("[%s] %s 检测和创建云盘文件夹完毕[from db], 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart3)))
 		}
 		if rs == nil {
+			fmt.Printf("[%s] %s 文件夹 MkdirRecursive: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
 			utu.FolderCreateMutex.Lock()
 			rs, apierr = utu.PanClient.MkdirRecursive(utu.DriveId, "", "", 0, strings.Split(path.Clean(saveFilePath), "/"))
 			utu.FolderCreateMutex.Unlock()
@@ -357,6 +358,7 @@ StepUploadPrepareUpload:
 				result.ResultMessage = "创建云盘文件夹失败"
 				return
 			}
+			fmt.Printf("[%s] %s 文件夹 MkdirRecursive end\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 		}
 	} else {
 		rs = &aliyunpan.MkdirResult{}
