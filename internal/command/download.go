@@ -25,6 +25,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/taskframework"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
+	"github.com/tickstep/library-go/requester/rio/speeds"
 	"github.com/urfave/cli"
 	"os"
 	"path/filepath"
@@ -260,6 +261,9 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	// 配置执行器任务并发数，即同时下载文件并发数
 	executor.SetParallel(cfg.MaxParallel)
 
+	// 全局速度统计
+	globalSpeedsStat := &speeds.Speeds{}
+
 	// 处理队列
 	for k := range paths {
 		newCfg := *cfg
@@ -275,7 +279,8 @@ func RunDownload(paths []string, options *DownloadOptions) {
 			IsOverwrite:          options.IsOverwrite,
 			NoCheck:              options.NoCheck,
 			FilePanPath:          paths[k],
-			DriveId:             options.DriveId,
+			DriveId:              options.DriveId,
+			GlobalSpeedsStat:     globalSpeedsStat,
 		}
 
 		// 设置储存的路径

@@ -49,6 +49,7 @@ type (
 		onDownloadStatusEvent DownloadStatusFunc //状态处理事件
 
 		monitorCancelFunc context.CancelFunc
+		globalSpeedsStat *speeds.Speeds // 全局速度统计
 
 		fileInfo               *aliyunpan.FileEntity      // 下载的文件信息
 		driveId               string
@@ -72,11 +73,12 @@ type (
 )
 
 //NewDownloader 初始化Downloader
-func NewDownloader(writer io.WriterAt, config *Config, p *aliyunpan.PanClient) (der *Downloader) {
+func NewDownloader(writer io.WriterAt, config *Config, p *aliyunpan.PanClient, globalSpeedsStat *speeds.Speeds) (der *Downloader) {
 	der = &Downloader{
 		config: config,
 		writer: writer,
 		panClient: p,
+		globalSpeedsStat: globalSpeedsStat,
 	}
 
 	return
@@ -393,7 +395,7 @@ func (der *Downloader) Execute() error {
 		if der.config.UseInternalUrl {
 			realUrl = durl.InternalUrl
 		}
-		worker := NewWorker(k, der.driveId, der.fileInfo.FileId, realUrl, writer)
+		worker := NewWorker(k, der.driveId, der.fileInfo.FileId, realUrl, writer, der.globalSpeedsStat)
 		worker.SetClient(client)
 		worker.SetPanClient(der.panClient)
 		worker.SetWriteMutex(writeMu)
@@ -452,6 +454,7 @@ func (der *Downloader) downloadStatusEvent() {
 			case <-der.monitor.completed:
 				return
 			case <-ticker.C:
+				time.Sleep(500 * time.Millisecond)
 				der.onDownloadStatusEvent(status, der.monitor.RangeWorker)
 			}
 		}
