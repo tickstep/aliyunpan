@@ -312,6 +312,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	var localFileInfo os.FileInfo
 	var localFile *os.File
 	timeStart2 := time.Now()
+	timeStart3 := time.Now()
 
 	switch utu.Step {
 	case StepUploadPrepareUpload:
@@ -339,11 +340,13 @@ StepUploadPrepareUpload:
 		fmt.Printf("[%s] %s 正在检测和创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
 		//同步功能先尝试从数据库获取
 		if utu.FolderSyncDb != nil {
+			timeStart3 = time.Now()
 			utu.FolderCreateMutex.Lock()
 			if test := utu.FolderSyncDb.Get(saveFilePath); test.FileId != "" && test.IsFolder {
 				rs = &aliyunpan.MkdirResult{FileId: test.FileId}
 			}
 			utu.FolderCreateMutex.Unlock()
+			fmt.Printf("[%s] %s 检测和创建云盘文件夹完毕[from db], 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart3)))
 		}
 		if rs == nil {
 			utu.FolderCreateMutex.Lock()
