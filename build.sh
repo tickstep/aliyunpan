@@ -13,6 +13,9 @@ fi
 
 output="out"
 
+build_dir=`dirname $0`
+mkdir -p ${build_dir}/${output} > /dev/null 2>&1
+
 default_golang() {
   export GOROOT=/usr/local/go
   go=$GOROOT/bin/go
