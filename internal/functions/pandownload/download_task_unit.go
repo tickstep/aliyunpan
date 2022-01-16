@@ -256,6 +256,7 @@ func (dtu *DownloadTaskUnit) handleError(result *taskframework.TaskUnitRunResult
 		// 其他错误, 需要重试
 		result.NeedRetry = true
 	}
+	time.Sleep(1*time.Second)
 }
 
 //checkFileValid 检测文件有效性
@@ -362,7 +363,10 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		}
 
 		// 获取该目录下的文件列表
-		fileList := dtu.PanClient.FilesDirectoriesRecurseList(dtu.DriveId, dtu.FilePanPath, nil)
+		fileList := dtu.PanClient.FilesDirectoriesRecurseList(dtu.DriveId, dtu.FilePanPath, func(depth int, _ string, fd *aliyunpan.FileEntity, apiError *apierror.ApiError) bool {
+			time.Sleep(500 * time.Millisecond)
+			return true
+		})
 		if fileList == nil {
 			result.ResultMessage = "获取目录信息错误"
 			result.Err = err

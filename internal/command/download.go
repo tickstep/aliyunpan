@@ -241,8 +241,10 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	var (
 		panClient = activeUser.PanClient()
 		loadCount = 0
+		loadSize = int64(0)
 	)
 
+	fmt.Printf("[0] 正在计算需要下载的文件数量和大小...\n")
 	// 预测要下载的文件数量
 	for k := range paths {
 		// 使用递归获取文件的方法计算路径包含的文件的总数量
@@ -255,12 +257,13 @@ func RunDownload(paths []string, options *DownloadOptions) {
 			// 忽略统计文件夹数量
 			if !fd.IsFolder() {
 				loadCount++
+				loadSize += fd.FileSize
 			}
 			time.Sleep(500 * time.Millisecond)
 			return true
 		})
 	}
-	fmt.Printf("[0] 预计总共需要下载的文件数量: %d\n", loadCount)
+	fmt.Printf("[0] 预计总共需要下载的文件数量: %d, 总大小：%s\n\n", loadCount, converter.ConvertFileSize(loadSize, 2))
 	cfg.MaxParallel = options.Parallel
 
 	var (
