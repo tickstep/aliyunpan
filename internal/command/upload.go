@@ -234,18 +234,10 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	activeUser := GetActiveUser()
 	// pan token expired checker
 	go func() {
-		cz := time.FixedZone("CST", 8*3600) // 东8区
 		for {
 			time.Sleep(time.Duration(1) * time.Minute)
-			expiredTime, _ := time.ParseInLocation("2006-01-02 15:04:05", activeUser.WebToken.ExpireTime, cz)
-			now := time.Now()
-			if (expiredTime.Unix() - now.Unix()) <= (10 * 60) {
-				// need refresh token
-				if wt, er := aliyunpan.GetAccessTokenFromRefreshToken(activeUser.RefreshToken); er == nil {
-					activeUser.WebToken = *wt
-					activeUser.PanClient().UpdateToken(*wt)
-					logger.Verboseln("update access token for upload task")
-				}
+			if RefreshTokenInNeed(activeUser) {
+				logger.Verboseln("update access token for upload task")
 			}
 		}
 	}()
@@ -268,6 +260,8 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		opt.MaxRetry = DefaultUploadMaxRetry
 	}
 	opt.UseInternalUrl = config.Config.TransferUrlType == 2
+
+	fmt.Printf("\n[0] 当前文件上传最大并发量为: %d, 上传分片大小为: %s\n", opt.AllParallel, converter.ConvertFileSize(opt.BlockSize, 2))
 
 	savePath = activeUser.PathJoin(opt.DriveId, savePath)
 	_, err1 := activeUser.PanClient().FileInfoByPath(opt.DriveId, savePath)
@@ -438,7 +432,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	}
 
 	fmt.Printf("\n")
-	fmt.Printf("上传结束, 时间: %s, 总大小: %s\n", utils.ConvertTime(statistic.Elapsed()), converter.ConvertFileSize(statistic.TotalSize()))
+	fmt.Printf("上传结束, 时间: %s, 数据总量: %s\n", utils.ConvertTime(statistic.Elapsed()), converter.ConvertFileSize(statistic.TotalSize(), 2))
 
 	// 输出上传失败的文件列表
 	for _, failed := range failedList {

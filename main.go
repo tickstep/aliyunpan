@@ -16,7 +16,6 @@ package main
 import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"io/ioutil"
@@ -81,22 +80,7 @@ func checkLoginExpiredAndRelogin() {
 		cmder.TryLogin()
 	} else {
 		// refresh expired token
-		if activeUser.PanClient() != nil {
-			if len(activeUser.WebToken.RefreshToken) > 0 {
-				cz := time.FixedZone("CST", 8*3600) // 东8区
-				expiredTime, _ := time.ParseInLocation("2006-01-02 15:04:05", activeUser.WebToken.ExpireTime, cz)
-				now := time.Now()
-				if (expiredTime.Unix() - now.Unix()) <= (10 * 60) {
-					// need refresh token
-					logger.Verboseln("access token expired, get new from refresh token")
-					if wt, er := aliyunpan.GetAccessTokenFromRefreshToken(activeUser.RefreshToken); er == nil {
-						activeUser.WebToken = *wt
-						activeUser.PanClient().UpdateToken(*wt)
-						logger.Verboseln("get new access token success")
-					}
-				}
-			}
-		}
+		command.RefreshTokenInNeed(activeUser)
 	}
 	cmder.SaveConfigFunc(nil)
 }

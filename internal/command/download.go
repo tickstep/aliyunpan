@@ -23,13 +23,16 @@ import (
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/functions/pandownload"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
+	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"github.com/urfave/cli"
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 type (
@@ -181,6 +184,17 @@ func downloadPrintFormat(load int) string {
 
 // RunDownload 执行下载网盘内文件
 func RunDownload(paths []string, options *DownloadOptions) {
+	activeUser := GetActiveUser()
+	// pan token expired checker
+	go func() {
+		for {
+			time.Sleep(time.Duration(1) * time.Minute)
+			if RefreshTokenInNeed(activeUser) {
+				logger.Verboseln("update access token for download task")
+			}
+		}
+	}()
+
 	if options == nil {
 		options = &DownloadOptions{}
 	}
@@ -225,7 +239,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s\n", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
 
 	var (
-		panClient = GetActivePanClient()
+		panClient = activeUser.PanClient()
 		loadCount = 0
 	)
 
@@ -242,6 +256,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 			if !fd.IsFolder() {
 				loadCount++
 			}
+			time.Sleep(500 * time.Millisecond)
 			return true
 		})
 	}
@@ -298,7 +313,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	// 开始执行
 	executor.Execute()
 
-	fmt.Printf("\n下载结束, 时间: %s, 数据总量: %s\n", statistic.Elapsed()/1e6*1e6, converter.ConvertFileSize(statistic.TotalSize()))
+	fmt.Printf("\n下载结束, 时间: %s, 数据总量: %s\n", utils.ConvertTime(statistic.Elapsed()), converter.ConvertFileSize(statistic.TotalSize(), 2))
 
 	// 输出失败的文件列表
 	failedList := executor.FailedDeque()
