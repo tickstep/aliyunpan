@@ -35,6 +35,7 @@ type (
 		totalSize    int64 // 整个文件的大小, worker请求range时会获取尝试获取该值, 如果不匹配, 则返回错误
 		wrange       *transfer.Range
 		speedsStat   *speeds.Speeds
+		globalSpeedsStat   *speeds.Speeds // 全局速度统计
 		id           int    // work id
 		fileId       string // 文件ID
 		driveId     string
@@ -67,13 +68,14 @@ func (wl WorkerList) Duplicate() WorkerList {
 }
 
 //NewWorker 初始化Worker
-func NewWorker(id int, driveId string, fileId, durl string, writerAt io.WriterAt) *Worker {
+func NewWorker(id int, driveId string, fileId, durl string, writerAt io.WriterAt, globalSpeedsStat *speeds.Speeds) *Worker {
 	return &Worker{
 		id:       id,
 		url:      durl,
 		writerAt: writerAt,
 		fileId: fileId,
 		driveId: driveId,
+		globalSpeedsStat: globalSpeedsStat,
 	}
 }
 
@@ -405,6 +407,9 @@ func (wer *Worker) Execute() {
 					wer.downloadStatus.AddSpeedsDownloaded(nn64) // 限速在这里阻塞
 				}
 				wer.speedsStat.Add(nn64)
+				if wer.globalSpeedsStat != nil {
+					wer.globalSpeedsStat.Add(nn64)
+				}
 				n += nn
 			}
 

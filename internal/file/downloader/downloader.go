@@ -49,6 +49,7 @@ type (
 		onDownloadStatusEvent DownloadStatusFunc //状态处理事件
 
 		monitorCancelFunc context.CancelFunc
+		globalSpeedsStat *speeds.Speeds // 全局速度统计
 
 		fileInfo               *aliyunpan.FileEntity      // 下载的文件信息
 		driveId               string
@@ -72,11 +73,12 @@ type (
 )
 
 //NewDownloader 初始化Downloader
-func NewDownloader(writer io.WriterAt, config *Config, p *aliyunpan.PanClient) (der *Downloader) {
+func NewDownloader(writer io.WriterAt, config *Config, p *aliyunpan.PanClient, globalSpeedsStat *speeds.Speeds) (der *Downloader) {
 	der = &Downloader{
 		config: config,
 		writer: writer,
 		panClient: p,
+		globalSpeedsStat: globalSpeedsStat,
 	}
 
 	return
@@ -128,12 +130,12 @@ func (der *Downloader) lazyInit() {
 // SelectParallel 获取合适的 parallel
 func (der *Downloader) SelectParallel(single bool, maxParallel int, totalSize int64, instanceRangeList transfer.RangeList) (parallel int) {
 	isRange := instanceRangeList != nil && len(instanceRangeList) > 0
-	if single { //不支持多线程
+	if single { // 单线程下载
 		parallel = 1
 	} else if isRange {
 		parallel = len(instanceRangeList)
 	} else {
-		parallel = der.config.MaxParallel
+		parallel = maxParallel
 		if int64(parallel) > totalSize/int64(MinParallelSize) {
 			parallel = int(totalSize/int64(MinParallelSize)) + 1
 		}
@@ -298,7 +300,7 @@ func (der *Downloader) Execute() error {
 	var (
 		isInstance = bii != nil // 是否存在断点信息
 		status     *transfer.DownloadStatus
-		single = false // 开启多线程下载
+		single = false // 默认开启多线程下载
 	)
 	if !isInstance {
 		bii = &transfer.DownloadInstanceInfo{}
@@ -320,8 +322,8 @@ func (der *Downloader) Execute() error {
 		defer rl.Stop()
 	}
 
-	// 数据处理
-	parallel := der.SelectParallel(single, der.config.MaxParallel, status.TotalSize(), bii.Ranges) // 实际的下载并行量
+	// 计算文件下载的线程数
+	parallel := der.SelectParallel(single, MaxParallelWorkerCount, status.TotalSize(), bii.Ranges) // 实际的下载并行量
 	blockSize, err := der.SelectBlockSizeAndInitRangeGen(single, status, parallel)                 // 实际的BlockSize
 	if err != nil {
 		return err
@@ -393,7 +395,7 @@ func (der *Downloader) Execute() error {
 		if der.config.UseInternalUrl {
 			realUrl = durl.InternalUrl
 		}
-		worker := NewWorker(k, der.driveId, der.fileInfo.FileId, realUrl, writer)
+		worker := NewWorker(k, der.driveId, der.fileInfo.FileId, realUrl, writer, der.globalSpeedsStat)
 		worker.SetClient(client)
 		worker.SetPanClient(der.panClient)
 		worker.SetWriteMutex(writeMu)
@@ -452,6 +454,7 @@ func (der *Downloader) downloadStatusEvent() {
 			case <-der.monitor.completed:
 				return
 			case <-ticker.C:
+				time.Sleep(500 * time.Millisecond)
 				der.onDownloadStatusEvent(status, der.monitor.RangeWorker)
 			}
 		}

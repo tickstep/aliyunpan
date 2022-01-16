@@ -74,9 +74,8 @@ func (c *PanConfig) PrintTable() {
 	tb.SetColumnAlignment([]int{tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
 	tb.AppendBulk([][]string{
 		[]string{"cache_size", converter.ConvertFileSize(int64(c.CacheSize), 2), "1KB ~ 256KB", "下载缓存, 如果硬盘占用高或下载速度慢, 请尝试调大此值"},
-		[]string{"max_download_parallel", strconv.Itoa(c.MaxDownloadParallel), "1 ~ 64", "最大下载并发量"},
-		[]string{"max_upload_parallel", strconv.Itoa(c.MaxUploadParallel), "1 ~ 100", "最大上传并发量，即同时上传文件最大数量"},
-		[]string{"max_download_load", strconv.Itoa(c.MaxDownloadLoad), "1 ~ 5", "同时进行下载文件的最大数量"},
+		[]string{"max_download_parallel", strconv.Itoa(c.MaxDownloadParallel), "1 ~ 20", "最大下载并发量，即同时下载文件最大数量"},
+		[]string{"max_upload_parallel", strconv.Itoa(c.MaxUploadParallel), "1 ~ 20", "最大上传并发量，即同时上传文件最大数量"},
 		[]string{"max_download_rate", showMaxRate(c.MaxDownloadRate), "", "限制最大下载速度, 0代表不限制"},
 		[]string{"max_upload_rate", showMaxRate(c.MaxUploadRate), "", "限制最大上传速度, 0代表不限制"},
 		[]string{"transfer_url_type", strconv.Itoa(c.TransferUrlType), "1-默认，2-阿里云ECS", "上传下载URL类别。除非在阿里云ECS服务器中使用，不然请设置1"},

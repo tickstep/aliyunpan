@@ -25,6 +25,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/taskframework"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
+	"github.com/tickstep/library-go/requester/rio/speeds"
 	"github.com/urfave/cli"
 	"os"
 	"path/filepath"
@@ -114,7 +115,7 @@ func CmdDownload() cli.Command {
 				IsOverwrite:          c.Bool("ow"),
 				SaveTo:               saveTo,
 				Parallel:             c.Int("p"),
-				Load:                 c.Int("l"),
+				Load:                 0,
 				MaxRetry:             c.Int("retry"),
 				NoCheck:              c.Bool("nocheck"),
 				ShowProgress:         !c.Bool("np"),
@@ -147,10 +148,6 @@ func CmdDownload() cli.Command {
 			},
 			cli.IntFlag{
 				Name:  "p",
-				Usage: "指定下载线程数",
-			},
-			cli.IntFlag{
-				Name:  "l",
 				Usage: "指定同时进行下载文件的数量",
 			},
 			cli.IntFlag{
@@ -188,10 +185,6 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		options = &DownloadOptions{}
 	}
 
-	if options.Load <= 0 {
-		options.Load = config.Config.MaxDownloadLoad
-	}
-
 	if options.MaxRetry < 0 {
 		options.MaxRetry = pandownload.DefaultDownloadMaxRetry
 	}
@@ -218,6 +211,9 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	// 设置下载最大并发量
 	if options.Parallel < 1 {
 		options.Parallel = config.Config.MaxDownloadParallel
+		if options.Parallel == 0 {
+			options.Parallel = config.DefaultFileDownloadParallelNum
+		}
 	}
 
 	paths, err := matchPathByShellPattern(options.DriveId, paths...)
@@ -226,8 +222,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		return
 	}
 
-	fmt.Print("\n")
-	fmt.Printf("[0] 提示: 当前下载最大并发量为: %d, 下载缓存为: %d\n", options.Parallel, cfg.CacheSize)
+	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s\n", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
 
 	var (
 		panClient = GetActivePanClient()
@@ -246,26 +241,12 @@ func RunDownload(paths []string, options *DownloadOptions) {
 			// 忽略统计文件夹数量
 			if !fd.IsFolder() {
 				loadCount++
-				if loadCount >= options.Load { // 文件的总数量超过指定的指定数量，则不再进行下层的递归查找文件
-					return false
-				}
 			}
 			return true
 		})
-
-		if loadCount >= options.Load {
-			break
-		}
 	}
-
-	// 修改Load, 设置MaxParallel
-	if loadCount > 0 {
-		options.Load = loadCount
-		// 取平均值
-		cfg.MaxParallel = config.AverageParallel(options.Parallel, loadCount)
-	} else {
-		cfg.MaxParallel = options.Parallel
-	}
+	fmt.Printf("[0] 预计总共需要下载的文件数量: %d\n", loadCount)
+	cfg.MaxParallel = options.Parallel
 
 	var (
 		executor = taskframework.TaskExecutor{
@@ -273,6 +254,12 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		}
 		statistic = &pandownload.DownloadStatistic{}
 	)
+	// 配置执行器任务并发数，即同时下载文件并发数
+	executor.SetParallel(cfg.MaxParallel)
+
+	// 全局速度统计
+	globalSpeedsStat := &speeds.Speeds{}
+
 	// 处理队列
 	for k := range paths {
 		newCfg := *cfg
@@ -288,7 +275,8 @@ func RunDownload(paths []string, options *DownloadOptions) {
 			IsOverwrite:          options.IsOverwrite,
 			NoCheck:              options.NoCheck,
 			FilePanPath:          paths[k],
-			DriveId:             options.DriveId,
+			DriveId:              options.DriveId,
+			GlobalSpeedsStat:     globalSpeedsStat,
 		}
 
 		// 设置储存的路径

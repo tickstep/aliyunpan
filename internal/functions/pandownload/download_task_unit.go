@@ -26,6 +26,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
+	"github.com/tickstep/library-go/requester/rio/speeds"
 	"io"
 	"net/http"
 	"os"
@@ -45,6 +46,7 @@ type (
 		ParentTaskExecutor *taskframework.TaskExecutor
 
 		DownloadStatistic *DownloadStatistic // 下载统计
+		GlobalSpeedsStat *speeds.Speeds // 全局速度统计
 
 		// 可选项
 		VerbosePrinter       *logger.CmdVerbose
@@ -121,7 +123,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	}
 	defer file.Close()
 
-	der := downloader.NewDownloader(writer, dtu.Cfg, dtu.PanClient)
+	der := downloader.NewDownloader(writer, dtu.Cfg, dtu.PanClient, dtu.GlobalSpeedsStat)
 	der.SetFileInfo(dtu.fileInfo)
 	der.SetDriveId(dtu.DriveId)
 	der.SetStatusCodeBodyCheckFunc(func(respBody io.Reader) error {
@@ -147,7 +149,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 			tb.SetHeader([]string{"#", "status", "range", "left", "speeds", "error"})
 			workersCallback(func(key int, worker *downloader.Worker) bool {
 				wrange := worker.GetRange()
-				tb.Append([]string{fmt.Sprint(worker.ID()), worker.GetStatus().StatusText(), wrange.ShowDetails(), strconv.FormatInt(wrange.Len(), 10), strconv.FormatInt(worker.GetSpeedsPerSecond(), 10), fmt.Sprint(worker.Err())})
+				tb.Append([]string{fmt.Sprint(worker.ID()), worker.GetStatus().StatusText(), wrange.ShowDetails(), strconv.FormatInt(wrange.Len(), 10), converter.ConvertFileSize(worker.GetSpeedsPerSecond(), 2)+"/s", fmt.Sprint(worker.Err())})
 				return true
 			})
 
@@ -166,10 +168,11 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 		}
 
 		if dtu.Cfg.ShowProgress {
-			fmt.Fprintf(builder, dtu.PrintFormat, dtu.taskInfo.Id(),
+			fmt.Fprintf(builder, "\r[%s] ↓ %s/%s %s/s(%s/s) in %s, left %s ............", dtu.taskInfo.Id(),
 				converter.ConvertFileSize(status.Downloaded(), 2),
 				converter.ConvertFileSize(status.TotalSize(), 2),
 				converter.ConvertFileSize(status.SpeedsPerSecond(), 2),
+				converter.ConvertFileSize(dtu.GlobalSpeedsStat.GetSpeeds(), 2),
 				status.TimeElapsed()/1e7*1e7, leftStr,
 			)
 		}
