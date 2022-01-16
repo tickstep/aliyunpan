@@ -117,3 +117,30 @@ func UnescapeStr(s string) string {
 	r,_ := url.PathUnescape(s)
 	return r
 }
+
+// RefreshTokenInNeed 刷新refresh token
+func RefreshTokenInNeed(activeUser *config.PanUser) bool {
+	if activeUser == nil {
+		return false
+	}
+
+	// refresh expired token
+	if activeUser.PanClient() != nil {
+		if len(activeUser.WebToken.RefreshToken) > 0 {
+			cz := time.FixedZone("CST", 8*3600) // 东8区
+			expiredTime, _ := time.ParseInLocation("2006-01-02 15:04:05", activeUser.WebToken.ExpireTime, cz)
+			now := time.Now()
+			if (expiredTime.Unix() - now.Unix()) <= (10 * 60) { // 10min
+				// need update refresh token
+				logger.Verboseln("access token expired, get new from refresh token")
+				if wt, er := aliyunpan.GetAccessTokenFromRefreshToken(activeUser.RefreshToken); er == nil {
+					activeUser.WebToken = *wt
+					activeUser.PanClient().UpdateToken(*wt)
+					logger.Verboseln("get new access token success")
+					return true
+				}
+			}
+		}
+	}
+	return false
+}

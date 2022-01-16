@@ -14,6 +14,7 @@
 package downloader
 
 import (
+	"errors"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	mathrand "math/rand"
@@ -34,6 +35,9 @@ var (
 
 	// ran 一个随机数实例
 	ran = mathrand.New(ranSource)
+
+	// 文件被禁止下载
+	ErrFileDownloadForbidden = errors.New("文件被禁止下载")
 )
 
 // RandomNumber 生成指定区间随机数

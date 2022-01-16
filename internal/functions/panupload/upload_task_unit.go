@@ -15,6 +15,7 @@ package panupload
 
 import (
 	"fmt"
+	"github.com/tickstep/library-go/logger"
 	"os"
 	"path"
 	"path/filepath"
@@ -297,7 +298,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	}()
 	// 准备文件
 	utu.prepareFile()
-	fmt.Printf("[%s] %s 准备结束, 准备耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart)))
+	logger.Verbosef("[%s] %s 准备结束, 准备耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart)))
 
 	var apierr *apierror.ApiError
 	var rs *aliyunpan.MkdirResult
@@ -346,11 +347,11 @@ StepUploadPrepareUpload:
 				rs = &aliyunpan.MkdirResult{FileId: test.FileId}
 			}
 			utu.FolderCreateMutex.Unlock()
-			fmt.Printf("[%s] %s 检测和创建云盘文件夹完毕[from db], 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart3)))
+			logger.Verbosef("[%s] %s 检测和创建云盘文件夹完毕[from db], 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart3)))
 		}
 		if rs == nil {
 			timeStart4 = time.Now()
-			fmt.Printf("[%s] %s 创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
+			logger.Verbosef("[%s] %s 创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
 			utu.FolderCreateMutex.Lock()
 			// rs, apierr = utu.PanClient.MkdirRecursive(utu.DriveId, "", "", 0, strings.Split(path.Clean(saveFilePath), "/"))
 			// 可以直接创建的，不用循环创建
@@ -361,7 +362,7 @@ StepUploadPrepareUpload:
 				result.ResultMessage = "创建云盘文件夹失败"
 				return
 			}
-			fmt.Printf("[%s] %s 创建云盘文件夹, 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart4)))
+			logger.Verbosef("[%s] %s 创建云盘文件夹, 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart4)))
 		}
 	} else {
 		rs = &aliyunpan.MkdirResult{}
@@ -369,7 +370,7 @@ StepUploadPrepareUpload:
 	}
 	// time.Sleep(time.Duration(2) * time.Second)
 	// utu.FolderCreateMutex.Unlock()
-	fmt.Printf("[%s] %s 检测和创建云盘文件夹完毕, 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart2)))
+	logger.Verbosef("[%s] %s 检测和创建云盘文件夹完毕, 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utils.ConvertTime(time.Now().Sub(timeStart2)))
 
 	sha1Str = ""
 	proofCode = ""
