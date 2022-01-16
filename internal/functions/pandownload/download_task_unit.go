@@ -188,14 +188,21 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	})
 
 	err = der.Execute()
-	isComplete = true
-	fmt.Print("\n")
-
 	if err != nil {
 		// check zero size file
 		if err == downloader.ErrNoWokers && dtu.fileInfo.FileSize == 0 {
 			// success for 0 size file
 			dtu.verboseInfof("download success for zero size file")
+		} else if err == downloader.ErrFileDownloadForbidden {
+			// 文件被禁止下载
+			isComplete = false
+			// 删除本地文件
+			removeErr := os.Remove(dtu.SavePath)
+			if removeErr != nil {
+				dtu.verboseInfof("[%s] remove file error: %s\n", dtu.taskInfo.Id(), removeErr)
+			}
+			fmt.Printf("[%s] 下载失败，文件不合法或者被禁止下载: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
+			return err
 		} else {
 			// 下载发生错误
 			// 下载失败, 删去空文件
@@ -211,6 +218,8 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 			}
 			return err
 		}
+	} else {
+		isComplete = true
 	}
 
 	// 下载成功
@@ -253,8 +262,12 @@ func (dtu *DownloadTaskUnit) handleError(result *taskframework.TaskUnitRunResult
 		// 系统级别的错误, 可能是权限问题
 		result.NeedRetry = false
 	default:
-		// 其他错误, 需要重试
-		result.NeedRetry = true
+		if result.Err == downloader.ErrFileDownloadForbidden {
+			result.NeedRetry = false
+		} else {
+			// 其他错误, 尝试重试
+			result.NeedRetry = true
+		}
 	}
 	time.Sleep(1*time.Second)
 }

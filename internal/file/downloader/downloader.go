@@ -20,12 +20,12 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
+	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/cachepool"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/prealloc"
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio/speeds"
-	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"io"
 	"net/http"
 	"sync"
@@ -42,6 +42,7 @@ type (
 	Downloader struct {
 		onExecuteEvent        requester.Event    //开始下载事件
 		onSuccessEvent        requester.Event    //成功下载事件
+		onFailedEvent         requester.Event    //成功下载事件
 		onFinishEvent         requester.Event    //结束下载事件
 		onPauseEvent          requester.Event    //暂停下载事件
 		onResumeEvent         requester.Event    //恢复下载事件
@@ -80,7 +81,6 @@ func NewDownloader(writer io.WriterAt, config *Config, p *aliyunpan.PanClient, g
 		panClient: p,
 		globalSpeedsStat: globalSpeedsStat,
 	}
-
 	return
 }
 
@@ -369,23 +369,34 @@ func (der *Downloader) Execute() error {
 	var (
 		writeMu = &sync.Mutex{}
 	)
+
+	// 获取下载链接
+	var apierr *apierror.ApiError
+	durl, apierr := der.panClient.GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+		DriveId: der.driveId,
+		FileId: der.fileInfo.FileId,
+	})
+	time.Sleep(time.Duration(200) * time.Millisecond)
+	if apierr != nil {
+		logger.Verbosef("ERROR: get download url error: %s\n", der.fileInfo.FileId)
+		cmdutil.Trigger(der.onCancelEvent)
+		return apierr
+	}
+	if durl == nil || durl.Url == "" {
+		logger.Verbosef("无法获取有效的下载链接: %+v\n", durl)
+		cmdutil.Trigger(der.onCancelEvent)
+		der.removeInstanceState() // 移除断点续传文件
+		cmdutil.Trigger(der.onFailedEvent)
+		return ErrFileDownloadForbidden
+	}
+
+	// 初始化下载worker
 	for k, r := range bii.Ranges {
 		loadBalancer := loadBalancerResponseList.SequentialGet()
 		if loadBalancer == nil {
 			continue
 		}
 
-		// 获取下载链接
-		var apierr *apierror.ApiError
-		durl, apierr := der.panClient.GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
-			DriveId: der.driveId,
-			FileId: der.fileInfo.FileId,
-		})
-		time.Sleep(time.Duration(200) * time.Millisecond)
-		if apierr != nil {
-			logger.Verbosef("ERROR: get download url error: %s\n", der.fileInfo.FileId)
-			continue
-		}
 		logger.Verbosef("work id: %d, download url: %s\n", k, durl)
 		client := requester.NewHTTPClient()
 		client.SetKeepAlive(true)
@@ -488,6 +499,15 @@ func (der *Downloader) Cancel() {
 	cmdutil.Trigger(der.monitorCancelFunc)
 }
 
+//Failed 失败
+func (der *Downloader) Failed() {
+	if der.monitor == nil {
+		return
+	}
+	cmdutil.Trigger(der.onFailedEvent)
+	cmdutil.Trigger(der.monitorCancelFunc)
+}
+
 //OnExecute 设置开始下载事件
 func (der *Downloader) OnExecute(onExecuteEvent requester.Event) {
 	der.onExecuteEvent = onExecuteEvent
@@ -496,6 +516,11 @@ func (der *Downloader) OnExecute(onExecuteEvent requester.Event) {
 //OnSuccess 设置成功下载事件
 func (der *Downloader) OnSuccess(onSuccessEvent requester.Event) {
 	der.onSuccessEvent = onSuccessEvent
+}
+
+//OnFailed 设置失败事件
+func (der *Downloader) OnFailed(onFailedEvent requester.Event) {
+	der.onFailedEvent = onFailedEvent
 }
 
 //OnFinish 设置结束下载事件
