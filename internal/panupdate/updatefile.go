@@ -23,6 +23,10 @@ import (
 func update(targetPath string, src io.Reader) error {
 	info, err := os.Stat(targetPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Printf("警告: 本地文件不存在 %s\n", targetPath)
+			return nil
+		}
 		fmt.Printf("Warning: %s\n", err)
 		return nil
 	}
