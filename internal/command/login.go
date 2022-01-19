@@ -43,7 +43,7 @@ func CmdLogin() cli.Command {
 		3.指定自行搭建的web服务，从指定的URL获取Token进行登录
 		aliyunpan login --RefreshTokenUrl "http://your.host.com/aliyunpan/token/refresh"
 
-		URL获取的响应体必须是JSON，格式要求如下所示，data内容即为token：
+		web服务为GET请求，返回的响应体必须是JSON，格式要求如下所示，data内容即为token：
 		{
 		    "code": "0",
 		    "msg": "ok",
