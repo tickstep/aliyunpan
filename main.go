@@ -50,7 +50,7 @@ const (
 
 var (
 	// Version 版本号
-	Version = "v0.1.1"
+	Version = "v0.1.2"
 
 	historyFilePath = filepath.Join(config.GetConfigDir(), "aliyunpan_command_history.txt")
 
@@ -200,8 +200,8 @@ func main() {
 			}
 
 			var (
-				activeUser = config.Config.ActiveUser()
-				runeFunc   = unicode.IsSpace
+				activeUser  = config.Config.ActiveUser()
+				runeFunc    = unicode.IsSpace
 				cmdRuneFunc = func(r rune) bool {
 					switch r {
 					case '\'', '"':
@@ -462,10 +462,10 @@ func main() {
 
 		// 显示命令历史
 		{
-			Name:        "history",
-			Aliases:     []string{},
-			Usage:       "显示命令历史",
-			UsageText:   app.Name + " history",
+			Name:      "history",
+			Aliases:   []string{},
+			Usage:     "显示命令历史",
+			UsageText: app.Name + " history",
 			Description: `显示命令历史
 
 		示例:
@@ -478,11 +478,11 @@ func main() {
 		3. 显示全部命令历史
 		aliyunpan history -n 0
 `,
-			Category:    "其他",
+			Category: "其他",
 			Action: func(c *cli.Context) error {
 				lineCount := 20
 				if c.IsSet("n") {
-					lineCount =  c.Int("n")
+					lineCount = c.Int("n")
 				}
 				printTable := func(lines []string) {
 					tb := cmdtable.NewTable(os.Stdout)
@@ -490,7 +490,7 @@ func main() {
 					tb.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 					tb.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
 					idx := 1
-					for _,line := range lines {
+					for _, line := range lines {
 						if line == "" {
 							continue
 						}
@@ -499,13 +499,13 @@ func main() {
 					}
 					tb.Render()
 				}
-				if contents,err := ioutil.ReadFile(historyFilePath);err == nil {
+				if contents, err := ioutil.ReadFile(historyFilePath); err == nil {
 					result := strings.Split(string(contents), "\n")
 					if lineCount == 0 {
 						printTable(result)
 					} else {
 						outputLine := make([]string, 0)
-						for idx := len(result)-1; idx >= 0; idx-- {
+						for idx := len(result) - 1; idx >= 0; idx-- {
 							line := result[idx]
 							if line != "" {
 								outputLine = append(outputLine, line)
@@ -515,7 +515,7 @@ func main() {
 							}
 						}
 						lines := make([]string, 0)
-						for idx := len(outputLine)-1; idx >= 0; idx-- {
+						for idx := len(outputLine) - 1; idx >= 0; idx-- {
 							lines = append(lines, outputLine[idx])
 						}
 						printTable(lines)
