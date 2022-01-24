@@ -30,6 +30,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -229,7 +230,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 			fmt.Printf("[%s] 警告, 加执行权限错误: %s\n", dtu.taskInfo.Id(), err)
 		}
 	}
-	fmt.Printf("[%s] 下载完成, 保存位置: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
+	fmt.Printf("\n[%s] 下载完成, 保存位置: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
 
 	return nil
 }
@@ -376,10 +377,30 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		}
 
 		// 获取该目录下的文件列表
-		fileList := dtu.PanClient.FilesDirectoriesRecurseList(dtu.DriveId, dtu.FilePanPath, func(depth int, _ string, fd *aliyunpan.FileEntity, apiError *apierror.ApiError) bool {
-			time.Sleep(500 * time.Millisecond)
-			return true
+		fileList,apierr := dtu.PanClient.FileListGetAll(&aliyunpan.FileListParam{
+			DriveId:      dtu.DriveId,
+			ParentFileId: dtu.fileInfo.FileId,
 		})
+		if apierr != nil {
+			// retry one more time
+			time.Sleep(3*time.Second)
+
+			fileList,apierr = dtu.PanClient.FileListGetAll(&aliyunpan.FileListParam{
+				DriveId:      dtu.DriveId,
+				ParentFileId: dtu.fileInfo.FileId,
+			})
+			if apierr != nil {
+				logger.Verbosef("[%s] get download file list for %s error: %s\n",
+					dtu.taskInfo.Id(), dtu.FilePanPath, apierr)
+
+				// 下次重试
+				result.ResultMessage = "获取目录信息错误"
+				result.Succeed = false
+				result.Err = apierr
+				result.NeedRetry = true
+				return
+			}
+		}
 		if fileList == nil {
 			result.ResultMessage = "获取目录信息错误"
 			result.Err = err
@@ -387,10 +408,14 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			return
 		}
 
+		// 创建对应的任务进行下载
 		for k := range fileList {
+			fileList[k].Path = path.Join(dtu.FilePanPath, fileList[k].FileName)
 			if fileList[k].IsFolder() {
-				continue
+				logger.Verbosef("[%s] create sub folder download task: %s\n",
+					dtu.taskInfo.Id(), fileList[k].Path)
 			}
+
 			// 添加子任务
 			subUnit := *dtu
 			newCfg := *dtu.Cfg
@@ -399,12 +424,13 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			subUnit.FilePanPath = fileList[k].Path
 			subUnit.SavePath = filepath.Join(dtu.OriginSaveRootPath, fileList[k].Path) // 保存位置
 
-			// 加入父队列
+			// 加入父队列，按照队列调度进行下载
 			info := dtu.ParentTaskExecutor.Append(&subUnit, dtu.taskInfo.MaxRetry())
 			fmt.Printf("[%s] 加入下载队列: %s\n", info.Id(), fileList[k].Path)
 		}
 
-		result.Succeed = true // 执行成功
+		// 本下载任务执行成功
+		result.Succeed = true
 		return
 	}
 

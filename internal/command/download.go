@@ -15,8 +15,6 @@ package command
 
 import (
 	"fmt"
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
-	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
@@ -236,34 +234,11 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		return
 	}
 
-	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s\n", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
+	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s\n\n", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
 
 	var (
 		panClient = activeUser.PanClient()
-		loadCount = 0
-		loadSize = int64(0)
 	)
-
-	fmt.Printf("[0] 正在计算需要下载的文件数量和大小...\n")
-	// 预测要下载的文件数量
-	for k := range paths {
-		// 使用递归获取文件的方法计算路径包含的文件的总数量
-		panClient.FilesDirectoriesRecurseList(options.DriveId, paths[k], func(depth int, _ string, fd *aliyunpan.FileEntity, apiError *apierror.ApiError) bool {
-			if apiError != nil {
-				panCommandVerbose.Warnf("%s\n", apiError)
-				return true
-			}
-
-			// 忽略统计文件夹数量
-			if !fd.IsFolder() {
-				loadCount++
-				loadSize += fd.FileSize
-			}
-			time.Sleep(500 * time.Millisecond)
-			return true
-		})
-	}
-	fmt.Printf("[0] 预计总共需要下载的文件数量: %d, 总大小：%s\n\n", loadCount, converter.ConvertFileSize(loadSize, 2))
 	cfg.MaxParallel = options.Parallel
 
 	var (
