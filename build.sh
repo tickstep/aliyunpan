@@ -14,7 +14,9 @@ fi
 output="out"
 
 build_dir=`dirname $0`
-mkdir -p ${build_dir}/${output} > /dev/null 2>&1
+if [ ! -d ${build_dir}/${output} ];then
+  mkdir -p ${build_dir}/${output}
+fi
 
 default_golang() {
   export GOROOT=/usr/local/go
