@@ -363,6 +363,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			dtu.handleError(result)
 			return
 		}
+		time.Sleep(1*time.Second)
 	}
 
 	// 输出文件信息
@@ -407,6 +408,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			result.NeedRetry = true
 			return
 		}
+		time.Sleep(1*time.Second)
 
 		// 创建对应的任务进行下载
 		for k := range fileList {
