@@ -52,8 +52,10 @@ var (
 	// Version 版本号
 	Version = "v0.1.2"
 
+	// 命令历史文件
 	historyFilePath = filepath.Join(config.GetConfigDir(), "aliyunpan_command_history.txt")
 
+	// 是否是交互命令行形态
 	isCli bool
 )
 
