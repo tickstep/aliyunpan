@@ -104,11 +104,11 @@ func ParseVersionNum(versionStr string) int {
 	versionStr = strings.ReplaceAll(versionStr, "-dev", "")
 	versionStr = strings.ReplaceAll(versionStr, "v", "")
 	versionParts := strings.Split(versionStr, ".")
-	verNum := parseInt(versionParts[0]) * 1e4 + parseInt(versionParts[1]) * 1e2 + parseInt(versionParts[2])
+	verNum := parseInt(versionParts[0])*1e4 + parseInt(versionParts[1])*1e2 + parseInt(versionParts[2])
 	return verNum
 }
 func parseInt(numStr string) int {
-	num,e := strconv.Atoi(numStr)
+	num, e := strconv.Atoi(numStr)
 	if e != nil {
 		return 0
 	}
@@ -117,7 +117,10 @@ func parseInt(numStr string) int {
 
 func ConvertTime(t time.Duration) string {
 	seconds := int64(t.Seconds())
+	return ConvertTimeSecond(seconds)
+}
 
+func ConvertTimeSecond(seconds int64) string {
 	MT := int64(1 * 60)
 	HT := int64(1 * 60 * 60)
 
@@ -128,22 +131,22 @@ func ConvertTime(t time.Duration) string {
 		return fmt.Sprintf("%d秒", seconds)
 	}
 	if seconds >= MT && seconds < HT {
-		return fmt.Sprintf("%d分%d秒", seconds / MT, seconds % MT)
+		return fmt.Sprintf("%d分%d秒", seconds/MT, seconds%MT)
 	}
 	if seconds >= HT {
 		h := seconds / HT
 		tmp := seconds % HT
-		return fmt.Sprintf("%d小时%d分%d秒", h, tmp / MT, tmp % MT)
+		return fmt.Sprintf("%d小时%d分%d秒", h, tmp/MT, tmp%MT)
 	}
 	return "0秒"
 }
 
 // HasSuffix 判断是否以某字符串作为结尾
-func HasSuffix(s ,suffix string) bool {
+func HasSuffix(s, suffix string) bool {
 	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
 }
 
 // HasPrefix 判断是否以某字符串作为开始
 func HasPrefix(s, prefix string) bool {
-	return len(s) >= len(prefix) && s[0:len(prefix)]== prefix
+	return len(s) >= len(prefix) && s[0:len(prefix)] == prefix
 }

@@ -26,12 +26,12 @@ import (
 type DriveInfo struct {
 	DriveId   string `json:"driveId"`
 	DriveName string `json:"driveName"`
-	DriveTag string `json:"driveTag"`
+	DriveTag  string `json:"driveTag"`
 }
 type DriveInfoList []*DriveInfo
 
 func (d DriveInfoList) GetFileDriveId() string {
-	for _,drive := range d {
+	for _, drive := range d {
 		if drive.DriveTag == "File" {
 			return drive.DriveId
 		}
@@ -41,22 +41,23 @@ func (d DriveInfoList) GetFileDriveId() string {
 
 type PanUser struct {
 	UserId      string `json:"userId"`
-	Nickname string `json:"nickname"`
+	Nickname    string `json:"nickname"`
 	AccountName string `json:"accountName"`
 
-	Workdir  string `json:"workdir"`
+	Workdir           string               `json:"workdir"`
 	WorkdirFileEntity aliyunpan.FileEntity `json:"workdirFileEntity"`
 
-	AlbumWorkdir  string `json:"albumWorkdir"`
+	AlbumWorkdir           string               `json:"albumWorkdir"`
 	AlbumWorkdirFileEntity aliyunpan.FileEntity `json:"albumWorkdirFileEntity"`
 
-	ActiveDriveId string `json:"activeDriveId"`
-	DriveList DriveInfoList `json:"driveList"`
+	ActiveDriveId string        `json:"activeDriveId"`
+	DriveList     DriveInfoList `json:"driveList"`
 
-	RefreshToken string `json:"refreshToken"`
-	WebToken aliyunpan.WebLoginToken `json:"webToken"`
+	RefreshToken string                  `json:"refreshToken"`
+	WebToken     aliyunpan.WebLoginToken `json:"webToken"`
+	TokenId      string                  `json:"tokenId"`
 
-	panClient *aliyunpan.PanClient
+	panClient  *aliyunpan.PanClient
 	cacheOpMap cachemap.CacheOpMap
 }
 
@@ -72,9 +73,9 @@ func SetupUserByCookie(webToken *aliyunpan.WebLoginToken) (user *PanUser, err *a
 doLoginAct:
 	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{})
 	u := &PanUser{
-		WebToken: *webToken,
-		panClient: panClient,
-		Workdir: "/",
+		WebToken:          *webToken,
+		panClient:         panClient,
+		Workdir:           "/",
 		WorkdirFileEntity: *aliyunpan.NewFileEntityForRootDir(),
 	}
 
@@ -83,7 +84,7 @@ doLoginAct:
 	if err != nil {
 		if err.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshWebToken {
 			tryRefreshWebToken = false
-			webCookie,_ := aliyunpan.GetAccessTokenFromRefreshToken(webToken.RefreshToken)
+			webCookie, _ := aliyunpan.GetAccessTokenFromRefreshToken(webToken.RefreshToken)
 			if webCookie != nil {
 				webToken = webCookie
 				goto doLoginAct
@@ -171,7 +172,7 @@ func (pu *PanUser) GetSavePath(filePanPath string) string {
 }
 
 func (pu *PanUser) GetDriveByTag(tag string) *DriveInfo {
-	for _,item := range pu.DriveList {
+	for _, item := range pu.DriveList {
 		if item.DriveTag == tag {
 			return item
 		}
@@ -180,7 +181,7 @@ func (pu *PanUser) GetDriveByTag(tag string) *DriveInfo {
 }
 
 func (pu *PanUser) GetDriveById(id string) *DriveInfo {
-	for _,item := range pu.DriveList {
+	for _, item := range pu.DriveList {
 		if item.DriveId == id {
 			return item
 		}
@@ -189,7 +190,7 @@ func (pu *PanUser) GetDriveById(id string) *DriveInfo {
 }
 
 func (pu *PanUser) GetActiveDriveInfo() *DriveInfo {
-	for _,item := range pu.DriveList {
+	for _, item := range pu.DriveList {
 		if item.DriveId == pu.ActiveDriveId {
 			return item
 		}

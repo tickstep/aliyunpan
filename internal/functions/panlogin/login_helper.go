@@ -47,6 +47,9 @@ func NewLoginHelper(webHost string) *LoginHelper {
 
 // GetQRCodeLoginUrl 获取登录二维码链接
 func (h *LoginHelper) GetQRCodeLoginUrl(keyStr string) (*QRCodeUrlResult, error) {
+	if keyStr == "" {
+		keyStr = ids.GetUniqueId("", 32)
+	}
 	fullUrl := strings.Builder{}
 	ipAddr, err := getip.IPInfoFromTechainBaidu()
 	if err != nil {
