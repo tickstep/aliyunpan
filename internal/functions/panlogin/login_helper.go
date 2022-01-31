@@ -41,9 +41,6 @@ type QRCodeLoginResult struct {
 }
 
 func NewLoginHelper(webHost string) *LoginHelper {
-	if webHost == "" {
-		webHost = "http://api.tickstep.com"
-	}
 	return &LoginHelper{
 		webHost: webHost,
 	}

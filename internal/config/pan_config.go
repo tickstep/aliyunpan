@@ -39,11 +39,15 @@ const (
 	// ConfigVersion 配置文件版本
 	ConfigVersion string = "1.0"
 
-	// DefaultUploadParallelNum 默认的文件上传并发数量
+	// DefaultFileUploadParallelNum 默认的文件上传并发数量
 	DefaultFileUploadParallelNum = 10
 
 	// DefaultFileDownloadParallelNum 默认的文件下载并发数量
 	DefaultFileDownloadParallelNum = 5
+
+	// DefaultTokenServiceWebHost 默认的token服务
+	DefaultTokenServiceWebHost = "http://api.tickstep.com"
+	//DefaultTokenServiceWebHost = "http://localhost:8977"
 )
 
 var (
@@ -75,7 +79,7 @@ type PanConfig struct {
 
 	MaxDownloadRate int64 `json:"maxDownloadRate"` // 限制最大下载速度，单位 B/s, 即字节/每秒
 	MaxUploadRate   int64 `json:"maxUploadRate"`   // 限制最大上传速度，单位 B/s, 即字节/每秒
-	TransferUrlType  int `json:"transferUrlType"`   // 上传/下载URL类别，1-默认，2-阿里云ECS
+	TransferUrlType int   `json:"transferUrlType"` // 上传/下载URL类别，1-默认，2-阿里云ECS
 
 	SaveDir string `json:"saveDir"` // 下载储存路径
 
@@ -282,7 +286,7 @@ func GetConfigDir() string {
 
 		// 3. ~/.aliyunpan/
 		if runtime.GOOS == "linux" || runtime.GOOS == "windows" {
-			cd,er := homedir.Expand("~/.aliyunpan")
+			cd, er := homedir.Expand("~/.aliyunpan")
 			if er == nil {
 				if IsFolderExist(cd) {
 					logger.Verboseln("use config dir: ", cd)

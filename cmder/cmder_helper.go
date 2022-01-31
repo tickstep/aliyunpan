@@ -6,6 +6,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder/cmdliner"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/functions/panlogin"
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"sync"
@@ -75,7 +76,29 @@ func TryLogin() *config.PanUser {
 			// login
 			_, webToken, err := DoLoginHelper(u.RefreshToken)
 			if err != nil {
-				logger.Verboseln("automatically login error")
+				logger.Verboseln("automatically login use saved refresh token error ", err)
+				if u.TokenId != "" {
+					logger.Verboseln("try to login use tokenId")
+					h := panlogin.NewLoginHelper(config.DefaultTokenServiceWebHost)
+					r, e := h.GetRefreshToken(u.TokenId)
+					if e != nil {
+						logger.Verboseln("try to login use tokenId error", e)
+						break
+					}
+					refreshToken, e := h.ParseSecureRefreshToken("", r.SecureRefreshToken)
+					if e != nil {
+						logger.Verboseln("try to parse refresh token error", e)
+						break
+					}
+					_, webToken, err = DoLoginHelper(refreshToken)
+					if err != nil {
+						logger.Verboseln("try to use refresh token from tokenId error", e)
+						break
+					}
+					fmt.Println("Token重新自动登录成功")
+					// save new refresh token
+					u.RefreshToken = refreshToken
+				}
 				break
 			}
 			// success

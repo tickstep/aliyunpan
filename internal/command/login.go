@@ -133,7 +133,7 @@ func CmdLogout() cli.Command {
 
 func RunLogin(useQrCodeLogin bool, refreshToken string) (tokenId, refreshTokenStr string, webToken aliyunpan.WebLoginToken, error error) {
 	if useQrCodeLogin {
-		h := panlogin.NewLoginHelper("http://localhost:8977")
+		h := panlogin.NewLoginHelper(config.DefaultTokenServiceWebHost)
 		qrCodeUrlResult, err := h.GetQRCodeLoginUrl("")
 		if err != nil {
 			fmt.Println("二维码登录错误：", err)
