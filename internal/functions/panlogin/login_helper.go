@@ -11,6 +11,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"net/url"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -40,6 +41,9 @@ type QRCodeLoginResult struct {
 }
 
 func NewLoginHelper(webHost string) *LoginHelper {
+	if webHost == "" {
+		webHost = "http://api.tickstep.com"
+	}
 	return &LoginHelper{
 		webHost: webHost,
 	}
@@ -74,6 +78,15 @@ func (h *LoginHelper) GetQRCodeLoginUrl(keyStr string) (*QRCodeUrlResult, error)
 		return nil, err
 	}
 
+	errResp := &LoginHttpResult{}
+	if err1 := json.Unmarshal(body, errResp); err1 != nil {
+		logger.Verboseln("parse qrcode result json error ", err1)
+		return nil, err1
+	}
+	if errResp.Code != 0 {
+		return nil, fmt.Errorf(errResp.Msg)
+	}
+
 	// parse result
 	r := &LoginHttpResult{}
 	r.Data = &QRCodeUrlResult{}
@@ -81,9 +94,7 @@ func (h *LoginHelper) GetQRCodeLoginUrl(keyStr string) (*QRCodeUrlResult, error)
 		logger.Verboseln("parse qrcode result json error ", err2)
 		return nil, err2
 	}
-	if r.Code != 0 {
-		return nil, fmt.Errorf(r.Msg)
-	}
+
 	token := r.Data.(*QRCodeUrlResult)
 	if len(token.TokenUrl) > 0 {
 		u, err := url.Parse(token.TokenUrl)
@@ -118,15 +129,21 @@ func (h *LoginHelper) GetQRCodeLoginResult(tokenId string) (*QRCodeLoginResult, 
 		return nil, err
 	}
 
+	errResp := &LoginHttpResult{}
+	if err1 := json.Unmarshal(body, errResp); err1 != nil {
+		logger.Verboseln("parse qrcode result json error ", err1)
+		return nil, err1
+	}
+	if errResp.Code != 0 {
+		return nil, fmt.Errorf(errResp.Msg)
+	}
+
 	// parse result
 	r := &LoginHttpResult{}
 	r.Data = &QRCodeLoginResult{}
 	if err2 := json.Unmarshal(body, r); err2 != nil {
 		logger.Verboseln("parse qrcode result json error ", err2)
 		return nil, err2
-	}
-	if r.Code != 0 {
-		return nil, fmt.Errorf(r.Msg)
 	}
 	return r.Data.(*QRCodeLoginResult), nil
 }
@@ -152,15 +169,21 @@ func (h *LoginHelper) GetRefreshToken(tokenId string) (*QRCodeLoginResult, error
 		return nil, err
 	}
 
+	errResp := &LoginHttpResult{}
+	if err1 := json.Unmarshal(body, errResp); err1 != nil {
+		logger.Verboseln("parse qrcode result json error ", err1)
+		return nil, err1
+	}
+	if errResp.Code != 0 {
+		return nil, fmt.Errorf(errResp.Msg)
+	}
+
 	// parse result
 	r := &LoginHttpResult{}
 	r.Data = &QRCodeLoginResult{}
 	if err2 := json.Unmarshal(body, r); err2 != nil {
 		logger.Verboseln("parse refresh token result json error ", err2)
 		return nil, err2
-	}
-	if r.Code != 0 {
-		return nil, fmt.Errorf(r.Msg)
 	}
 	return r.Data.(*QRCodeLoginResult), nil
 }
@@ -192,5 +215,11 @@ func (h *LoginHelper) ParseSecureRefreshToken(keyStr, secureRefreshToken string)
 	if e != nil {
 		return "", nil
 	}
-	return string(r), nil
+
+	refreshToken := string(r)
+	matched, _ := regexp.MatchString(`^[\-a-zA-Z0-9]+`, refreshToken)
+	if !matched {
+		return "", fmt.Errorf("Token解析错误")
+	}
+	return refreshToken, nil
 }
