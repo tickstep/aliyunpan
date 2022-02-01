@@ -46,7 +46,7 @@ const (
 	DefaultFileDownloadParallelNum = 5
 
 	// DefaultTokenServiceWebHost 默认的token服务
-	DefaultTokenServiceWebHost = "http://api.tickstep.com"
+	DefaultTokenServiceWebHost = "https://api.tickstep.com"
 	//DefaultTokenServiceWebHost = "http://localhost:8977"
 )
 
