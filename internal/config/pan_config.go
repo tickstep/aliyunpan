@@ -361,6 +361,7 @@ func (c *PanConfig) SetActiveUser(user *PanUser) *PanUser {
 			u.Nickname = user.Nickname
 			u.WebToken = user.WebToken
 			u.RefreshToken = user.RefreshToken
+			u.TokenId = user.TokenId
 			needToInsert = false
 			break
 		}
