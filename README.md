@@ -576,8 +576,8 @@ aliyunpan webdav start -h
 使用默认配置启动webdav服务。
 aliyunpan webdav start
 
-启动webdav服务，并配置IP为127.0.0.1，端口为23077，登录用户名为admin，登录密码为admin123，网盘目录 /webdav_folder 作为服务的根目录
-aliyunpan webdav start -ip "127.0.0.1" -port 23077 -webdav_user "admin" -webdav_password "admin123" -pan_dir_path "/webdav_folder"
+启动webdav服务，并配置IP为127.0.0.1，端口为23077，登录用户名为admin，登录密码为admin123，文件网盘目录 /webdav_folder 作为服务的根目录
+aliyunpan webdav start -ip "127.0.0.1" -port 23077 -webdav_user "admin" -webdav_password "admin123" -pan_drive "File" -pan_dir_path "/webdav_folder"
 
 正常启动后会打印出webdav链接参数，然后使用支持webdav的客户端填入下面对应的参数进行链接即可
 ----------------------------------------
@@ -585,6 +585,7 @@ webdav网盘信息：
 链接：http://localhost:23077
 用户名：admin
 密码：admin123
+网盘服务类型：文件
 网盘服务目录：/webdav_folder
 ----------------------------------------
 ```
@@ -637,11 +638,12 @@ $ nohup ./webdav.sh >/dev/null 2>&1 &
 
 1. 直接运行   
 ```
-docker run -d --name=aliyunpan-webdav --restart=always -p 23077:23077 -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_AUTH_USER="admin" -e ALIYUNPAN_AUTH_PASSWORD="admin" -e ALIYUNPAN_PAN_DIR="/" tickstep/aliyunpan-webdav
+docker run -d --name=aliyunpan-webdav --restart=always -p 23077:23077 -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_AUTH_USER="admin" -e ALIYUNPAN_AUTH_PASSWORD="admin" -e ALIYUNPAN_PAN_DRIVE="File" -e ALIYUNPAN_PAN_DIR="/" tickstep/aliyunpan-webdav
 
 # ALIYUNPAN_REFRESH_TOKEN RefreshToken
 # ALIYUNPAN_AUTH_USER webdav登录用户名
 # ALIYUNPAN_AUTH_PASSWORD webdav登录密码
+# ALIYUNPAN_PAN_DRIVE 网盘类型，可选： File-文件 Album-相册
 # ALIYUNPAN_PAN_DIR 网盘文件夹的webdav服务根目录
 ```
 
@@ -664,6 +666,8 @@ services:
       - ALIYUNPAN_AUTH_USER=admin
       # webdav 登录密码
       - ALIYUNPAN_AUTH_PASSWORD=admin
+      # 指定网盘类型为文件，可选： File-文件 Album-相册
+      - ALIYUNPAN_PAN_DRIVE=File
       # 指定网盘文件夹作为webdav服务根目录
       - ALIYUNPAN_PAN_DIR=/
       # 上传下载链接类型：1-默认 2-阿里ECS环境

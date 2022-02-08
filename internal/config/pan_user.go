@@ -39,6 +39,15 @@ func (d DriveInfoList) GetFileDriveId() string {
 	return ""
 }
 
+func (d DriveInfoList) GetAlbumDriveId() string {
+	for _, drive := range d {
+		if drive.DriveTag == "Album" {
+			return drive.DriveId
+		}
+	}
+	return ""
+}
+
 type PanUser struct {
 	UserId      string `json:"userId"`
 	Nickname    string `json:"nickname"`

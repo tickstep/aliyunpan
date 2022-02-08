@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/webdav"
 	"github.com/urfave/cli"
+	"strings"
 )
 
 func CmdWebdav() cli.Command {
@@ -59,8 +60,8 @@ aliyunpan webdav start -h
 	2. 使用默认配置启动webdav服务
 	aliyunpan webdav start
 
-	3. 启动webdav服务，并配置IP为127.0.0.1，端口为23077，登录用户名为admin，登录密码为admin123，网盘目录 /webdav_folder 作为服务的根目录
-	aliyunpan webdav start -ip "127.0.0.1" -port 23077 -webdav_user "admin" -webdav_password "admin123" -pan_dir_path "/webdav_folder"
+	3. 启动webdav服务，并配置IP为127.0.0.1，端口为23077，登录用户名为admin，登录密码为admin123，文件网盘目录 /webdav_folder 作为服务的根目录
+	aliyunpan webdav start -ip "127.0.0.1" -port 23077 -webdav_user "admin" -webdav_password "admin123" -pan_drive "File" -pan_dir_path "/webdav_folder"
 
 `,
 				Action: func(c *cli.Context) error {
@@ -88,7 +89,6 @@ aliyunpan webdav start -h
 					panUserId := config.Config.ActiveUID
 					activeUser := GetActiveUser()
 					webdavServ.PanUserId = panUserId
-					webdavServ.PanDriveId = activeUser.DriveList.GetFileDriveId()
 					webdavServ.PanUser = activeUser
 
 					// address
@@ -104,6 +104,20 @@ aliyunpan webdav start -h
 						port = c.Int("port")
 					}
 					webdavServ.Port = port
+
+					// binding pan drive
+					panDriveName := "File"
+					panDriveNameStr := "文件"
+					if c.IsSet("pan_drive") {
+						panDriveName = c.String("pan_drive")
+					}
+					if strings.ToLower(panDriveName) == "album" {
+						webdavServ.PanDriveId = activeUser.DriveList.GetAlbumDriveId()
+						panDriveNameStr = "相册"
+					} else {
+						webdavServ.PanDriveId = activeUser.DriveList.GetFileDriveId()
+						panDriveNameStr = "文件"
+					}
 
 					// binding pan dir path
 					panDirPath := "/"
@@ -131,8 +145,8 @@ aliyunpan webdav start -h
 					}
 
 					fmt.Println("----------------------------------------")
-					fmt.Printf("webdav网盘信息：\n链接：http://localhost:%d\n用户名：%s\n密码：%s\n网盘服务目录：%s\n",
-						webdavServ.Port, webdavServ.Users[0].Username, webdavServ.Users[0].Password, webdavServ.Users[0].Scope)
+					fmt.Printf("webdav网盘信息：\n链接：http://localhost:%d\n用户名：%s\n密码：%s\n网盘服务类型：%s\n网盘服务目录：%s\n",
+						webdavServ.Port, webdavServ.Users[0].Username, webdavServ.Users[0].Password, panDriveNameStr, webdavServ.Users[0].Scope)
 					fmt.Println("----------------------------------------")
 					fmt.Println("webdav在线网盘服务运行中...")
 					webdavServ.StartServer()
@@ -155,6 +169,11 @@ aliyunpan webdav start -h
 					cli.StringFlag{
 						Name:  "webdav_password",
 						Usage: "Webdav登录密码，默认为：admin",
+					},
+					cli.StringFlag{
+						Name:  "pan_drive",
+						Usage: "Webdav绑定的网盘类型。File-文件 Album-相册。默认为文件网盘",
+						Value: "File",
 					},
 					cli.StringFlag{
 						Name:  "pan_dir_path",
