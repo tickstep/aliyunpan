@@ -161,6 +161,9 @@ aliyunpan login
 
 命令行指定RefreshToken登录
 aliyunpan login -RefreshToken=626a27b6193f4c5ca6ef0.......
+
+使用二维码方式进行登录，按照引导步骤进行
+aliyunpan login -QrCode
 ```
 
 
