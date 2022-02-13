@@ -73,9 +73,34 @@ func CmdLs() cli.Command {
 				return nil
 			}
 
+			var (
+				orderBy   aliyunpan.FileOrderBy        = aliyunpan.FileOrderByUpdatedAt
+				orderSort aliyunpan.FileOrderDirection = aliyunpan.FileOrderDirectionDesc
+			)
+
+			switch {
+			case c.IsSet("asc"):
+				orderSort = aliyunpan.FileOrderDirectionAsc
+			case c.IsSet("desc"):
+				orderSort = aliyunpan.FileOrderDirectionDesc
+			default:
+				orderSort = aliyunpan.FileOrderDirectionDesc
+			}
+
+			switch {
+			case c.IsSet("time"):
+				orderBy = aliyunpan.FileOrderByUpdatedAt
+			case c.IsSet("name"):
+				orderBy = aliyunpan.FileOrderByName
+			case c.IsSet("size"):
+				orderBy = aliyunpan.FileOrderBySize
+			default:
+				orderBy = aliyunpan.FileOrderByUpdatedAt
+			}
+
 			RunLs(parseDriveId(c), c.Args().Get(0), &LsOptions{
 				Total: c.Bool("l") || c.Parent().Args().Get(0) == "ll",
-			})
+			}, orderBy, orderSort)
 
 			return nil
 		},
@@ -85,15 +110,36 @@ func CmdLs() cli.Command {
 				Usage: "网盘ID",
 				Value: "",
 			},
+			cli.BoolFlag{
+				Name:  "asc",
+				Usage: "升序排序",
+			},
+			cli.BoolFlag{
+				Name:  "desc",
+				Usage: "降序排序",
+			},
+			cli.BoolFlag{
+				Name:  "time",
+				Usage: "根据修改时间排序",
+			},
+			cli.BoolFlag{
+				Name:  "name",
+				Usage: "根据文件名排序",
+			},
+			cli.BoolFlag{
+				Name:  "size",
+				Usage: "根据大小排序",
+			},
 		},
 	}
 }
 
-func RunLs(driveId, targetPath string, lsOptions *LsOptions)  {
+func RunLs(driveId, targetPath string, lsOptions *LsOptions,
+	orderBy aliyunpan.FileOrderBy, orderDirection aliyunpan.FileOrderDirection) {
 	activeUser := config.Config.ActiveUser()
 	targetPath = activeUser.PathJoin(driveId, targetPath)
-	if targetPath[len(targetPath) - 1] == '/' {
-		targetPath = text.Substr(targetPath, 0, len(targetPath) - 1)
+	if targetPath[len(targetPath)-1] == '/' {
+		targetPath = text.Substr(targetPath, 0, len(targetPath)-1)
 	}
 
 	targetPathInfo, err := activeUser.PanClient().FileInfoByPath(driveId, targetPath)
@@ -106,6 +152,8 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions)  {
 	fileListParam := &aliyunpan.FileListParam{}
 	fileListParam.ParentFileId = targetPathInfo.FileId
 	fileListParam.DriveId = driveId
+	fileListParam.OrderBy = orderBy
+	fileListParam.OrderDirection = orderDirection
 	if targetPathInfo.IsFolder() {
 		fileResult, err := activeUser.PanClient().FileListGetAll(fileListParam)
 		if err != nil {
@@ -118,7 +166,6 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions)  {
 	}
 	renderTable(opLs, lsOptions.Total, targetPath, fileList)
 }
-
 
 func renderTable(op int, isTotal bool, path string, files aliyunpan.FileList) {
 	tb := cmdtable.NewTable(os.Stdout)
