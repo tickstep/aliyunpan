@@ -50,10 +50,10 @@ type (
 		onDownloadStatusEvent DownloadStatusFunc //状态处理事件
 
 		monitorCancelFunc context.CancelFunc
-		globalSpeedsStat *speeds.Speeds // 全局速度统计
+		globalSpeedsStat  *speeds.Speeds // 全局速度统计
 
-		fileInfo               *aliyunpan.FileEntity      // 下载的文件信息
-		driveId               string
+		fileInfo                *aliyunpan.FileEntity // 下载的文件信息
+		driveId                 string
 		loadBalancerCompareFunc LoadBalancerCompareFunc // 负载均衡检测函数
 		durlCheckFunc           DURLCheckFunc           // 下载url检测函数
 		statusCodeBodyCheckFunc StatusCodeBodyCheckFunc
@@ -76,9 +76,9 @@ type (
 //NewDownloader 初始化Downloader
 func NewDownloader(writer io.WriterAt, config *Config, p *aliyunpan.PanClient, globalSpeedsStat *speeds.Speeds) (der *Downloader) {
 	der = &Downloader{
-		config: config,
-		writer: writer,
-		panClient: p,
+		config:           config,
+		writer:           writer,
+		panClient:        p,
 		globalSpeedsStat: globalSpeedsStat,
 	}
 	return
@@ -216,7 +216,7 @@ func (der *Downloader) checkLoadBalancers() *LoadBalancerResponseList {
 			}
 
 			loadBalancer := &LoadBalancerResponse{
-				URL:     req.URL.String(),
+				URL: req.URL.String(),
 			}
 
 			loadBalancerResponses = append(loadBalancerResponses, loadBalancer)
@@ -300,7 +300,7 @@ func (der *Downloader) Execute() error {
 	var (
 		isInstance = bii != nil // 是否存在断点信息
 		status     *transfer.DownloadStatus
-		single = false // 默认开启多线程下载
+		single     = false // 默认开启多线程下载
 	)
 	if !isInstance {
 		bii = &transfer.DownloadInstanceInfo{}
@@ -374,7 +374,7 @@ func (der *Downloader) Execute() error {
 	var apierr *apierror.ApiError
 	durl, apierr := der.panClient.GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
 		DriveId: der.driveId,
-		FileId: der.fileInfo.FileId,
+		FileId:  der.fileInfo.FileId,
 	})
 	time.Sleep(time.Duration(200) * time.Millisecond)
 	if apierr != nil {
@@ -382,7 +382,7 @@ func (der *Downloader) Execute() error {
 		cmdutil.Trigger(der.onCancelEvent)
 		return apierr
 	}
-	if durl == nil || durl.Url == "" {
+	if durl == nil || durl.Url == "" || durl.Url == aliyunpan.IllegalDownloadUrl {
 		logger.Verbosef("无法获取有效的下载链接: %+v\n", durl)
 		cmdutil.Trigger(der.onCancelEvent)
 		der.removeInstanceState() // 移除断点续传文件

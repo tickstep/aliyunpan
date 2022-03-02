@@ -63,6 +63,8 @@ const (
 	StatusCodeCanceled
 	//StatusCodeDownloadUrlExpired 下载链接已过期
 	StatusCodeDownloadUrlExpired
+	//StatusCodeIllegalDownloadFile 文件非法，不允许下载
+	StatusCodeIllegalDownloadFile
 )
 
 //GetStatusText 根据状态码获取状态信息
