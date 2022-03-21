@@ -42,8 +42,14 @@ const (
 	// DefaultFileUploadParallelNum 默认的文件上传并发数量
 	DefaultFileUploadParallelNum = 10
 
+	// MaxFileUploadParallelNum 最大文件上传并发数量。过大会被阿里云盘风控，导致无法上传
+	MaxFileUploadParallelNum = 20
+
 	// DefaultFileDownloadParallelNum 默认的文件下载并发数量
 	DefaultFileDownloadParallelNum = 5
+
+	// MaxFileDownloadParallelNum 最大文件下载并发数量。过大会被阿里云盘风控，导致无法下载
+	MaxFileDownloadParallelNum = 20
 
 	// DefaultTokenServiceWebHost 默认的token服务
 	DefaultTokenServiceWebHost = "https://api.tickstep.com"

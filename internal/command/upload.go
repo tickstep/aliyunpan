@@ -70,7 +70,7 @@ type (
 var UploadFlags = []cli.Flag{
 	cli.IntFlag{
 		Name:  "p",
-		Usage: "本次操作文件上传并发数量，即可以同时并发上传多少个文件。0代表跟从配置文件设置",
+		Usage: "本次操作文件上传并发数量，即可以同时并发上传多少个文件。0代表跟从配置文件设置（取值范围:1 ~ 20）",
 		Value: 0,
 	},
 	cli.IntFlag{
@@ -253,6 +253,10 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			opt.AllParallel = config.DefaultFileUploadParallelNum
 		}
 	}
+	if opt.AllParallel > config.MaxFileUploadParallelNum {
+		opt.AllParallel = config.MaxFileUploadParallelNum
+	}
+
 	if opt.Parallel <= 0 {
 		opt.Parallel = 1
 	}

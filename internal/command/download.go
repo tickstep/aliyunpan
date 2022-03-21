@@ -149,7 +149,7 @@ func CmdDownload() cli.Command {
 			},
 			cli.IntFlag{
 				Name:  "p",
-				Usage: "指定同时进行下载文件的数量",
+				Usage: "指定同时进行下载文件的数量（取值范围:1 ~ 20）",
 			},
 			cli.IntFlag{
 				Name:  "retry",
@@ -226,6 +226,9 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		if options.Parallel == 0 {
 			options.Parallel = config.DefaultFileDownloadParallelNum
 		}
+	}
+	if options.Parallel > config.MaxFileDownloadParallelNum {
+		options.Parallel = config.MaxFileDownloadParallelNum
 	}
 
 	paths, err := matchPathByShellPattern(options.DriveId, paths...)
