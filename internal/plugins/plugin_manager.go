@@ -1,4 +1,4 @@
-package plugin
+package plugins
 
 import (
 	"fmt"
@@ -14,14 +14,23 @@ import (
 type (
 	PluginManager struct {
 		PluginPath string
-		log        *logger.CmdVerbose
 	}
 )
 
-func NewPluginManager() *PluginManager {
+func GetContext(user *config.PanUser) *Context {
+	return &Context{
+		AppName:      "aliyunpan",
+		Version:      config.AppVersion,
+		UserId:       user.UserId,
+		Nickname:     user.Nickname,
+		FileDriveId:  user.DriveList.GetFileDriveId(),
+		AlbumDriveId: user.DriveList.GetFileDriveId(),
+	}
+}
+
+func NewPluginManager(pluginDir string) *PluginManager {
 	return &PluginManager{
-		PluginPath: "",
-		log:        logger.New("PLUGIN", config.EnvVerbose),
+		PluginPath: pluginDir,
 	}
 }
 
@@ -35,11 +44,11 @@ func (p *PluginManager) SetPluginPath(pluginPath string) error {
 }
 
 func (p *PluginManager) GetPlugin() (Plugin, error) {
-	// js plugin folder
-	// only support js plugin right now
+	// js plugins folder
+	// only support js plugins right now
 	jsPluginPath := path.Clean(p.PluginPath + string(os.PathSeparator) + "js")
 	if fi, err := os.Stat(jsPluginPath); err == nil && fi.IsDir() {
-		jsPlugin := NewJsPlugin(p.log)
+		jsPlugin := NewJsPlugin()
 		if jsPlugin.Start() != nil {
 			logger.Verbosef("初始化JS脚本错误\n")
 			return interface{}(NewIdlePlugin()).(Plugin), nil
@@ -70,6 +79,6 @@ func (p *PluginManager) GetPlugin() (Plugin, error) {
 		}
 	}
 
-	// default idle plugin
+	// default idle plugins
 	return interface{}(NewIdlePlugin()).(Plugin), nil
 }

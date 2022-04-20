@@ -1,4 +1,4 @@
-package plugin
+package plugins
 
 import (
 	"fmt"
@@ -9,17 +9,15 @@ import (
 
 type (
 	JsPlugin struct {
-		Name   string
-		vm     *goja.Runtime
-		logger *logger.CmdVerbose
+		Name string
+		vm   *goja.Runtime
 	}
 )
 
-func NewJsPlugin(log *logger.CmdVerbose) *JsPlugin {
+func NewJsPlugin() *JsPlugin {
 	return &JsPlugin{
-		Name:   "JsPlugin",
-		vm:     nil,
-		logger: log,
+		Name: "JsPlugin",
+		vm:   nil,
 	}
 }
 
@@ -55,22 +53,24 @@ func (js *JsPlugin) Start() error {
 func (js *JsPlugin) LoadScript(script string) error {
 	_, err := js.vm.RunString(script)
 	if err != nil {
-		fmt.Println("JS代码有问题！")
+		logger.Verboseln("JS代码有问题！")
 		return err
 	}
 	return nil
 }
 
+// UploadFilePrepareCallback 上传文件前的回调函数
 func (js *JsPlugin) UploadFilePrepareCallback(context *Context, params *UploadFilePrepareParams) (*UploadFilePrepareResult, error) {
 	var fn func(*Context, *UploadFilePrepareParams) (*UploadFilePrepareResult, error)
 	err := js.vm.ExportTo(js.vm.Get("uploadFilePrepareCallback"), &fn)
 	if err != nil {
-		fmt.Println("Js函数映射到 Go 函数失败！")
+		logger.Verboseln("Js函数映射到 Go 函数失败！")
 		return nil, nil
 	}
 	r, er := fn(context, params)
 	if er != nil {
-		fmt.Println(er)
+		logger.Verboseln(er)
+		return nil, er
 	}
 	return r, nil
 }

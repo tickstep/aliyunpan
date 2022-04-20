@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package plugin
+package plugins
 
 type (
 	// Context 插件回调函数上下文信息
@@ -28,7 +28,7 @@ type (
 	UploadFilePrepareParams struct {
 		LocalFilePath      string `json:"localFilePath"`
 		LocalFileName      string `json:"localFileName"`
-		LocalFileSize      int    `json:"localFileSize"`
+		LocalFileSize      int64  `json:"localFileSize"`
 		LocalFileType      string `json:"localFileType"`
 		LocalFileUpdatedAt string `json:"localFileUpdatedAt"`
 		DriveId            string `json:"driveId"`

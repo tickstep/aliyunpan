@@ -1,4 +1,4 @@
-package plugin
+package plugins
 
 import (
 	"fmt"
@@ -6,8 +6,7 @@ import (
 )
 
 func TestPlugin(t *testing.T) {
-	pluginManager := NewPluginManager()
-	pluginManager.SetPluginPath("D:\\smb\\feny\\goprojects\\dev")
+	pluginManager := NewPluginManager("D:\\smb\\feny\\goprojects\\dev")
 	plugin, err := pluginManager.GetPlugin()
 	if err != nil {
 		fmt.Println(err)

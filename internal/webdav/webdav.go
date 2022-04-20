@@ -28,7 +28,7 @@ type Config struct {
 	LogFormat string
 }
 
-// ServeHTTP determines if the request is for this plugin, and if all prerequisites are met.
+// ServeHTTP determines if the request is for this plugins, and if all prerequisites are met.
 func (c *Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	u := c.User
 	requestOrigin := r.Header.Get("Origin")
@@ -74,7 +74,7 @@ func (c *Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Gets the correct user for this request.
 		username, password, ok := r.BasicAuth()
-		logger.Verboseln("login attempt", "username = " + username, "remote_address = " + r.RemoteAddr)
+		logger.Verboseln("login attempt", "username = "+username, "remote_address = "+r.RemoteAddr)
 		if !ok {
 			http.Error(w, "Not authorized", 401)
 			return
@@ -87,17 +87,17 @@ func (c *Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if !checkPassword(user.Password, password) {
-			logger.Verboseln("invalid password", "username = " + username, "remote_address = " + r.RemoteAddr)
+			logger.Verboseln("invalid password", "username = "+username, "remote_address = "+r.RemoteAddr)
 			http.Error(w, "Not authorized", 401)
 			return
 		}
 
 		u = user
-		logger.Verboseln("user authorized", "username = " + username)
+		logger.Verboseln("user authorized", "username = "+username)
 	} else {
 		// Even if Auth is disabled, we might want to get
 		// the user from the Basic Auth header. Useful for Caddy
-		// plugin implementation.
+		// plugins implementation.
 		username, _, ok := r.BasicAuth()
 		if ok {
 			if user, ok := c.Users[username]; ok {
@@ -167,7 +167,7 @@ func addContextValue(r *http.Request) *http.Request {
 				contentLength = "0"
 			}
 		}
-		if cl,ok := strconv.ParseInt(contentLength, 10, 64);ok == nil{
+		if cl, ok := strconv.ParseInt(contentLength, 10, 64); ok == nil {
 			length = cl
 		}
 	}

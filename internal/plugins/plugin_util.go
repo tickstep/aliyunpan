@@ -1,4 +1,4 @@
-package plugin
+package plugins
 
 import (
 	"github.com/tickstep/library-go/logger"

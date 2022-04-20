@@ -123,3 +123,8 @@ func WalkDir(dirPth, suffix string) (files []string, err error) {
 func ConvertToUnixPathSeparator(p string) string {
 	return strings.Replace(p, "\\", "/", -1)
 }
+
+// ConvertToWindowsPathSeparator 将路径中的所有分隔符转换成windows格式
+func ConvertToWindowsPathSeparator(p string) string {
+	return strings.Replace(p, "/", "\\", -1)
+}

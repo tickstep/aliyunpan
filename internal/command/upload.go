@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder"
+	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"io/ioutil"
@@ -54,16 +55,16 @@ const (
 type (
 	// UploadOptions 上传可选项
 	UploadOptions struct {
-		AllParallel   int // 所有文件并发上传数量，即可以同时并发上传多少个文件
-		Parallel      int // 单个文件并发上传数量
-		MaxRetry      int
-		NoRapidUpload bool
-		ShowProgress  bool
-		IsOverwrite   bool // 覆盖已存在的文件，如果同名文件已存在则移到回收站里
-		DriveId      string
-		ExcludeNames []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行上传，支持正则表达式
-		BlockSize    int64 // 分片大小
-		UseInternalUrl bool // 是否使用内置链接
+		AllParallel    int // 所有文件并发上传数量，即可以同时并发上传多少个文件
+		Parallel       int // 单个文件并发上传数量
+		MaxRetry       int
+		NoRapidUpload  bool
+		ShowProgress   bool
+		IsOverwrite    bool // 覆盖已存在的文件，如果同名文件已存在则移到回收站里
+		DriveId        string
+		ExcludeNames   []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行上传，支持正则表达式
+		BlockSize      int64    // 分片大小
+		UseInternalUrl bool     // 是否使用内置链接
 	}
 )
 
@@ -161,14 +162,14 @@ func CmdUpload() cli.Command {
 			subArgs := c.Args()
 			RunUpload(subArgs[:c.NArg()-1], subArgs[c.NArg()-1], &UploadOptions{
 				AllParallel:   c.Int("p"), // 多文件上传的时候，允许同时并行上传的文件数量
-				Parallel:      1, // 一个文件同时多少个线程并发上传的数量。阿里云盘只支持单线程按顺序进行文件part数据上传，所以只能是1
+				Parallel:      1,          // 一个文件同时多少个线程并发上传的数量。阿里云盘只支持单线程按顺序进行文件part数据上传，所以只能是1
 				MaxRetry:      c.Int("retry"),
 				NoRapidUpload: c.Bool("norapid"),
 				ShowProgress:  !c.Bool("np"),
 				IsOverwrite:   c.Bool("ow"),
-				DriveId:      parseDriveId(c),
-				ExcludeNames: c.StringSlice("exn"),
-				BlockSize: int64(c.Int("bs") * 1024),
+				DriveId:       parseDriveId(c),
+				ExcludeNames:  c.StringSlice("exn"),
+				BlockSize:     int64(c.Int("bs") * 1024),
 			})
 			return nil
 		},
@@ -296,12 +297,17 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		statistic = &panupload.UploadStatistic{}
 
 		folderCreateMutex = &sync.Mutex{}
+
+		pluginManger = plugins.NewPluginManager(config.GetConfigDir())
 	)
 	executor.SetParallel(opt.AllParallel)
 	statistic.StartTimer() // 开始计时
 
 	// 全局速度统计
 	globalSpeedsStat := &speeds.Speeds{}
+
+	// 获取当前插件
+	plugin, _ := pluginManger.GetPlugin()
 
 	// 遍历指定的文件并创建上传任务
 	for _, curPath := range localPaths {
@@ -329,7 +335,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			}
 			dbpath += string(os.PathSeparator) + BackupMetaDirName
 			if di, err := os.Stat(dbpath); err == nil && di.IsDir() {
-				db, err = panupload.OpenSyncDb(dbpath+string(os.PathSeparator) + "db", BackupMetaBucketName)
+				db, err = panupload.OpenSyncDb(dbpath+string(os.PathSeparator)+"db", BackupMetaBucketName)
 				if db != nil {
 					defer func(syncDb panupload.SyncDb) {
 						db.Close()
@@ -344,6 +350,9 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		walkFunc = func(file string, fi os.FileInfo, err error) error {
 			if err != nil {
 				return err
+			}
+			if os.PathSeparator == '\\' {
+				file = cmdutil.ConvertToWindowsPathSeparator(file)
 			}
 
 			// 是否排除上传
@@ -401,6 +410,31 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 				return filepath.SkipDir
 			}
 
+			// 插件回调
+			if !fi.IsDir() { // 针对文件上传前进行回调
+				pluginParam := &plugins.UploadFilePrepareParams{
+					LocalFilePath:      file,
+					LocalFileName:      fi.Name(),
+					LocalFileSize:      fi.Size(),
+					LocalFileType:      "file",
+					LocalFileUpdatedAt: fi.ModTime().Format("2006-01-02 15:04:05"),
+					DriveId:            activeUser.ActiveDriveId,
+					DriveFilePath:      strings.TrimPrefix(strings.TrimPrefix(subSavePath, savePath), "/"),
+				}
+				if uploadFilePrepareResult, er := plugin.UploadFilePrepareCallback(plugins.GetContext(activeUser), pluginParam); er == nil && uploadFilePrepareResult != nil {
+					if strings.Compare("yes", uploadFilePrepareResult.UploadApproved) != 0 {
+						// skip upload this file
+						fmt.Printf("插件禁止该文件上传: %s\n", file)
+						return filepath.SkipDir
+					}
+					if uploadFilePrepareResult.DriveFilePath != "" {
+						targetSavePanRelativePath := strings.TrimPrefix(uploadFilePrepareResult.DriveFilePath, "/")
+						subSavePath = path.Clean(savePath + aliyunpan.PathSeparator + targetSavePanRelativePath)
+						fmt.Printf("插件修改文件网盘保存路径为: %s\n", subSavePath)
+					}
+				}
+			}
+
 			taskinfo := executor.Append(&panupload.UploadTaskUnit{
 				LocalFileChecksum: localfile.NewLocalFileEntity(file),
 				SavePath:          subSavePath,
@@ -455,14 +489,14 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 
 // 是否是排除上传的文件
 func isExcludeFile(filePath string, opt *UploadOptions) bool {
-	if opt == nil || len(opt.ExcludeNames) == 0{
+	if opt == nil || len(opt.ExcludeNames) == 0 {
 		return false
 	}
 
-	for _,pattern := range opt.ExcludeNames {
+	for _, pattern := range opt.ExcludeNames {
 		fileName := path.Base(filePath)
 
-		m,_ := regexp.MatchString(pattern, fileName)
+		m, _ := regexp.MatchString(pattern, fileName)
 		if m {
 			return true
 		}
@@ -520,8 +554,8 @@ func RunRapidUpload(driveId string, isOverwrite bool, fileMetaList []string, sav
 
 	items := []*RapidUploadItem{}
 	// parse file meta strings
-	for _,fileMeta := range fileMetaList {
-		item,e := newRapidUploadItem(fileMeta)
+	for _, fileMeta := range fileMetaList {
+		item, e := newRapidUploadItem(fileMeta)
 		if e != nil {
 			fmt.Println(e)
 			continue
@@ -539,7 +573,7 @@ func RunRapidUpload(driveId string, isOverwrite bool, fileMetaList []string, sav
 	}
 
 	// upload one by one
-	for _,item := range items {
+	for _, item := range items {
 		fmt.Println("准备秒传:", item.FilePath)
 		if ee := doRapidUpload(driveId, isOverwrite, item); ee != nil {
 			fmt.Println(ee)
@@ -580,7 +614,7 @@ func doRapidUpload(driveId string, isOverwrite bool, item *RapidUploadItem) erro
 		}
 		if efi != nil && efi.FileId != "" {
 			// existed, delete it
-			fileDeleteResult, err1 := panClient.FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId:efi.DriveId, FileId:efi.FileId}})
+			fileDeleteResult, err1 := panClient.FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: efi.DriveId, FileId: efi.FileId}})
 			if err1 != nil || len(fileDeleteResult) == 0 {
 				return fmt.Errorf("无法删除文件，请稍后重试")
 			}
@@ -604,7 +638,7 @@ func doRapidUpload(driveId string, isOverwrite bool, item *RapidUploadItem) erro
 	if apierr != nil {
 		return fmt.Errorf("创建秒传任务失败：" + apierr.Error())
 	}
-	
+
 	if uploadOpEntity.RapidUpload {
 		logger.Verboseln("秒传成功, 保存到网盘路径: ", path.Join(panDir, uploadOpEntity.FileName))
 	} else {
