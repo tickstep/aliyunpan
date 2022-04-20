@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/logger"
 	"io/ioutil"
 	"os"
@@ -13,11 +14,15 @@ import (
 type (
 	PluginManager struct {
 		PluginPath string
+		log        *logger.CmdVerbose
 	}
 )
 
 func NewPluginManager() *PluginManager {
-	return &PluginManager{}
+	return &PluginManager{
+		PluginPath: "",
+		log:        logger.New("PLUGIN", config.EnvVerbose),
+	}
 }
 
 func (p *PluginManager) SetPluginPath(pluginPath string) error {
@@ -31,9 +36,10 @@ func (p *PluginManager) SetPluginPath(pluginPath string) error {
 
 func (p *PluginManager) GetPlugin() (Plugin, error) {
 	// js plugin folder
+	// only support js plugin right now
 	jsPluginPath := path.Clean(p.PluginPath + string(os.PathSeparator) + "js")
 	if fi, err := os.Stat(jsPluginPath); err == nil && fi.IsDir() {
-		jsPlugin := NewJsPlugin()
+		jsPlugin := NewJsPlugin(p.log)
 		if jsPlugin.Start() != nil {
 			logger.Verbosef("初始化JS脚本错误\n")
 			return interface{}(NewIdlePlugin()).(Plugin), nil

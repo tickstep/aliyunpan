@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/dop251/goja"
 	"github.com/tickstep/library-go/logger"
+	"strings"
 )
 
 type (
@@ -14,18 +15,20 @@ type (
 	}
 )
 
-func NewJsPlugin() *JsPlugin {
+func NewJsPlugin(log *logger.CmdVerbose) *JsPlugin {
 	return &JsPlugin{
 		Name:   "JsPlugin",
 		vm:     nil,
-		logger: nil,
+		logger: log,
 	}
 }
 
 // jsLog 支持js中的console.log方法
 func jsLog(call goja.FunctionCall) goja.Value {
 	str := call.Argument(0)
-	fmt.Print(str.String())
+	buf := &strings.Builder{}
+	fmt.Fprintf(buf, "%+v", str.Export())
+	logger.Verboseln(buf.String())
 	return str
 }
 
@@ -39,7 +42,7 @@ func (js *JsPlugin) Start() error {
 	console.Set("log", jsLog)
 	js.vm.Set("console", console)
 
-	// 内置系统函数
+	// 内置系统函数sys
 	sysObj := js.vm.NewObject()
 	sysObj.Set("httpGet", HttpGet)
 	sysObj.Set("httpPost", HttpPost)
