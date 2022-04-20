@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"testing"
 )
 
@@ -28,6 +29,10 @@ func TestPlugin(t *testing.T) {
 		DriveId:            "19519221",
 		DriveFilePath:      "aliyunpan/Downloads/11001d48564f43b3bc5662874f04bb11/token.bat",
 	}
+	b, _ := jsoniter.Marshal(ctx)
+	fmt.Println(string(b))
+	b, _ = jsoniter.Marshal(params)
+	fmt.Println(string(b))
 	r, e := plugin.UploadFilePrepareCallback(ctx, params)
 	if e != nil {
 		fmt.Println(e)

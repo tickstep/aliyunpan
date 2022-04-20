@@ -58,6 +58,9 @@ func (p *PluginManager) GetPlugin() (Plugin, error) {
 		if files, e := ioutil.ReadDir(jsPluginPath); e == nil {
 			for _, f := range files {
 				if !f.IsDir() {
+					if strings.HasPrefix(strings.ToLower(f.Name()), ".") || strings.HasPrefix(strings.ToLower(f.Name()), "~") {
+						continue
+					}
 					if strings.HasSuffix(strings.ToLower(f.Name()), ".js") {
 						// this is a js file
 						bytes, re := ioutil.ReadFile(path.Clean(jsPluginPath + string(os.PathSeparator) + f.Name()))

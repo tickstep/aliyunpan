@@ -298,7 +298,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 
 		folderCreateMutex = &sync.Mutex{}
 
-		pluginManger = plugins.NewPluginManager(config.GetConfigDir())
+		pluginManger = plugins.NewPluginManager(config.GetPluginDir())
 	)
 	executor.SetParallel(opt.AllParallel)
 	statistic.StartTimer() // 开始计时

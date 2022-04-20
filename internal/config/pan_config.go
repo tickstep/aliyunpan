@@ -308,6 +308,10 @@ func GetConfigDir() string {
 	return configDir
 }
 
+func GetPluginDir() string {
+	return strings.TrimSuffix(GetConfigDir(), "/") + "/plugin"
+}
+
 func (c *PanConfig) ActiveUser() *PanUser {
 	if c.activeUser == nil {
 		if c.UserList == nil {

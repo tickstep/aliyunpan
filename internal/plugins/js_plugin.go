@@ -53,7 +53,7 @@ func (js *JsPlugin) Start() error {
 func (js *JsPlugin) LoadScript(script string) error {
 	_, err := js.vm.RunString(script)
 	if err != nil {
-		logger.Verboseln("JS代码有问题！")
+		logger.Verboseln("JS代码有问题！{}", err)
 		return err
 	}
 	return nil
