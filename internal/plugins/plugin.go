@@ -43,6 +43,19 @@ type (
 		DriveFilePath string `json:"driveFilePath"`
 	}
 
+	// UploadFileFinishParams 上传文件结束的回调函数-参数
+	UploadFileFinishParams struct {
+		LocalFilePath      string `json:"localFilePath"`
+		LocalFileName      string `json:"localFileName"`
+		LocalFileSize      int64  `json:"localFileSize"`
+		LocalFileType      string `json:"localFileType"`
+		LocalFileUpdatedAt string `json:"localFileUpdatedAt"`
+		LocalFileSha1      string `json:"localFileSha1"`
+		UploadResult       string `json:"uploadResult"`
+		DriveId            string `json:"driveId"`
+		DriveFilePath      string `json:"driveFilePath"`
+	}
+
 	// Plugin 插件接口
 	Plugin interface {
 		// Start 启动
@@ -50,6 +63,9 @@ type (
 
 		// UploadFilePrepareCallback 上传文件前的回调函数
 		UploadFilePrepareCallback(context *Context, params *UploadFilePrepareParams) (*UploadFilePrepareResult, error)
+
+		// UploadFileFinishCallback 上传文件完成的回调函数
+		UploadFileFinishCallback(context *Context, params *UploadFileFinishParams) error
 
 		// Stop 停止
 		Stop() error

@@ -15,6 +15,7 @@ package panupload
 
 import (
 	"fmt"
+	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/library-go/logger"
 	"os"
 	"path"
@@ -233,6 +234,9 @@ func (utu *UploadTaskUnit) OnRetry(lastRunResult *taskframework.TaskUnitRunResul
 }
 
 func (utu *UploadTaskUnit) OnSuccess(lastRunResult *taskframework.TaskUnitRunResult) {
+	// 执行插件
+	utu.pluginCallback("success")
+
 	//文件上传成功
 	if utu.FolderSyncDb == nil || lastRunResult == ResultLocalFileNotUpdated { //不需要更新数据库
 		return
@@ -259,13 +263,36 @@ func (utu *UploadTaskUnit) OnSuccess(lastRunResult *taskframework.TaskUnitRunRes
 
 func (utu *UploadTaskUnit) OnFailed(lastRunResult *taskframework.TaskUnitRunResult) {
 	// 失败
+	utu.pluginCallback("fail")
+}
+
+func (utu *UploadTaskUnit) pluginCallback(result string) {
+	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+	plugin, _ := pluginManger.GetPlugin()
+	_, fileName := filepath.Split(utu.LocalFileChecksum.Path)
+	pluginParam := &plugins.UploadFileFinishParams{
+		LocalFilePath:      utu.LocalFileChecksum.Path,
+		LocalFileName:      fileName,
+		LocalFileSize:      utu.LocalFileChecksum.LocalFileMeta.Length,
+		LocalFileType:      "file",
+		LocalFileUpdatedAt: time.Unix(utu.LocalFileChecksum.LocalFileMeta.ModTime, 0).Format("2006-01-02 15:04:05"),
+		LocalFileSha1:      utu.LocalFileChecksum.LocalFileMeta.SHA1,
+		UploadResult:       result,
+		DriveId:            utu.DriveId,
+		DriveFilePath:      utu.panDir + "/" + utu.panFile,
+	}
+	if er := plugin.UploadFileFinishCallback(plugins.GetContext(config.Config.ActiveUser()), pluginParam); er != nil {
+		logger.Verboseln("插件UploadFileFinishCallback调用失败： {}", er)
+	} else {
+		logger.Verboseln("插件UploadFileFinishCallback调用成功")
+	}
 }
 
 var ResultLocalFileNotUpdated = &taskframework.TaskUnitRunResult{ResultCode: 1, Succeed: true, ResultMessage: "本地文件未更新，无需上传！"}
 var ResultUpdateLocalDatabase = &taskframework.TaskUnitRunResult{ResultCode: 2, Succeed: true, ResultMessage: "本地文件和云端文件MD5一致，无需上传！"}
 
 func (utu *UploadTaskUnit) OnComplete(lastRunResult *taskframework.TaskUnitRunResult) {
-
+	// 任务结束，可能成功也可能失败
 }
 
 func (utu *UploadTaskUnit) RetryWait() time.Duration {
