@@ -59,9 +59,20 @@ func (js *JsPlugin) LoadScript(script string) error {
 	return nil
 }
 
+func (js *JsPlugin) isHandlerFuncExisted(fnName string) bool {
+	ret := js.vm.Get(fnName)
+	if ret != nil {
+		return true
+	}
+	return false
+}
+
 // UploadFilePrepareCallback 上传文件前的回调函数
 func (js *JsPlugin) UploadFilePrepareCallback(context *Context, params *UploadFilePrepareParams) (*UploadFilePrepareResult, error) {
 	var fn func(*Context, *UploadFilePrepareParams) (*UploadFilePrepareResult, error)
+	if !js.isHandlerFuncExisted("uploadFilePrepareCallback") {
+		return nil, nil
+	}
 	err := js.vm.ExportTo(js.vm.Get("uploadFilePrepareCallback"), &fn)
 	if err != nil {
 		logger.Verboseln("Js函数映射到 Go 函数失败！")
