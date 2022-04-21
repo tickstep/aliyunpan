@@ -20,6 +20,10 @@ func (p *IdlePlugin) UploadFilePrepareCallback(context *Context, params *UploadF
 	return nil, nil
 }
 
+func (p *IdlePlugin) DownloadFilePrepareCallback(context *Context, params *DownloadFilePrepareParams) (*DownloadFilePrepareResult, error) {
+	return nil, nil
+}
+
 func (p *IdlePlugin) Stop() error {
 	return nil
 }

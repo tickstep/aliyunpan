@@ -51,6 +51,10 @@ func (tu *TestUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	}
 }
 
+func (tu *TestUnit) OnCancel(lastRunResult *taskframework.TaskUnitRunResult) {
+
+}
+
 func (tu *TestUnit) OnRetry(lastRunResult *taskframework.TaskUnitRunResult) {
 	fmt.Printf("[%s] prepare retry, times [%d/%d]...\n", tu.taskInfo.Id(), tu.taskInfo.Retry(), tu.taskInfo.MaxRetry())
 }

@@ -19,13 +19,15 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/functions"
+	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
+	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
-	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"io"
 	"net/http"
@@ -47,7 +49,7 @@ type (
 		ParentTaskExecutor *taskframework.TaskExecutor
 
 		DownloadStatistic *DownloadStatistic // 下载统计
-		GlobalSpeedsStat *speeds.Speeds // 全局速度统计
+		GlobalSpeedsStat  *speeds.Speeds     // 全局速度统计
 
 		// 可选项
 		VerbosePrinter       *logger.CmdVerbose
@@ -57,10 +59,10 @@ type (
 		IsOverwrite          bool // 是否覆盖已存在的文件
 		NoCheck              bool // 不校验文件
 
-		FilePanPath string // 要下载的网盘文件路径
-		SavePath    string // 文件保存在本地的路径
-		OriginSaveRootPath    string // 文件保存在本地的根目录路径
-		DriveId    string
+		FilePanPath        string // 要下载的网盘文件路径
+		SavePath           string // 文件保存在本地的路径
+		OriginSaveRootPath string // 文件保存在本地的根目录路径
+		DriveId            string
 
 		fileInfo *aliyunpan.FileEntity // 文件或目录详情
 	}
@@ -145,12 +147,12 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 		if dtu.IsPrintStatus {
 			// 输出所有的worker状态
 			var (
-				tb      = cmdtable.NewTable(builder)
+				tb = cmdtable.NewTable(builder)
 			)
 			tb.SetHeader([]string{"#", "status", "range", "left", "speeds", "error"})
 			workersCallback(func(key int, worker *downloader.Worker) bool {
 				wrange := worker.GetRange()
-				tb.Append([]string{fmt.Sprint(worker.ID()), worker.GetStatus().StatusText(), wrange.ShowDetails(), strconv.FormatInt(wrange.Len(), 10), converter.ConvertFileSize(worker.GetSpeedsPerSecond(), 2)+"/s", fmt.Sprint(worker.Err())})
+				tb.Append([]string{fmt.Sprint(worker.ID()), worker.GetStatus().StatusText(), wrange.ShowDetails(), strconv.FormatInt(wrange.Len(), 10), converter.ConvertFileSize(worker.GetSpeedsPerSecond(), 2) + "/s", fmt.Sprint(worker.Err())})
 				return true
 			})
 
@@ -270,7 +272,7 @@ func (dtu *DownloadTaskUnit) handleError(result *taskframework.TaskUnitRunResult
 			result.NeedRetry = true
 		}
 	}
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 }
 
 //checkFileValid 检测文件有效性
@@ -343,6 +345,10 @@ func (dtu *DownloadTaskUnit) OnFailed(lastRunResult *taskframework.TaskUnitRunRe
 func (dtu *DownloadTaskUnit) OnComplete(lastRunResult *taskframework.TaskUnitRunResult) {
 }
 
+func (dtu *DownloadTaskUnit) OnCancel(lastRunResult *taskframework.TaskUnitRunResult) {
+
+}
+
 func (dtu *DownloadTaskUnit) RetryWait() time.Duration {
 	return functions.RetryWait(dtu.taskInfo.Retry())
 }
@@ -363,7 +369,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			dtu.handleError(result)
 			return
 		}
-		time.Sleep(1*time.Second)
+		time.Sleep(1 * time.Second)
 	}
 
 	// 输出文件信息
@@ -378,15 +384,15 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		}
 
 		// 获取该目录下的文件列表
-		fileList,apierr := dtu.PanClient.FileListGetAll(&aliyunpan.FileListParam{
+		fileList, apierr := dtu.PanClient.FileListGetAll(&aliyunpan.FileListParam{
 			DriveId:      dtu.DriveId,
 			ParentFileId: dtu.fileInfo.FileId,
 		})
 		if apierr != nil {
 			// retry one more time
-			time.Sleep(3*time.Second)
+			time.Sleep(3 * time.Second)
 
-			fileList,apierr = dtu.PanClient.FileListGetAll(&aliyunpan.FileListParam{
+			fileList, apierr = dtu.PanClient.FileListGetAll(&aliyunpan.FileListParam{
 				DriveId:      dtu.DriveId,
 				ParentFileId: dtu.fileInfo.FileId,
 			})
@@ -408,7 +414,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			result.NeedRetry = true
 			return
 		}
-		time.Sleep(1*time.Second)
+		time.Sleep(1 * time.Second)
 
 		// 创建对应的任务进行下载
 		for k := range fileList {
@@ -434,6 +440,37 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		// 本下载任务执行成功
 		result.Succeed = true
 		return
+	}
+
+	// 调用插件
+	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+	plugin, _ := pluginManger.GetPlugin()
+	localFilePath := strings.TrimPrefix(dtu.SavePath, dtu.OriginSaveRootPath)
+	localFilePath = strings.TrimPrefix(strings.TrimPrefix(localFilePath, "\\"), "/")
+	pluginParam := &plugins.DownloadFilePrepareParams{
+		DriveId:            dtu.fileInfo.DriveId,
+		DriveFilePath:      dtu.fileInfo.Path,
+		DriveFileName:      dtu.fileInfo.FileName,
+		DriveFileSize:      dtu.fileInfo.FileSize,
+		DriveFileType:      "file",
+		DriveFileSha1:      dtu.fileInfo.ContentHash,
+		DriveFileUpdatedAt: dtu.fileInfo.UpdatedAt,
+		LocalFilePath:      localFilePath,
+	}
+	if downloadFilePrepareResult, er := plugin.DownloadFilePrepareCallback(plugins.GetContext(config.Config.ActiveUser()), pluginParam); er == nil && downloadFilePrepareResult != nil {
+		if strings.Compare("yes", downloadFilePrepareResult.DownloadApproved) != 0 {
+			// skip download this file
+			fmt.Printf("插件取消了该文件下载: %s\n", dtu.fileInfo.Path)
+			result.Succeed = false
+			result.Cancel = true
+			return
+		}
+		if downloadFilePrepareResult.LocalFilePath != "" {
+			targetSaveRelativePath := strings.TrimPrefix(downloadFilePrepareResult.LocalFilePath, "/")
+			targetSaveRelativePath = strings.TrimPrefix(targetSaveRelativePath, "\\")
+			dtu.SavePath = path.Clean(dtu.OriginSaveRootPath + string(os.PathSeparator) + targetSaveRelativePath)
+			fmt.Printf("插件修改文件下载保存路径为: %s\n", dtu.SavePath)
+		}
 	}
 
 	fmt.Printf("[%s] 准备下载: %s\n", dtu.taskInfo.Id(), dtu.FilePanPath)

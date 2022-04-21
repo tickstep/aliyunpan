@@ -1,0 +1,77 @@
+// ==========================================================================================
+// aliyunpan JS插件回调处理函数
+// 支持 JavaScript ECMAScript 5.1 语言规范
+//
+// 更多内容请查看官方文档：https://github.com/tickstep/aliyunpan
+// ==========================================================================================
+
+
+// ------------------------------------------------------------------------------------------
+// 函数说明：下载文件前的回调函数
+// 
+// 参数说明
+// context - 当前调用的上下文信息
+// {
+// 	"appName": "aliyunpan",
+// 	"version": "v0.1.3",
+// 	"userId": "11001d48564f43b3bc5662874f04bb11",
+// 	"nickname": "tickstep",
+// 	"fileDriveId": "19519111",
+// 	"albumDriveId": "29519122"
+// }
+// appName - 应用名称，当前固定为aliyunpan
+// version - 版本号
+// userId - 当前登录用户的ID
+// nickname - 用户昵称
+// fileDriveId - 用户文件网盘ID
+// albumDriveId - 用户相册网盘ID
+//
+// params - 文件下载前参数
+// {
+// 	"driveId": "19519221",
+// 	"driveFileName": "token.bat",
+// 	"driveFilePath": "aliyunpan/Downloads/token.bat",
+// 	"driveFileSha1": "08FBE28A5B8791A2F50225E2EC5CEEC3C7955A11",
+// 	"driveFileSize": 125330,
+// 	"driveFileType": "file",
+// 	"driveFileUpdatedAt": "2022-04-14 07:05:12",
+// 	"localFilePath": "aliyunpan\\Downloads\\token.bat"
+// }
+// driveId - 网盘ID
+// driveFileName - 网盘文件名
+// driveFilePath - 网盘文件绝对完整路径
+// driveFileSize - 网盘文件大小，单位B
+// driveFileSha1 - 网盘文件SHA1
+// driveFileType - 网盘文件类型，file-文件，folder-文件夹
+// driveFileUpdatedAt - 网盘文件修改时间
+// localFilePath - 下载文件到本地保存的路径，这个是相对路径，相对指定下载的目标文件夹
+// 
+// 返回值说明
+// {
+// 	"downloadApproved": "yes",
+// 	"localFilePath": "newfolder\\token.bat"
+// }
+// downloadApproved - 该文件是否下载，yes-确认下载，no-取消下载
+// localFilePath - 文件保存的本地路径，这个是相对路径，如果为空""代表保持原本的目标路径。
+//                 这个改动要小心，会导致重名文件下载只会下载一个
+// ------------------------------------------------------------------------------------------
+function downloadFilePrepareCallback(context, params) {
+    console.log(params)
+
+    var result = {
+        "downloadApproved": "yes",
+        "localFilePath": ""
+    };
+
+    // 所有的.dmg.exe文件，下载保存的文件后缀名去掉.exe，网盘文件不改动
+    if (params["driveFileName"].lastIndexOf(".dmg.exe") > 0) {
+        result["localFilePath"] = params["localFilePath"].substr(0, (params["localFilePath"].length - ".exe".length));
+    }
+
+    // 禁止.txt文件下载
+    if (params["driveFileName"].lastIndexOf(".txt") > 0) {
+        result["downloadApproved"] = "no";
+    }
+
+    return result;
+}

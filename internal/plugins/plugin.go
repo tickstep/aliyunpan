@@ -56,6 +56,26 @@ type (
 		DriveFilePath      string `json:"driveFilePath"`
 	}
 
+	// DownloadFilePrepareParams 下载文件前的回调函数-参数
+	DownloadFilePrepareParams struct {
+		DriveId            string `json:"driveId"`
+		DriveFileName      string `json:"driveFileName"`
+		DriveFilePath      string `json:"driveFilePath"`
+		DriveFileSha1      string `json:"driveFileSha1"`
+		DriveFileSize      int64  `json:"driveFileSize"`
+		DriveFileType      string `json:"driveFileType"`
+		DriveFileUpdatedAt string `json:"driveFileUpdatedAt"`
+		LocalFilePath      string `json:"localFilePath"`
+	}
+
+	// DownloadFilePrepareResult 上传文件前的回调函数-返回结果
+	DownloadFilePrepareResult struct {
+		// DownloadApproved 确认该文件是否下载。yes-下载 no-不下载
+		DownloadApproved string `json:"downloadApproved"`
+		// LocalFilePath 保存本地的修改后的路径。注意该路径是相对路径
+		LocalFilePath string `json:"localFilePath"`
+	}
+
 	// Plugin 插件接口
 	Plugin interface {
 		// Start 启动
@@ -66,6 +86,9 @@ type (
 
 		// UploadFileFinishCallback 上传文件完成的回调函数
 		UploadFileFinishCallback(context *Context, params *UploadFileFinishParams) error
+
+		// DownloadFilePrepareCallback 下载文件前的回调函数
+		DownloadFilePrepareCallback(context *Context, params *DownloadFilePrepareParams) (*DownloadFilePrepareResult, error)
 
 		// Stop 停止
 		Stop() error

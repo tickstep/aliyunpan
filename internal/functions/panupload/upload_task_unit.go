@@ -294,7 +294,9 @@ var ResultUpdateLocalDatabase = &taskframework.TaskUnitRunResult{ResultCode: 2, 
 func (utu *UploadTaskUnit) OnComplete(lastRunResult *taskframework.TaskUnitRunResult) {
 	// 任务结束，可能成功也可能失败
 }
+func (utu *UploadTaskUnit) OnCancel(lastRunResult *taskframework.TaskUnitRunResult) {
 
+}
 func (utu *UploadTaskUnit) RetryWait() time.Duration {
 	return functions.RetryWait(utu.taskInfo.Retry())
 }

@@ -29,14 +29,17 @@ type (
 		OnFailed(lastRunResult *TaskUnitRunResult)
 		// 每次执行结束执行的方法, 不管成功失败
 		OnComplete(lastRunResult *TaskUnitRunResult)
+		// 取消下载
+		OnCancel(lastRunResult *TaskUnitRunResult)
 		// 重试等待的时间
 		RetryWait() time.Duration
 	}
 
 	// 任务单元执行结果
 	TaskUnitRunResult struct {
-		Succeed       bool        // 是否执行成功
-		NeedRetry     bool        // 是否需要重试
+		Succeed   bool // 是否执行成功
+		NeedRetry bool // 是否需要重试
+		Cancel    bool // 是否取消了任务
 
 		// 以下是额外的信息
 		Err           error       // 错误信息

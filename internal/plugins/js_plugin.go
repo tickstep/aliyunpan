@@ -105,6 +105,25 @@ func (js *JsPlugin) UploadFileFinishCallback(context *Context, params *UploadFil
 	return nil
 }
 
+// DownloadFilePrepareCallback 下载文件前的回调函数
+func (js *JsPlugin) DownloadFilePrepareCallback(context *Context, params *DownloadFilePrepareParams) (*DownloadFilePrepareResult, error) {
+	var fn func(*Context, *DownloadFilePrepareParams) (*DownloadFilePrepareResult, error)
+	if !js.isHandlerFuncExisted("downloadFilePrepareCallback") {
+		return nil, nil
+	}
+	err := js.vm.ExportTo(js.vm.Get("downloadFilePrepareCallback"), &fn)
+	if err != nil {
+		logger.Verboseln("Js函数映射到 Go 函数失败！")
+		return nil, nil
+	}
+	r, er := fn(context, params)
+	if er != nil {
+		logger.Verboseln(er)
+		return nil, er
+	}
+	return r, nil
+}
+
 func (js *JsPlugin) Stop() error {
 	return nil
 }

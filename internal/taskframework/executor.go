@@ -116,6 +116,12 @@ func (te *TaskExecutor) Execute() {
 					return
 				}
 
+				// 取消下载
+				if result.Cancel {
+					task.Unit.OnCancel(result)
+					return
+				}
+
 				if result.Succeed {
 					task.Unit.OnSuccess(result)
 					task.Unit.OnComplete(result)
