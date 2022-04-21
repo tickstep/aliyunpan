@@ -330,9 +330,14 @@ func (dtu *DownloadTaskUnit) OnRetry(lastRunResult *taskframework.TaskUnitRunRes
 }
 
 func (dtu *DownloadTaskUnit) OnSuccess(lastRunResult *taskframework.TaskUnitRunResult) {
+	// 执行插件
+	dtu.pluginCallback("success")
 }
 
 func (dtu *DownloadTaskUnit) OnFailed(lastRunResult *taskframework.TaskUnitRunResult) {
+	// 失败
+	dtu.pluginCallback("fail")
+
 	// 失败
 	if lastRunResult.Err == nil {
 		// result中不包含Err, 忽略输出
@@ -340,6 +345,27 @@ func (dtu *DownloadTaskUnit) OnFailed(lastRunResult *taskframework.TaskUnitRunRe
 		return
 	}
 	fmt.Printf("[%s] %s, %s\n", dtu.taskInfo.Id(), lastRunResult.ResultMessage, lastRunResult.Err)
+}
+
+func (dtu *DownloadTaskUnit) pluginCallback(result string) {
+	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+	plugin, _ := pluginManger.GetPlugin()
+	pluginParam := &plugins.DownloadFileFinishParams{
+		DriveId:            dtu.fileInfo.DriveId,
+		DriveFilePath:      dtu.fileInfo.Path,
+		DriveFileName:      dtu.fileInfo.FileName,
+		DriveFileSize:      dtu.fileInfo.FileSize,
+		DriveFileType:      "file",
+		DriveFileSha1:      dtu.fileInfo.ContentHash,
+		DriveFileUpdatedAt: dtu.fileInfo.UpdatedAt,
+		DownloadResult:     result,
+		LocalFilePath:      dtu.SavePath,
+	}
+	if er := plugin.DownloadFileFinishCallback(plugins.GetContext(config.Config.ActiveUser()), pluginParam); er != nil {
+		logger.Verboseln("插件DownloadFileFinishCallback调用失败： {}", er)
+	} else {
+		logger.Verboseln("插件DownloadFileFinishCallback调用成功")
+	}
 }
 
 func (dtu *DownloadTaskUnit) OnComplete(lastRunResult *taskframework.TaskUnitRunResult) {

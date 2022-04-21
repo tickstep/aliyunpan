@@ -20,8 +20,16 @@ func (p *IdlePlugin) UploadFilePrepareCallback(context *Context, params *UploadF
 	return nil, nil
 }
 
+func (p *IdlePlugin) UploadFileFinishCallback(context *Context, params *UploadFileFinishParams) error {
+	return nil
+}
+
 func (p *IdlePlugin) DownloadFilePrepareCallback(context *Context, params *DownloadFilePrepareParams) (*DownloadFilePrepareResult, error) {
 	return nil, nil
+}
+
+func (p *IdlePlugin) DownloadFileFinishCallback(context *Context, params *DownloadFileFinishParams) error {
+	return nil
 }
 
 func (p *IdlePlugin) Stop() error {

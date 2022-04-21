@@ -86,7 +86,7 @@ func (js *JsPlugin) UploadFilePrepareCallback(context *Context, params *UploadFi
 	return r, nil
 }
 
-// UploadFileFinishCallback 上传文件完成的回调函数
+// UploadFileFinishCallback 上传文件结束的回调函数
 func (js *JsPlugin) UploadFileFinishCallback(context *Context, params *UploadFileFinishParams) error {
 	var fn func(*Context, *UploadFileFinishParams) error
 	if !js.isHandlerFuncExisted("uploadFileFinishCallback") {
@@ -122,6 +122,25 @@ func (js *JsPlugin) DownloadFilePrepareCallback(context *Context, params *Downlo
 		return nil, er
 	}
 	return r, nil
+}
+
+// DownloadFileFinishCallback 下载文件结束的回调函数
+func (js *JsPlugin) DownloadFileFinishCallback(context *Context, params *DownloadFileFinishParams) error {
+	var fn func(*Context, *DownloadFileFinishParams) error
+	if !js.isHandlerFuncExisted("downloadFileFinishCallback") {
+		return nil
+	}
+	err := js.vm.ExportTo(js.vm.Get("downloadFileFinishCallback"), &fn)
+	if err != nil {
+		logger.Verboseln("Js函数映射到 Go 函数失败！")
+		return nil
+	}
+	er := fn(context, params)
+	if er != nil {
+		logger.Verboseln(er)
+		return nil
+	}
+	return nil
 }
 
 func (js *JsPlugin) Stop() error {

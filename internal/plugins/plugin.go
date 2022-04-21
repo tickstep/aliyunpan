@@ -76,6 +76,19 @@ type (
 		LocalFilePath string `json:"localFilePath"`
 	}
 
+	// DownloadFileFinishParams 下载文件结束的回调函数-参数
+	DownloadFileFinishParams struct {
+		DriveId            string `json:"driveId"`
+		DriveFileName      string `json:"driveFileName"`
+		DriveFilePath      string `json:"driveFilePath"`
+		DriveFileSha1      string `json:"driveFileSha1"`
+		DriveFileSize      int64  `json:"driveFileSize"`
+		DriveFileType      string `json:"driveFileType"`
+		DriveFileUpdatedAt string `json:"driveFileUpdatedAt"`
+		DownloadResult     string `json:"downloadResult"`
+		LocalFilePath      string `json:"localFilePath"`
+	}
+
 	// Plugin 插件接口
 	Plugin interface {
 		// Start 启动
@@ -84,11 +97,14 @@ type (
 		// UploadFilePrepareCallback 上传文件前的回调函数
 		UploadFilePrepareCallback(context *Context, params *UploadFilePrepareParams) (*UploadFilePrepareResult, error)
 
-		// UploadFileFinishCallback 上传文件完成的回调函数
+		// UploadFileFinishCallback 上传文件结束的回调函数
 		UploadFileFinishCallback(context *Context, params *UploadFileFinishParams) error
 
 		// DownloadFilePrepareCallback 下载文件前的回调函数
 		DownloadFilePrepareCallback(context *Context, params *DownloadFilePrepareParams) (*DownloadFilePrepareResult, error)
+
+		// DownloadFileFinishCallback 下载文件结束的回调函数
+		DownloadFileFinishCallback(context *Context, params *DownloadFileFinishParams) error
 
 		// Stop 停止
 		Stop() error

@@ -98,7 +98,7 @@ function uploadFilePrepareCallback(context, params) {
 // fileDriveId - 用户文件网盘ID
 // albumDriveId - 用户相册网盘ID
 //
-// params - 文件上传前参数
+// params - 文件上传结束参数
 // {
 // 	"localFilePath": "D:\\Program Files\\aliyunpan\\Downloads\\token.bat",
 // 	"localFileName": "token.bat",

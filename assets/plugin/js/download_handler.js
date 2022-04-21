@@ -75,3 +75,53 @@ function downloadFilePrepareCallback(context, params) {
 
     return result;
 }
+
+
+// ------------------------------------------------------------------------------------------
+// 函数说明：下载文件结束的回调函数
+//
+// 参数说明
+// context - 当前调用的上下文信息
+// {
+// 	"appName": "aliyunpan",
+// 	"version": "v0.1.3",
+// 	"userId": "11001d48564f43b3bc5662874f04bb11",
+// 	"nickname": "tickstep",
+// 	"fileDriveId": "19519111",
+// 	"albumDriveId": "29519122"
+// }
+// appName - 应用名称，当前固定为aliyunpan
+// version - 版本号
+// userId - 当前登录用户的ID
+// nickname - 用户昵称
+// fileDriveId - 用户文件网盘ID
+// albumDriveId - 用户相册网盘ID
+//
+// params - 文件下载结束参数
+// {
+// 	"driveId": "19519221",
+// 	"driveFileName": "token.bat",
+// 	"driveFilePath": "aliyunpan/Downloads/token.bat",
+// 	"driveFileSha1": "08FBE28A5B8791A2F50225E2EC5CEEC3C7955A11",
+// 	"driveFileSize": 125330,
+// 	"driveFileType": "file",
+// 	"driveFileUpdatedAt": "2022-04-14 07:05:12",
+//  "downloadResult": "success",
+// 	"localFilePath": "aliyunpan\\Downloads\\token.bat"
+// }
+// driveId - 网盘ID
+// driveFileName - 网盘文件名
+// driveFilePath - 网盘文件绝对完整路径
+// driveFileSize - 网盘文件大小，单位B
+// driveFileSha1 - 网盘文件SHA1
+// driveFileType - 网盘文件类型，file-文件，folder-文件夹
+// driveFileUpdatedAt - 网盘文件修改时间
+// downloadResult - 下载结果，success-成功，fail-失败
+// localFilePath - 下载文件到本地保存的路径，这个是相对路径，相对指定下载的目标文件夹
+//
+// 返回值说明
+// （没有返回值）
+// ------------------------------------------------------------------------------------------
+function downloadFileFinishCallback(context, params) {
+    console.log(params)
+}
