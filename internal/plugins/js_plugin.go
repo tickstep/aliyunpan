@@ -25,7 +25,7 @@ func NewJsPlugin() *JsPlugin {
 func jsLog(call goja.FunctionCall) goja.Value {
 	str := call.Argument(0)
 	buf := &strings.Builder{}
-	fmt.Fprintf(buf, "%+v", str.Export())
+	fmt.Fprintf(buf, "JAVASCRIPT: %+v", str.Export())
 	logger.Verboseln(buf.String())
 	return str
 }
