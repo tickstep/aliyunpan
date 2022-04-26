@@ -131,6 +131,28 @@ func CmdAlbum() cli.Command {
 				},
 				Flags: []cli.Flag{},
 			},
+			{
+				Name:      "list-file",
+				Aliases:   []string{"lf"},
+				Usage:     "展示相簿中文件",
+				UsageText: cmder.App().Name + " album list-file",
+				Description: `
+展示相簿中文件，同名的相簿只会展示第一个符合条件的
+示例:
+
+    展示相簿中文件"我的相簿2022"
+    aliyunpan album list-file "我的相簿2022"
+`,
+				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					RunAlbumListFile(c.Args().Get(0))
+					return nil
+				},
+				Flags: []cli.Flag{},
+			},
 		},
 	}
 }
@@ -203,6 +225,21 @@ func RunAlbumDelete(nameList []string) {
 	}
 }
 
+func getAlbumFromName(activeUser *config.PanUser, name string) *aliyunpan.AlbumEntity {
+	records, err := activeUser.PanClient().AlbumListGetAll(&aliyunpan.AlbumListParam{})
+	if err != nil {
+		fmt.Printf("获取相簿列表失败: %s\n", err)
+		return nil
+	}
+
+	for _, record := range records {
+		if name == record.Name {
+			return record
+		}
+	}
+	return nil
+}
+
 func RunAlbumRename(name, newName string) {
 	if len(name) == 0 {
 		fmt.Printf("相簿名称不能为空\n")
@@ -214,27 +251,41 @@ func RunAlbumRename(name, newName string) {
 	}
 
 	activeUser := GetActiveUser()
-	records, err := activeUser.PanClient().AlbumListGetAll(&aliyunpan.AlbumListParam{})
+	record := getAlbumFromName(activeUser, name)
+	if record == nil {
+		return
+	}
+	_, err := activeUser.PanClient().AlbumEdit(&aliyunpan.AlbumEditParam{
+		AlbumId:     record.AlbumId,
+		Description: record.Description,
+		Name:        newName,
+	})
 	if err != nil {
-		fmt.Printf("获取相簿列表失败: %s\n", err)
+		fmt.Printf("重命名相簿失败: %s\n", name)
+		return
+	} else {
+		fmt.Printf("重命名相簿成功: %s -> %s\n", name, newName)
+	}
+}
+
+func RunAlbumListFile(name string) {
+	if len(name) == 0 {
+		fmt.Printf("相簿名称不能为空\n")
 		return
 	}
 
-	for _, record := range records {
-		if name == record.Name {
-			_, err := activeUser.PanClient().AlbumEdit(&aliyunpan.AlbumEditParam{
-				AlbumId:     record.AlbumId,
-				Description: record.Description,
-				Name:        newName,
-			})
-			if err != nil {
-				fmt.Printf("重命名相簿失败: %s\n", name)
-				return
-			} else {
-				fmt.Printf("重命名相簿成功: %s -> %s\n", name, newName)
-			}
-			break
-		}
+	activeUser := GetActiveUser()
+	record := getAlbumFromName(activeUser, name)
+	if record == nil {
+		return
 	}
 
+	fileList, er := activeUser.PanClient().AlbumListFileGetAll(&aliyunpan.AlbumListFileParam{
+		AlbumId: record.AlbumId,
+	})
+	if er != nil {
+		fmt.Printf("获取相簿文件列表失败：%s\n", er)
+		return
+	}
+	renderTable(opLs, false, "", fileList)
 }
