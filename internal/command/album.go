@@ -109,6 +109,28 @@ func CmdAlbum() cli.Command {
 				},
 				Flags: []cli.Flag{},
 			},
+			{
+				Name:      "rename",
+				Aliases:   []string{""},
+				Usage:     "重命名相簿",
+				UsageText: cmder.App().Name + " album rename",
+				Description: `
+重命名相簿，同名的相簿只会修改第一个符合条件的
+示例:
+
+    重命名相簿"我的相簿2022"为新的名称"我的相簿2022-new"
+    aliyunpan album rename "我的相簿2022" "我的相簿2022-new"
+`,
+				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					RunAlbumRename(c.Args().Get(0), c.Args().Get(1))
+					return nil
+				},
+				Flags: []cli.Flag{},
+			},
 		},
 	}
 }
@@ -179,4 +201,40 @@ func RunAlbumDelete(nameList []string) {
 			}
 		}
 	}
+}
+
+func RunAlbumRename(name, newName string) {
+	if len(name) == 0 {
+		fmt.Printf("相簿名称不能为空\n")
+		return
+	}
+	if len(newName) == 0 {
+		fmt.Printf("相簿名称不能为空\n")
+		return
+	}
+
+	activeUser := GetActiveUser()
+	records, err := activeUser.PanClient().AlbumListGetAll(&aliyunpan.AlbumListParam{})
+	if err != nil {
+		fmt.Printf("获取相簿列表失败: %s\n", err)
+		return
+	}
+
+	for _, record := range records {
+		if name == record.Name {
+			_, err := activeUser.PanClient().AlbumEdit(&aliyunpan.AlbumEditParam{
+				AlbumId:     record.AlbumId,
+				Description: record.Description,
+				Name:        newName,
+			})
+			if err != nil {
+				fmt.Printf("重命名相簿失败: %s\n", name)
+				return
+			} else {
+				fmt.Printf("重命名相簿成功: %s -> %s\n", name, newName)
+			}
+			break
+		}
+	}
+
 }
