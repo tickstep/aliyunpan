@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
 	"os"
 	"strconv"
@@ -43,8 +44,42 @@ func CmdAlbum() cli.Command {
 				Aliases:   []string{"ls"},
 				Usage:     "展示相簿列表",
 				UsageText: cmder.App().Name + " album list",
+				Description: `
+示例:
+
+    展示相簿列表 
+    aliyunpan album ls
+`,
 				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
 					RunAlbumList()
+					return nil
+				},
+				Flags: []cli.Flag{},
+			},
+			{
+				Name:      "new",
+				Aliases:   []string{""},
+				Usage:     "创建相簿",
+				UsageText: cmder.App().Name + " album new",
+				Description: `
+示例:
+
+    新建相簿，名称为：我的相簿2022
+    aliyunpan album new "我的相簿2022"
+
+    新建相簿，名称为：我的相簿2022，描述为：存放2022所有文件
+    aliyunpan album new "我的相簿2022" "存放2022所有文件"
+`,
+				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					RunAlbumCreate(c.Args().Get(0), c.Args().Get(1))
 					return nil
 				},
 				Flags: []cli.Flag{},
@@ -69,4 +104,22 @@ func RunAlbumList() {
 			record.CreatedAtStr(), record.UpdatedAtStr()})
 	}
 	tb.Render()
+}
+
+func RunAlbumCreate(name, description string) {
+	if name == "" {
+		fmt.Printf("相簿名称不能为空\n")
+		return
+	}
+
+	activeUser := GetActiveUser()
+	_, err := activeUser.PanClient().AlbumCreate(&aliyunpan.AlbumCreateParam{
+		Name:        name,
+		Description: description,
+	})
+	if err != nil {
+		fmt.Printf("创建相簿失败: %s\n", err)
+		return
+	}
+	fmt.Printf("创建相簿成功: %s\n", name)
 }
