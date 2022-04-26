@@ -153,6 +153,33 @@ func CmdAlbum() cli.Command {
 				},
 				Flags: []cli.Flag{},
 			},
+			{
+				Name:      "rm-file",
+				Aliases:   []string{"rf"},
+				Usage:     "展示相簿中文件",
+				UsageText: cmder.App().Name + " album rm-file",
+				Description: `
+移除相簿中的文件，同名的相簿只会移除第一个符合条件的
+示例:
+
+    移除相簿 "我的相簿2022" 中的文件 1.png 2.png
+    aliyunpan album rm-file 我的相簿2022 1.png 2.png
+`,
+				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					subArgs := c.Args()
+					if len(subArgs) < 2 {
+						fmt.Println("请指定移除的文件")
+						return nil
+					}
+					RunAlbumRmFile(subArgs[0], subArgs[1:])
+					return nil
+				},
+				Flags: []cli.Flag{},
+			},
 		},
 	}
 }
@@ -288,4 +315,61 @@ func RunAlbumListFile(name string) {
 		return
 	}
 	renderTable(opLs, false, "", fileList)
+}
+
+func RunAlbumRmFile(name string, nameList []string) {
+	if len(name) == 0 {
+		fmt.Printf("相簿名称不能为空\n")
+		return
+	}
+	if len(nameList) == 0 {
+		fmt.Printf("指定文件不能为空\n")
+		return
+	}
+
+	activeUser := GetActiveUser()
+	record := getAlbumFromName(activeUser, name)
+	if record == nil {
+		return
+	}
+
+	fileList, er := activeUser.PanClient().AlbumListFileGetAll(&aliyunpan.AlbumListFileParam{
+		AlbumId: record.AlbumId,
+	})
+	if er != nil {
+		fmt.Printf("获取相簿文件列表失败：%s\n", er)
+		return
+	}
+	param := &aliyunpan.AlbumDeleteFileParam{
+		AlbumId:       record.AlbumId,
+		DriveFileList: []aliyunpan.FileBatchActionParam{},
+	}
+	for _, file := range fileList {
+		if len(nameList) == 0 {
+			break
+		}
+		for i, name := range nameList {
+			if name == file.FileName {
+				nameList = append(nameList[:i], nameList[i+1:]...)
+				param.DriveFileList = append(param.DriveFileList, aliyunpan.FileBatchActionParam{
+					DriveId: file.DriveId,
+					FileId:  file.FileId,
+				})
+				break
+			}
+		}
+	}
+
+	// 1-500 范围
+	if len(param.DriveFileList) == 0 {
+		fmt.Printf("没有符合的文件\n")
+		return
+	}
+	// delete file
+	_, e := activeUser.PanClient().AlbumDeleteFile(param)
+	if e != nil {
+		fmt.Printf("删除相簿文件失败：%s\n", e)
+		return
+	}
+	fmt.Printf("删除相簿文件成功：%s\n", name)
 }
