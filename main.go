@@ -462,6 +462,9 @@ func main() {
 		// 工具箱 tool
 		command.CmdTool(),
 
+		// 相簿
+		command.CmdAlbum(),
+
 		// 显示命令历史
 		{
 			Name:      "history",
