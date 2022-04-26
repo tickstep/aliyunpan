@@ -84,6 +84,31 @@ func CmdAlbum() cli.Command {
 				},
 				Flags: []cli.Flag{},
 			},
+			{
+				Name:      "rm",
+				Aliases:   []string{""},
+				Usage:     "删除相簿",
+				UsageText: cmder.App().Name + " album rm",
+				Description: `
+删除相簿，同名的相簿只会删除第一个符合条件的
+示例:
+
+    删除名称为"我的相簿2022"的相簿
+    aliyunpan album rm "我的相簿2022"
+
+    删除名称为"我的相簿2022-1" 和 "我的相簿2022-2"的相簿
+    aliyunpan album rm "我的相簿2022-1" "我的相簿2022-2"
+`,
+				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					RunAlbumDelete(c.Args())
+					return nil
+				},
+				Flags: []cli.Flag{},
+			},
 		},
 	}
 }
@@ -122,4 +147,36 @@ func RunAlbumCreate(name, description string) {
 		return
 	}
 	fmt.Printf("创建相簿成功: %s\n", name)
+}
+
+func RunAlbumDelete(nameList []string) {
+	if len(nameList) == 0 {
+		fmt.Printf("相簿名称不能为空\n")
+		return
+	}
+
+	activeUser := GetActiveUser()
+	records, err := activeUser.PanClient().AlbumListGetAll(&aliyunpan.AlbumListParam{})
+	if err != nil {
+		fmt.Printf("获取相簿列表失败: %s\n", err)
+		return
+	}
+
+	for _, record := range records {
+		for i, name := range nameList {
+			if name == record.Name {
+				nameList = append(nameList[:i], nameList[i+1:]...)
+				_, err := activeUser.PanClient().AlbumDelete(&aliyunpan.AlbumDeleteParam{
+					AlbumId: record.AlbumId,
+				})
+				if err != nil {
+					fmt.Printf("删除相簿失败: %s\n", name)
+					return
+				} else {
+					fmt.Printf("删除相簿成功: %s\n", name)
+				}
+				break
+			}
+		}
+	}
 }
