@@ -17,19 +17,33 @@ import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"os"
 	"strconv"
+	"time"
+)
+
+type (
+	AlbumFileCategoryOption string
+)
+
+var (
+	ImageOnlyOption      AlbumFileCategoryOption = "image"
+	VideoOnlyOption      AlbumFileCategoryOption = "video"
+	ImageVideoOnlyOption AlbumFileCategoryOption = "image_video"
+	AllFileOption        AlbumFileCategoryOption = "none"
 )
 
 func CmdAlbum() cli.Command {
 	return cli.Command{
 		Name:      "album",
 		Aliases:   []string{"abm"},
-		Usage:     "相簿",
+		Usage:     "相簿(Beta)",
 		UsageText: cmder.App().Name + " album",
 		Category:  "阿里云盘",
 		Before:    cmder.ReloadConfigFunc,
@@ -134,7 +148,7 @@ func CmdAlbum() cli.Command {
 			{
 				Name:      "list-file",
 				Aliases:   []string{"lf"},
-				Usage:     "展示相簿中文件",
+				Usage:     "展示相簿中的文件",
 				UsageText: cmder.App().Name + " album list-file",
 				Description: `
 展示相簿中文件，同名的相簿只会展示第一个符合条件的
@@ -156,7 +170,7 @@ func CmdAlbum() cli.Command {
 			{
 				Name:      "rm-file",
 				Aliases:   []string{"rf"},
-				Usage:     "展示相簿中文件",
+				Usage:     "移除相簿中的文件",
 				UsageText: cmder.App().Name + " album rm-file",
 				Description: `
 移除相簿中的文件，同名的相簿只会移除第一个符合条件的
@@ -176,6 +190,36 @@ func CmdAlbum() cli.Command {
 						return nil
 					}
 					RunAlbumRmFile(subArgs[0], subArgs[1:])
+					return nil
+				},
+				Flags: []cli.Flag{},
+			},
+			{
+				Name:      "add-file",
+				Aliases:   []string{"af"},
+				Usage:     "增加（文件/相册）网盘文件到相簿中",
+				UsageText: cmder.App().Name + " album add-file",
+				Description: `
+增加文件到相簿中
+示例:
+
+    增加当前目录下的 1.png 2.png 文件到相簿 "我的相簿2022" 中
+    aliyunpan album add-file 我的相簿2022 1.png 2.png
+
+    增加当前目录下的 myFolder 文件夹下所有文件到相簿 "我的相簿2022" 中
+    aliyunpan album add-file 我的相簿2022 myFolder
+`,
+				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					subArgs := c.Args()
+					if len(subArgs) < 2 {
+						fmt.Println("请指定增加的文件")
+						return nil
+					}
+					RunAlbumAddFile(subArgs[0], subArgs[1:], ImageVideoOnlyOption)
 					return nil
 				},
 				Flags: []cli.Flag{},
@@ -328,20 +372,20 @@ func RunAlbumRmFile(name string, nameList []string) {
 	}
 
 	activeUser := GetActiveUser()
-	record := getAlbumFromName(activeUser, name)
-	if record == nil {
+	album := getAlbumFromName(activeUser, name)
+	if album == nil {
 		return
 	}
 
 	fileList, er := activeUser.PanClient().AlbumListFileGetAll(&aliyunpan.AlbumListFileParam{
-		AlbumId: record.AlbumId,
+		AlbumId: album.AlbumId,
 	})
 	if er != nil {
 		fmt.Printf("获取相簿文件列表失败：%s\n", er)
 		return
 	}
 	param := &aliyunpan.AlbumDeleteFileParam{
-		AlbumId:       record.AlbumId,
+		AlbumId:       album.AlbumId,
 		DriveFileList: []aliyunpan.FileBatchActionParam{},
 	}
 	for _, file := range fileList {
@@ -351,10 +395,7 @@ func RunAlbumRmFile(name string, nameList []string) {
 		for i, name := range nameList {
 			if name == file.FileName {
 				nameList = append(nameList[:i], nameList[i+1:]...)
-				param.DriveFileList = append(param.DriveFileList, aliyunpan.FileBatchActionParam{
-					DriveId: file.DriveId,
-					FileId:  file.FileId,
-				})
+				param.AddFileItem(file.DriveId, file.FileId)
 				break
 			}
 		}
@@ -372,4 +413,93 @@ func RunAlbumRmFile(name string, nameList []string) {
 		return
 	}
 	fmt.Printf("删除相簿文件成功：%s\n", name)
+}
+
+// RunAlbumAddFile 增加网盘文件到相簿
+func RunAlbumAddFile(albumName string, filePathList []string, filterOption AlbumFileCategoryOption) {
+	activeUser := GetActiveUser()
+
+	if albumName == "" {
+		fmt.Printf("必须指定相簿名称\n")
+		return
+	}
+	album := getAlbumFromName(activeUser, albumName)
+	if album == nil {
+		fmt.Printf("相簿不存在\n")
+		return
+	}
+
+	paths, err := matchPathByShellPattern(activeUser.ActiveDriveId, filePathList...)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if len(paths) == 0 {
+		fmt.Printf("没有有效的文件\n")
+		return
+	}
+
+	fmt.Printf("正在获取增加的文件信息，该操作可能会非常耗费时间，请耐心等待...\n")
+	param := &aliyunpan.AlbumAddFileParam{
+		AlbumId:       album.AlbumId,
+		DriveFileList: []aliyunpan.FileBatchActionParam{},
+	}
+	for k := range paths {
+		filePath := paths[k]
+		fileInfo, apierr := activeUser.PanClient().FileInfoByPath(activeUser.ActiveDriveId, filePath)
+		if apierr != nil {
+			fmt.Printf("获取文件信息失败: %s\n", filePath)
+			continue
+		}
+		if fileInfo.IsFile() {
+			// file
+			if isFileMatchCondition(fileInfo, filterOption) {
+				param.AddFileItem(fileInfo.DriveId, fileInfo.FileId)
+			}
+		} else {
+			// folder
+			activeUser.PanClient().FilesDirectoriesRecurseList(activeUser.ActiveDriveId, fileInfo.Path, func(depth int, _ string, fd *aliyunpan.FileEntity, apiError *apierror.ApiError) bool {
+				if apiError != nil {
+					logger.Verbosef("%s\n", apiError)
+					return true
+				}
+				if !fd.IsFolder() {
+					if isFileMatchCondition(fd, filterOption) {
+						param.AddFileItem(fd.DriveId, fd.FileId)
+					}
+				}
+				time.Sleep(2 * time.Second)
+				return true
+			})
+		}
+		time.Sleep(2 * time.Second)
+	}
+
+	if len(param.DriveFileList) == 0 {
+		fmt.Printf("没有符合的文件\n")
+		return
+	}
+	// add file
+	_, e := activeUser.PanClient().AlbumAddFile(param)
+	if e != nil {
+		fmt.Printf("增加相簿文件失败：%s\n", e)
+		return
+	}
+	fmt.Printf("增加相簿文件成功：%s\n", albumName)
+}
+
+func isFileMatchCondition(fileInfo *aliyunpan.FileEntity, filterOption AlbumFileCategoryOption) bool {
+	if fileInfo == nil {
+		return false
+	}
+	if filterOption == ImageOnlyOption {
+		return fileInfo.Category == "image"
+	} else if filterOption == VideoOnlyOption {
+		return fileInfo.Category == "video"
+	} else if filterOption == ImageVideoOnlyOption {
+		return fileInfo.Category == "image" || fileInfo.Category == "video"
+	} else if filterOption == AllFileOption {
+		return true
+	}
+	return false
 }
