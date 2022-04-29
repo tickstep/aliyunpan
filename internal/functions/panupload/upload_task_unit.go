@@ -461,7 +461,7 @@ StepUploadPrepareUpload:
 	// 创建上传任务
 	appCreateUploadFileParam = &aliyunpan.CreateFileUploadParam{
 		DriveId:         utu.DriveId,
-		Name:            filepath.Base(utu.LocalFileChecksum.Path),
+		Name:            filepath.Base(utu.SavePath),
 		Size:            utu.LocalFileChecksum.Length,
 		ContentHash:     sha1Str,
 		ContentHashName: contentHashName,
