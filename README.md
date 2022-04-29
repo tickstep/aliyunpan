@@ -12,6 +12,7 @@
 8. 命令和文件路径输入支持Tab键自动补全
 9. 支持阿里云ECS环境下使用内网链接上传/下载，速度更快(只支持阿里经典网络，最高可达100MB/s)，还可以节省公网带宽流量(配置transfer_url_type=2即可)
 10. 支持webdav文件协议，可以将阿里云盘当做webdav文件网盘挂载到Windows, macOS, linux的磁盘中进行使用。webdav部署支持docker镜像，镜像只有不到10MB非常小巧。
+11. 支持javascript插件，你可以按照自己的需要定制上传/下载中关键步骤的行为，最大程度满足自己的个性化需求
 
 # 重要提示
 ***由于阿里上传接口更改，目前上传文件需要原始文件的片段信息，故之前的"手动秒传"，"导入"，"导出"，"秒传链接分享"功能全部无法使用。新版本暂时屏蔽了该功能，请知悉。***
@@ -72,6 +73,9 @@
     + [Linux后台启动](#Linux后台启动)
     + [Docker运行](#Docker运行)
     + [HTTPS配置](#HTTPS配置)
+  * [JavaScript插件](#JavaScript插件)
+    + [如何使用](#如何使用)
+    + [JS中内置的函数](#JS中内置的函数)
   * [显示和修改程序配置项](#显示和修改程序配置项)
 - [常见问题Q&A](#常见问题Q&A)  
   * [1. 如何获取RefreshToken](#1-如何获取RefreshToken)
@@ -709,6 +713,79 @@ server {
    }
 ```
 
+## JavaScript插件
+支持javascript插件，你可以按照自己的需要定制上传/下载中关键步骤的行为，最大程度满足自己的个性化需求。   
+例如：   
+1.排除某个特定敏感文件的上传   
+2.上传文件进行改名，但是本地文件不做更改   
+3.上传完成文件，删除本地文件   
+4.上传的文件路径进行更改，但是本地的文件保持不变   
+5.上传文件成功后，通过HTTP通知其他服务   
+6.排除某些网盘文件的下载   
+7.下载的文件进行改名，但是网盘的文件保持不变   
+8.下载的文件路径进行更改，但是网盘的文件保持不变   
+9.下载文件完成后，通过HTTP通知其他服务   
+   
+### 如何使用
+JS插件的样本文件默认存放在程序所在的plugin/js文件夹下，分为下载(download_handler.js.sample)和上传(upload_handler.js.sample)两个。   
+建议拷贝一份并将后缀名更改为.js，例如：upload_handler.js，不然插件不会生效。   
+你必须具备一定的JS语言基础，然后按照里面的样例根据自己所需进行改动即可。   
+
+### JS中内置的函数
+目前只开放了如下函数，你可以在你的js脚本中直接调用   
+1.console.log()   
+打印日志
+```
+console.log("hello world");
+```
+
+2.PluginUtil.Http.get()   
+发起HTTP的get请求   
+```
+    var header = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    };
+    try {
+        var r = PluginUtil.Http.get(header, "https://625f528c53a42eaa07f37e13.mockapi.io/files/1");
+        console.log(r);
+    } catch (e) {
+        if (e !== "Error") {
+            throw e;
+        }
+    }
+```
+
+3.PluginUtil.Http.post()   
+发起HTTP的post请求
+```
+    var header = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    };
+    try {
+        var reqDataStr = JSON.stringify({
+            "id": "1",
+            "localFilePath": "/usr/local/src/borders_burundi_producer.gram.aab",
+            "localFileSize": 1111,
+            "uploadApproved": false
+        });
+        var r = PluginUtil.Http.post(header, "https://625f528c53a42eaa07f37e13.mockapi.io/files", reqDataStr);
+        console.log(r);
+    } catch (e) {
+        if (e !== "Error") {
+            throw e;
+        }
+    }
+```
+
+4.PluginUtil.LocalFS.deleteFile()   
+删除本地指定文件，不支持文件夹
+```
+PluginUtil.LocalFS.deleteFile(params["localFilePath"]);
+```
 
 ## 显示和修改程序配置项
 ```
