@@ -40,11 +40,14 @@ func (js *JsPlugin) Start() error {
 	console.Set("log", jsLog)
 	js.vm.Set("console", console)
 
-	// 内置系统函数sys
-	sysObj := js.vm.NewObject()
-	sysObj.Set("httpGet", HttpGet)
-	sysObj.Set("httpPost", HttpPost)
-	js.vm.Set("sys", sysObj)
+	// 内置系统函数PluginUtil
+	pluginObj := js.vm.NewObject()
+	js.vm.Set("PluginUtil", pluginObj)
+
+	httpObj := js.vm.NewObject()
+	pluginObj.Set("Http", httpObj)
+	httpObj.Set("get", HttpGet)
+	httpObj.Set("post", HttpPost)
 
 	return nil
 }
