@@ -38,16 +38,22 @@ func (js *JsPlugin) Start() error {
 	// 内置log
 	console := js.vm.NewObject()
 	console.Set("log", jsLog)
-	js.vm.Set("console", console)
+	js.vm.Set("console", console) // console.log()
 
 	// 内置系统函数PluginUtil
 	pluginObj := js.vm.NewObject()
 	js.vm.Set("PluginUtil", pluginObj)
 
+	// PluginUtil.Http
 	httpObj := js.vm.NewObject()
 	pluginObj.Set("Http", httpObj)
-	httpObj.Set("get", HttpGet)
-	httpObj.Set("post", HttpPost)
+	httpObj.Set("get", HttpGet)   // PluginUtil.Http.get()
+	httpObj.Set("post", HttpPost) // PluginUtil.Http.post()
+
+	// PluginUtil.LocalFS
+	localFS := js.vm.NewObject()
+	pluginObj.Set("LocalFS", localFS)
+	localFS.Set("deleteFile", DeleteLocalFile) // PluginUtil.LocalFS.deleteFile()
 
 	return nil
 }

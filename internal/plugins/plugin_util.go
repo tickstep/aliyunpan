@@ -3,6 +3,7 @@ package plugins
 import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
+	"os"
 )
 
 // HttpGet Http的get请求
@@ -25,4 +26,17 @@ func HttpPost(header map[string]string, url string, data interface{}) string {
 		return ""
 	}
 	return string(body)
+}
+
+// DeleteLocalFile 删除本地文件，不支持文件夹
+func DeleteLocalFile(localFilePath string) bool {
+	err := os.Remove(localFilePath)
+	if err != nil {
+		// 删除失败
+		return false
+	} else {
+		// 删除成功
+		return true
+	}
+	return false
 }
