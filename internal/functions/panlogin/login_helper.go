@@ -50,6 +50,10 @@ func NewLoginHelper(webHost string) *LoginHelper {
 func (h *LoginHelper) GetQRCodeLoginUrl(keyStr string) (*QRCodeUrlResult, error) {
 	if keyStr == "" {
 		keyStr = ids.GetUniqueId("", 32)
+		if len(keyStr) == 0 || keyStr == "" {
+			// default
+			keyStr = "AE8627B0296A4126A1434999C45ECAB2"
+		}
 	}
 	fullUrl := strings.Builder{}
 	ipAddr, err := getip.IPInfoFromTechainBaidu()
