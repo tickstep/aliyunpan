@@ -63,8 +63,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd0=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/tickstep/aliyunpan-api v0.0.5 h1:41eCJ1iGMtj2TXZGdrgv66RRcZpWpWq19yk8jOOpqdE=
-github.com/tickstep/aliyunpan-api v0.0.5/go.mod h1:EdciagdVeAHfqvzStVEVp1UVtySaq1DFd5RSucDfKWY=
+github.com/tickstep/aliyunpan-api v0.0.6 h1:mIgKlhX0OhKL7oTIu3WVRmUIHdwwDBX3RQzVwPpCJJs=
+github.com/tickstep/aliyunpan-api v0.0.6/go.mod h1:ZFtMpbmVPM6+zWRTQ7QHw6xzwN/WTm3zaxQjFZ54UAA=
 github.com/tickstep/bolt v1.3.3 h1:3abb88T5JJocnBlYTJE3EqKvwWV6+D/JZD2Fsdt1QHI=
 github.com/tickstep/bolt v1.3.3/go.mod h1:Y24RwCywbOsKAyHiVcJ4K2QQfED+q67x7PEOH9OG7Q4=
 github.com/tickstep/library-go v0.0.5 h1:MBb1tsvs4Wi67zy0E9eobVWLgsfPRLsqKAEdSEi3LBE=
