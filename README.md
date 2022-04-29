@@ -730,6 +730,7 @@ server {
 JS插件的样本文件默认存放在程序所在的plugin/js文件夹下，分为下载(download_handler.js.sample)和上传(upload_handler.js.sample)两个。   
 建议拷贝一份并将后缀名更改为.js，例如：upload_handler.js，不然插件不会生效。   
 你必须具备一定的JS语言基础，然后按照里面的样例根据自己所需进行改动即可。   
+如果你有通过环境变量ALIYUNPAN_CONFIG_DIR设置配置目录，则需要将plugin文件夹拷贝到配置的目录中才可以生效。   
 
 ### JS中内置的函数
 目前只开放了如下函数，你可以在你的js脚本中直接调用   
