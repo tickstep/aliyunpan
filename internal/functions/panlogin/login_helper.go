@@ -199,6 +199,10 @@ func (h *LoginHelper) ParseSecureRefreshToken(keyStr, secureRefreshToken string)
 
 	if len(keyStr) == 0 {
 		keyStr = ids.GetUniqueId("", 32)
+		if len(keyStr) == 0 || keyStr == "" {
+			// default
+			keyStr = "AE8627B0296A4126A1434999C45ECAB2"
+		}
 	}
 
 	if secureRefreshToken == "" {
