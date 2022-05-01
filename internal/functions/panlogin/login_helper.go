@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/crypto"
 	"github.com/tickstep/library-go/getip"
-	"github.com/tickstep/library-go/ids"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"net/url"
@@ -49,11 +49,7 @@ func NewLoginHelper(webHost string) *LoginHelper {
 // GetQRCodeLoginUrl 获取登录二维码链接
 func (h *LoginHelper) GetQRCodeLoginUrl(keyStr string) (*QRCodeUrlResult, error) {
 	if keyStr == "" {
-		keyStr = ids.GetUniqueId("", 32)
-		if len(keyStr) == 0 || keyStr == "" {
-			// default
-			keyStr = "AE8627B0296A4126A1434999C45ECAB2"
-		}
+		keyStr = utils.GetUniqueKeyStr()
 	}
 	fullUrl := strings.Builder{}
 	ipAddr, err := getip.IPInfoFromTechainBaidu()
@@ -198,11 +194,7 @@ func (h *LoginHelper) ParseSecureRefreshToken(keyStr, secureRefreshToken string)
 	}()
 
 	if len(keyStr) == 0 {
-		keyStr = ids.GetUniqueId("", 32)
-		if len(keyStr) == 0 || keyStr == "" {
-			// default
-			keyStr = "AE8627B0296A4126A1434999C45ECAB2"
-		}
+		keyStr = utils.GetUniqueKeyStr()
 	}
 
 	if secureRefreshToken == "" {

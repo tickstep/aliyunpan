@@ -17,6 +17,7 @@ import (
 	"compress/gzip"
 	"flag"
 	"fmt"
+	"github.com/tickstep/library-go/ids"
 	"io"
 	"io/ioutil"
 	"net/http/cookiejar"
@@ -149,4 +150,14 @@ func HasSuffix(s, suffix string) bool {
 // HasPrefix 判断是否以某字符串作为开始
 func HasPrefix(s, prefix string) bool {
 	return len(s) >= len(prefix) && s[0:len(prefix)] == prefix
+}
+
+// GetUniqueKeyStr 获取本机唯一标识
+func GetUniqueKeyStr() string {
+	keyStr := ids.GetUniqueId("", 32)
+	if len(keyStr) == 0 || keyStr == "" {
+		// default
+		keyStr = "AE8627B0296A4126A1434999C45ECAB2"
+	}
+	return keyStr
 }
