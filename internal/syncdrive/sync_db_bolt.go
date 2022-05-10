@@ -68,6 +68,10 @@ const (
 	DefaultDirKeyName string = "."
 )
 
+var (
+	ErrItemNotExisted error = fmt.Errorf("item is not existed")
+)
+
 func NewPanFileItem(fe *aliyunpan.FileEntity) *PanFileItem {
 	return &PanFileItem{
 		DriveId:       fe.DriveId,
@@ -116,6 +120,7 @@ func (p *PanSyncDb) Open() (bool, error) {
 	return true, nil
 }
 
+// Add 增加一个数据项
 func (p *PanSyncDb) Add(item *PanFileItem) (bool, error) {
 	if item == nil {
 		return false, fmt.Errorf("item is nil")
@@ -171,6 +176,8 @@ func (p *PanSyncDb) Add(item *PanFileItem) (bool, error) {
 
 	return true, nil
 }
+
+// Get 获取一个数据项，数据项不存在返回错误
 func (p *PanSyncDb) Get(filePath string) (*PanFileItem, error) {
 	filePath = FormatFilePath(filePath)
 	if filePath == "" {
@@ -195,16 +202,16 @@ func (p *PanSyncDb) Get(filePath string) (*PanFileItem, error) {
 
 	bkt := tx.Bucket([]byte("/"))
 	if bkt == nil {
-		return nil, fmt.Errorf("item is not existed")
+		return nil, ErrItemNotExisted
 	}
 	for _, p := range parts[:len(parts)-1] {
 		bkt = bkt.Bucket([]byte(p))
 		if bkt == nil {
-			return nil, fmt.Errorf("item is not existed")
+			return nil, ErrItemNotExisted
 		}
 	}
 	if bkt == nil {
-		return nil, fmt.Errorf("item is not existed")
+		return nil, ErrItemNotExisted
 	}
 
 	dirBucket := bkt.Bucket([]byte(parts[len(parts)-1]))
@@ -222,11 +229,65 @@ func (p *PanSyncDb) Get(filePath string) (*PanFileItem, error) {
 		}
 		return item, nil
 	}
-	return nil, nil
+	return nil, ErrItemNotExisted
 }
+
+// Delete 删除一个数据项
 func (p *PanSyncDb) Delete(filePath string) (bool, error) {
-	return false, nil
+	filePath = FormatFilePath(filePath)
+	if filePath == "" {
+		return false, fmt.Errorf("item is nil")
+	}
+	p.locker.Lock()
+	defer p.locker.Unlock()
+
+	tx, err := p.db.Begin(true)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+
+	partsOrg := strings.Split(filePath, "/")
+	parts := []string{}
+	for _, p := range partsOrg {
+		if p == "" {
+			continue
+		}
+		parts = append(parts, p)
+	}
+
+	// get parent node
+	bkt := tx.Bucket([]byte("/"))
+	if bkt == nil {
+		return false, ErrItemNotExisted
+	}
+	for _, p := range parts[:len(parts)-1] {
+		bkt = bkt.Bucket([]byte(p))
+		if bkt == nil {
+			return false, ErrItemNotExisted
+		}
+	}
+	if bkt == nil {
+		return false, ErrItemNotExisted
+	}
+
+	targetName := []byte(parts[len(parts)-1])
+	dirBucket := bkt.Bucket(targetName)
+	var er error
+	if dirBucket != nil {
+		// is dir, delete bucket
+		er = bkt.DeleteBucket(targetName)
+	} else {
+		// is file, delete item
+		er = bkt.Delete(targetName)
+	}
+	// Commit the transaction and check for error.
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return er == nil, nil
 }
+
 func (p *PanSyncDb) Update(filePath string) (bool, error) {
 	return false, nil
 }
