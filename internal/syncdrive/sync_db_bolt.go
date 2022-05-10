@@ -288,9 +288,69 @@ func (p *PanSyncDb) Delete(filePath string) (bool, error) {
 	return er == nil, nil
 }
 
-func (p *PanSyncDb) Update(filePath string) (bool, error) {
-	return false, nil
+// Update 更新数据项，数据项不存在返回错误
+func (p *PanSyncDb) Update(item *PanFileItem) (bool, error) {
+	if item == nil {
+		return false, fmt.Errorf("item is nil")
+	}
+	p.locker.Lock()
+	defer p.locker.Unlock()
+
+	// update item
+	// Start a writable transaction.
+	tx, err := p.db.Begin(true)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+
+	// get parent bucket of update item
+	parts := strings.Split(item.FormatFilePath(), "/")
+	bkt := tx.Bucket([]byte("/"))
+	if bkt == nil {
+		return false, ErrItemNotExisted
+	}
+	for _, p := range parts[:len(parts)-1] {
+		if p == "" {
+			continue
+		}
+		bkt = bkt.Bucket([]byte(p))
+		if bkt == nil {
+			return false, ErrItemNotExisted
+		}
+	}
+	if bkt == nil {
+		return false, ErrItemNotExisted
+	}
+
+	// update content
+	rs, err := json.Marshal(item)
+	if err != nil {
+		return false, err
+	}
+	if item.IsFolder() {
+		bkt = bkt.Bucket([]byte(item.FormatFileName()))
+		if bkt == nil {
+			return false, ErrItemNotExisted
+		}
+		if e := bkt.Put([]byte(DefaultDirKeyName), rs); e != nil {
+			return false, e
+		}
+	} else {
+		// is file
+		if e := bkt.Put([]byte(item.FormatFileName()), rs); e != nil {
+			return false, e
+		}
+	}
+
+	// Commit the transaction and check for error.
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return true, nil
 }
+
+// Close 关闭数据库
 func (p *PanSyncDb) Close() (bool, error) {
 	if p.db != nil {
 		if e := p.db.Close(); e != nil {
