@@ -11,7 +11,7 @@ import (
 
 func TestPanSyncDb(t *testing.T) {
 	// get access token
-	refreshToken := "39b6583...b662b2a522"
+	refreshToken := "c2b11bfc07...f090dc07ea59"
 	webToken, err := aliyunpan.GetAccessTokenFromRefreshToken(refreshToken)
 	if err != nil {
 		fmt.Println("get acccess token error")
@@ -51,4 +51,12 @@ func TestGet(t *testing.T) {
 	defer b.Close()
 
 	fmt.Println(b.Get("/Parallels Desktop/v17/部分电脑安装v17可能有问题，请退回v16版本.txt"))
+}
+
+func TestGetFileList(t *testing.T) {
+	b := NewPanSyncDb("D:\\smb\\feny\\goprojects\\dev\\pan.db")
+	b.Open()
+	defer b.Close()
+
+	fmt.Println(b.GetFileList("/Parallels Desktop/v17"))
 }
