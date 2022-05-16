@@ -5,6 +5,11 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/library-go/logger"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -59,4 +64,86 @@ func TestGetFileList(t *testing.T) {
 	defer b.Close()
 
 	fmt.Println(b.GetFileList("/Parallels Desktop/v17"))
+}
+
+func WalkAllFile(dirPath string, walkFn filepath.WalkFunc) error {
+	dirPath = strings.ReplaceAll(dirPath, "\\", "/")
+	info, err := os.Lstat(dirPath)
+	if err != nil {
+		err = walkFn(dirPath, nil, err)
+	} else {
+		err = walkAllFile(dirPath, info, walkFn)
+	}
+	return err
+}
+
+func walkAllFile(dirPath string, info os.FileInfo, walkFn filepath.WalkFunc) error {
+	if !info.IsDir() {
+		return walkFn(dirPath, info, nil)
+	}
+
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		return walkFn(dirPath, nil, err)
+	}
+	for _, fi := range files {
+		subFilePath := dirPath + "/" + fi.Name()
+		err = walkFn(subFilePath, fi, err)
+		if err != nil {
+			return err
+		}
+		if fi.IsDir() {
+			err = walkAllFile(subFilePath, fi, walkFn)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func TestLocalSyncDb(t *testing.T) {
+	b := NewLocalSyncDb("D:\\smb\\feny\\goprojects\\dev\\local.db")
+	b.Open()
+	defer b.Close()
+
+	var walkFunc filepath.WalkFunc
+	walkFunc = func(file string, fi os.FileInfo, err error) error {
+		fmt.Println(file)
+		fileType := "file"
+		if fi.IsDir() {
+			fileType = "folder"
+		}
+		item := &LocalFileItem{
+			FileName:      path.Base(file),
+			FileSize:      fi.Size(),
+			FileType:      fileType,
+			CreatedAt:     fi.ModTime().Format("2006-01-02 15:04:05"),
+			UpdatedAt:     fi.ModTime().Format("2006-01-02 15:04:05"),
+			FileExtension: "",
+			Sha1Hash:      "",
+			Path:          file,
+		}
+		if _, e := b.Add(item); e != nil {
+			fmt.Println(e)
+		}
+		return nil
+	}
+	WalkAllFile("D:\\smb\\feny\\goprojects\\dl\\a761171495", walkFunc)
+}
+
+func TestLocalGet(t *testing.T) {
+	b := NewLocalSyncDb("D:\\smb\\feny\\goprojects\\dev\\local.db")
+	b.Open()
+	defer b.Close()
+
+	fmt.Println(b.Get("D:\\smb\\feny\\goprojects\\dl\\a761171495\\1.jpg"))
+}
+
+func TestLocalGetFileList(t *testing.T) {
+	b := NewLocalSyncDb("D:\\smb\\feny\\goprojects\\dev\\local.db")
+	b.Open()
+	defer b.Close()
+
+	fmt.Println(b.GetFileList("D:/smb/feny/goprojects/dl/a761171495"))
 }

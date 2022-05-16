@@ -60,6 +60,40 @@ type (
 
 	// LocalFileItem 本地文件信息
 	LocalFileItem struct {
+		// FileName 文件名
+		FileName string `json:"fileName"`
+		// FileSize 文件大小
+		FileSize int64 `json:"fileSize"`
+		// 文件类别 folder / file
+		FileType string `json:"fileType"`
+		// 创建时间
+		CreatedAt string `json:"createdAt"`
+		// 最后修改时间
+		UpdatedAt string `json:"updatedAt"`
+		// 后缀名，例如：dmg
+		FileExtension string `json:"fileExtension"`
+		// 内容Hash值，只有文件才会有
+		Sha1Hash string `json:"sha1Hash"`
+		// FilePath 文件的完整路径
+		Path string `json:"path"`
+	}
+	LocalFileList []*LocalFileItem
+
+	LocalSyncDb interface {
+		// Open 打开并准备数据库
+		Open() (bool, error)
+		// Add 存储一个数据项
+		Add(item *LocalFileItem) (bool, error)
+		// Get 获取一个数据项
+		Get(filePath string) (*LocalFileItem, error)
+		// GetFileList 获取文件夹下的所有的文件列表
+		GetFileList(filePath string) (LocalFileList, error)
+		// Delete 删除一个数据项，如果是文件夹，则会删除文件夹下面所有的文件列表
+		Delete(filePath string) (bool, error)
+		// Update 更新一个数据项数据
+		Update(item *LocalFileItem) (bool, error)
+		// Close 关闭数据库
+		Close() (bool, error)
 	}
 )
 
@@ -101,4 +135,20 @@ func (item *PanFileItem) IsFolder() bool {
 
 func NewPanSyncDb(dbFilePath string) PanSyncDb {
 	return interface{}(newPanSyncDbBolt(dbFilePath)).(PanSyncDb)
+}
+
+func (item *LocalFileItem) FormatFileName() string {
+	return item.FileName
+}
+
+func (item *LocalFileItem) FormatFilePath() string {
+	return FormatFilePath(item.Path)
+}
+
+func (item *LocalFileItem) IsFolder() bool {
+	return item.FileType == "folder"
+}
+
+func NewLocalSyncDb(dbFilePath string) LocalSyncDb {
+	return interface{}(newLocalSyncDbBolt(dbFilePath)).(LocalSyncDb)
 }
