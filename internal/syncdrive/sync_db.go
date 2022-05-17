@@ -46,6 +46,8 @@ type (
 		Open() (bool, error)
 		// Add 存储一个数据项
 		Add(item *PanFileItem) (bool, error)
+		// AddFileList 存储批量数据项
+		AddFileList(items PanFileList) (bool, error)
 		// Get 获取一个数据项
 		Get(filePath string) (*PanFileItem, error)
 		// GetFileList 获取文件夹下的所有的文件列表
@@ -84,6 +86,8 @@ type (
 		Open() (bool, error)
 		// Add 存储一个数据项
 		Add(item *LocalFileItem) (bool, error)
+		// AddFileList 存储批量数据项
+		AddFileList(items LocalFileList) (bool, error)
 		// Get 获取一个数据项
 		Get(filePath string) (*LocalFileItem, error)
 		// GetFileList 获取文件夹下的所有的文件列表

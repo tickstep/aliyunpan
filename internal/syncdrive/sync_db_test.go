@@ -16,7 +16,7 @@ import (
 
 func TestPanSyncDb(t *testing.T) {
 	// get access token
-	refreshToken := "c2b11bfc07...f090dc07ea59"
+	refreshToken := "d77420e4daa...9d384d7c44508"
 	webToken, err := aliyunpan.GetAccessTokenFromRefreshToken(refreshToken)
 	if err != nil {
 		fmt.Println("get acccess token error")
@@ -130,6 +130,55 @@ func TestLocalSyncDb(t *testing.T) {
 		return nil
 	}
 	WalkAllFile("D:\\smb\\feny\\goprojects\\dl\\a761171495", walkFunc)
+}
+
+func TestLocalSyncDbAddFileList(t *testing.T) {
+	b := NewLocalSyncDb("D:\\smb\\feny\\goprojects\\dev\\tmp.db")
+	b.Open()
+	defer b.Close()
+
+	fl := LocalFileList{}
+	fl = append(fl, &LocalFileItem{
+		FileName:      "aliyunpan_command_history.txt",
+		FileSize:      1542,
+		FileType:      "file",
+		CreatedAt:     "2020-12-12 12:51:12",
+		UpdatedAt:     "2020-12-12 12:51:12",
+		FileExtension: "",
+		Sha1Hash:      "",
+		Path:          "D:\\smb\\feny\\goprojects\\dev\\aliyunpan_command_history.txt",
+	})
+	fl = append(fl, &LocalFileItem{
+		FileName:      "f1.txt",
+		FileSize:      1542,
+		FileType:      "file",
+		CreatedAt:     "2020-12-12 12:51:12",
+		UpdatedAt:     "2020-12-12 12:51:12",
+		FileExtension: "",
+		Sha1Hash:      "",
+		Path:          "D:\\smb\\feny\\goprojects\\dev\\f1.txt",
+	})
+	fl = append(fl, &LocalFileItem{
+		FileName:      "f2.txt",
+		FileSize:      1542,
+		FileType:      "file",
+		CreatedAt:     "2020-12-12 12:51:12",
+		UpdatedAt:     "2020-12-12 12:51:12",
+		FileExtension: "",
+		Sha1Hash:      "",
+		Path:          "D:\\smb\\feny\\goprojects\\dev\\f2.txt",
+	})
+	fl = append(fl, &LocalFileItem{
+		FileName:      "f1.txt",
+		FileSize:      1542,
+		FileType:      "file",
+		CreatedAt:     "2020-12-12 12:51:12",
+		UpdatedAt:     "2020-12-12 12:51:12",
+		FileExtension: "",
+		Sha1Hash:      "",
+		Path:          "D:\\smb\\feny\\goprojects\\dev\\fo\\f1.txt",
+	})
+	fmt.Println(b.AddFileList(fl))
 }
 
 func TestLocalGet(t *testing.T) {

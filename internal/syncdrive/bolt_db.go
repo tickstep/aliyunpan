@@ -105,6 +105,41 @@ func (b *BoltDb) Add(item *BoltItem) (bool, error) {
 	return true, nil
 }
 
+// AddItems 增加数据项
+func (b *BoltDb) AddItems(items []*BoltItem) (bool, error) {
+	b.locker.Lock()
+	defer b.locker.Unlock()
+
+	// add item
+	// Start a writable transaction.
+	tx, err := b.db.Begin(true)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+
+	rootBucket, er := tx.CreateBucketIfNotExists([]byte("/"))
+	if er != nil {
+		return false, er
+	}
+	for _, item := range items {
+		item.FilePath = FormatFilePath(item.FilePath)
+		if _, err := b.addOneItem(rootBucket, item); err != nil {
+			// Commit the transaction and check for error.
+			if err := tx.Commit(); err != nil {
+				return false, err
+			}
+			return false, err
+		}
+	}
+
+	// Commit the transaction and check for error.
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // Get 获取一个数据项，数据项不存在返回错误
 func (b *BoltDb) Get(filePath string) (string, error) {
 	filePath = FormatFilePath(filePath)

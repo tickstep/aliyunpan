@@ -58,6 +58,29 @@ func (p *PanSyncDbBolt) Add(item *PanFileItem) (bool, error) {
 	})
 }
 
+// AddFileList 增加批量数据项
+func (p *PanSyncDbBolt) AddFileList(items PanFileList) (bool, error) {
+	if items == nil {
+		return false, fmt.Errorf("item is nil")
+	}
+	p.locker.Lock()
+	defer p.locker.Unlock()
+
+	boltItems := []*BoltItem{}
+	for _, item := range items {
+		data, err := json.Marshal(item)
+		if err != nil {
+			return false, err
+		}
+		boltItems = append(boltItems, &BoltItem{
+			FilePath: item.Path,
+			IsFolder: item.IsFolder(),
+			Data:     string(data),
+		})
+	}
+	return p.db.AddItems(boltItems)
+}
+
 // Get 获取一个数据项，数据项不存在返回错误
 func (p *PanSyncDbBolt) Get(filePath string) (*PanFileItem, error) {
 	filePath = FormatFilePath(filePath)
@@ -167,6 +190,29 @@ func (p *LocalSyncDbBolt) Add(item *LocalFileItem) (bool, error) {
 		IsFolder: item.IsFolder(),
 		Data:     string(data),
 	})
+}
+
+// AddFileList 增加批量数据项
+func (p *LocalSyncDbBolt) AddFileList(items LocalFileList) (bool, error) {
+	if items == nil {
+		return false, fmt.Errorf("item is nil")
+	}
+	p.locker.Lock()
+	defer p.locker.Unlock()
+
+	boltItems := []*BoltItem{}
+	for _, item := range items {
+		data, err := json.Marshal(item)
+		if err != nil {
+			return false, err
+		}
+		boltItems = append(boltItems, &BoltItem{
+			FilePath: item.Path,
+			IsFolder: item.IsFolder(),
+			Data:     string(data),
+		})
+	}
+	return p.db.AddItems(boltItems)
 }
 
 // Get 获取一个数据项，数据项不存在返回错误
