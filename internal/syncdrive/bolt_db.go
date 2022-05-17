@@ -16,6 +16,12 @@ type (
 		db     *bolt.DB
 		locker *sync.Mutex
 	}
+
+	BoltItem struct {
+		FilePath string
+		IsFolder bool
+		Data     string
+	}
 )
 
 func NewBoltDb(dbFilePath string) *BoltDb {
@@ -25,34 +31,18 @@ func NewBoltDb(dbFilePath string) *BoltDb {
 	}
 }
 
-func (p *BoltDb) Open() (bool, error) {
-	db, err := bolt.Open(p.Path, 0600, &bolt.Options{Timeout: 5 * time.Second})
+func (b *BoltDb) Open() (bool, error) {
+	db, err := bolt.Open(b.Path, 0600, &bolt.Options{Timeout: 5 * time.Second})
 	if err != nil {
 		return false, err
 	}
-	p.db = db
+	b.db = db
 	return true, nil
 }
 
-// Add 增加一个数据项
-func (p *BoltDb) Add(filePath string, isFolder bool, data string) (bool, error) {
-	filePath = FormatFilePath(filePath)
-	p.locker.Lock()
-	defer p.locker.Unlock()
-
-	// add item
-	// Start a writable transaction.
-	tx, err := p.db.Begin(true)
-	if err != nil {
-		return false, err
-	}
-	defer tx.Rollback()
-
-	parts := strings.Split(filePath, "/")
-	bkt, er := tx.CreateBucketIfNotExists([]byte("/"))
-	if er != nil {
-		return false, er
-	}
+func (b *BoltDb) addOneItem(rootBucket *bolt.Bucket, item *BoltItem) (bool, error) {
+	bkt := rootBucket
+	parts := strings.Split(item.FilePath, "/")
 	for _, p := range parts[:len(parts)-1] {
 		if p == "" {
 			continue
@@ -63,19 +53,48 @@ func (p *BoltDb) Add(filePath string, isFolder bool, data string) (bool, error) 
 		return false, fmt.Errorf("create or get bucket error")
 	}
 
-	fileName := path.Base(filePath)
-	if isFolder {
+	fileName := path.Base(item.FilePath)
+	var err error
+	if item.IsFolder {
 		bkt, err = bkt.CreateBucketIfNotExists([]byte(fileName))
 		if err != nil {
 			return false, err
 		}
-		if e := bkt.Put([]byte(DefaultDirKeyName), []byte(data)); e != nil {
+		if e := bkt.Put([]byte(DefaultDirKeyName), []byte(item.Data)); e != nil {
 			return false, e
 		}
 	} else {
-		if e := bkt.Put([]byte(fileName), []byte(data)); e != nil {
+		if e := bkt.Put([]byte(fileName), []byte(item.Data)); e != nil {
 			return false, e
 		}
+	}
+	return true, nil
+}
+
+// Add 增加一个数据项
+func (b *BoltDb) Add(item *BoltItem) (bool, error) {
+	item.FilePath = FormatFilePath(item.FilePath)
+	b.locker.Lock()
+	defer b.locker.Unlock()
+
+	// add item
+	// Start a writable transaction.
+	tx, err := b.db.Begin(true)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+
+	rootBucket, er := tx.CreateBucketIfNotExists([]byte("/"))
+	if er != nil {
+		return false, er
+	}
+	if _, err := b.addOneItem(rootBucket, item); err != nil {
+		// Commit the transaction and check for error.
+		if err := tx.Commit(); err != nil {
+			return false, err
+		}
+		return false, err
 	}
 
 	// Commit the transaction and check for error.
@@ -87,15 +106,15 @@ func (p *BoltDb) Add(filePath string, isFolder bool, data string) (bool, error) 
 }
 
 // Get 获取一个数据项，数据项不存在返回错误
-func (p *BoltDb) Get(filePath string) (string, error) {
+func (b *BoltDb) Get(filePath string) (string, error) {
 	filePath = FormatFilePath(filePath)
 	if filePath == "" {
 		return "", fmt.Errorf("item is nil")
 	}
-	p.locker.Lock()
-	defer p.locker.Unlock()
+	b.locker.Lock()
+	defer b.locker.Unlock()
 
-	tx, err := p.db.Begin(false)
+	tx, err := b.db.Begin(false)
 	if err != nil {
 		return "", err
 	}
@@ -137,16 +156,16 @@ func (p *BoltDb) Get(filePath string) (string, error) {
 	return "", ErrItemNotExisted
 }
 
-func (p *BoltDb) GetFileList(filePath string) ([]string, error) {
+func (b *BoltDb) GetFileList(filePath string) ([]string, error) {
 	dataList := []string{}
 	filePath = FormatFilePath(filePath)
 	if filePath == "" {
 		return dataList, fmt.Errorf("item is nil")
 	}
-	p.locker.Lock()
-	defer p.locker.Unlock()
+	b.locker.Lock()
+	defer b.locker.Unlock()
 
-	tx, err := p.db.Begin(false)
+	tx, err := b.db.Begin(false)
 	if err != nil {
 		return dataList, err
 	}
@@ -190,15 +209,15 @@ func (p *BoltDb) GetFileList(filePath string) ([]string, error) {
 }
 
 // Delete 删除一个数据项
-func (p *BoltDb) Delete(filePath string) (bool, error) {
+func (b *BoltDb) Delete(filePath string) (bool, error) {
 	filePath = FormatFilePath(filePath)
 	if filePath == "" {
 		return false, fmt.Errorf("item is nil")
 	}
-	p.locker.Lock()
-	defer p.locker.Unlock()
+	b.locker.Lock()
+	defer b.locker.Unlock()
 
-	tx, err := p.db.Begin(true)
+	tx, err := b.db.Begin(true)
 	if err != nil {
 		return false, err
 	}
@@ -246,14 +265,14 @@ func (p *BoltDb) Delete(filePath string) (bool, error) {
 }
 
 // Update 更新数据项，数据项不存在返回错误
-func (p *BoltDb) Update(filePath string, isFolder bool, data string) (bool, error) {
+func (b *BoltDb) Update(filePath string, isFolder bool, data string) (bool, error) {
 	filePath = FormatFilePath(filePath)
-	p.locker.Lock()
-	defer p.locker.Unlock()
+	b.locker.Lock()
+	defer b.locker.Unlock()
 
 	// update item
 	// Start a writable transaction.
-	tx, err := p.db.Begin(true)
+	tx, err := b.db.Begin(true)
 	if err != nil {
 		return false, err
 	}
@@ -303,11 +322,11 @@ func (p *BoltDb) Update(filePath string, isFolder bool, data string) (bool, erro
 }
 
 // Close 关闭数据库
-func (p *BoltDb) Close() (bool, error) {
-	p.locker.Lock()
-	defer p.locker.Unlock()
-	if p.db != nil {
-		if e := p.db.Close(); e != nil {
+func (b *BoltDb) Close() (bool, error) {
+	b.locker.Lock()
+	defer b.locker.Unlock()
+	if b.db != nil {
+		if e := b.db.Close(); e != nil {
 			return false, e
 		}
 	}

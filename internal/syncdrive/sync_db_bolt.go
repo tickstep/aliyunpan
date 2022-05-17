@@ -51,7 +51,11 @@ func (p *PanSyncDbBolt) Add(item *PanFileItem) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return p.db.Add(item.Path, item.IsFolder(), string(data))
+	return p.db.Add(&BoltItem{
+		FilePath: item.Path,
+		IsFolder: item.IsFolder(),
+		Data:     string(data),
+	})
 }
 
 // Get 获取一个数据项，数据项不存在返回错误
@@ -158,7 +162,11 @@ func (p *LocalSyncDbBolt) Add(item *LocalFileItem) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return p.db.Add(item.Path, item.IsFolder(), string(data))
+	return p.db.Add(&BoltItem{
+		FilePath: item.Path,
+		IsFolder: item.IsFolder(),
+		Data:     string(data),
+	})
 }
 
 // Get 获取一个数据项，数据项不存在返回错误
