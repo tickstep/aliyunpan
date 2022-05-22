@@ -3,6 +3,7 @@ package syncdrive
 import (
 	"context"
 	"fmt"
+	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/aliyunpan/library/collection"
@@ -39,11 +40,14 @@ type (
 		wg         *waitgroup.WaitGroup
 		ctx        context.Context
 		cancelFunc context.CancelFunc
+
+		panClient *aliyunpan.PanClient
 	}
 
 	// SyncTaskManager 同步任务管理器
 	SyncTaskManager struct {
 		SyncTaskList []*SyncTask
+		PanClient    *aliyunpan.PanClient
 	}
 )
 
@@ -240,6 +244,29 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 
 // scanPanFile 云盘文件循环扫描进程
 func (t *SyncTask) scanPanFile(ctx context.Context) {
+	// init the root folders info
+	pathParts := strings.Split(strings.ReplaceAll(t.PanFolderPath, "\\", "/"), "/")
+	fullPath := ""
+	for _, p := range pathParts {
+		if p == "" {
+			continue
+		}
+		fullPath += "/" + p
+		fi, err := t.panClient.FileInfoByPath(t.DriveId, fullPath)
+		if err != nil {
+			return
+		}
+		t.panFileDb.Add(NewPanFileItem(fi))
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	folderQueue := collection.NewFifoQueue()
+	rootPanFile, err := t.panClient.FileInfoByPath(t.DriveId, t.PanFolderPath)
+	if err != nil {
+		return
+	}
+	folderQueue.Push(rootPanFile)
+
 	t.wg.AddDelta()
 	defer t.wg.Done()
 	for {
@@ -251,7 +278,54 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 		default:
 			// 采用广度优先遍历(BFS)进行文件遍历
 			logger.Verboseln("do scan pan file process")
-			time.Sleep(1 * time.Second)
+			obj := folderQueue.Pop()
+			if obj == nil {
+				return
+			}
+			item := obj.(*aliyunpan.FileEntity)
+			// TODO: check to decide to sync file info or to await
+			files, err := t.panClient.FileListGetAll(&aliyunpan.FileListParam{
+				DriveId:      t.DriveId,
+				ParentFileId: item.FileId,
+			})
+			if err != nil {
+				// retry next term
+				folderQueue.Push(item)
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			panFileList := PanFileList{}
+			for _, file := range files {
+				file.Path = path.Join(item.Path, file.FileName)
+				fmt.Println(utils.ObjectToJsonStr(file))
+				panFileInDb, _ := t.panFileDb.Get(file.Path)
+				if panFileInDb == nil {
+					// append
+					panFileList = append(panFileList, NewPanFileItem(file))
+				} else {
+					// update newest info into DB
+					panFileInDb.DomainId = file.DomainId
+					panFileInDb.FileId = file.FileId
+					panFileInDb.FileType = file.FileType
+					panFileInDb.Category = file.Category
+					panFileInDb.Crc64Hash = file.Crc64Hash
+					panFileInDb.Sha1Hash = file.ContentHash
+					panFileInDb.FileSize = file.FileSize
+					panFileInDb.UpdatedAt = file.UpdatedAt
+					panFileInDb.CreatedAt = file.CreatedAt
+					t.panFileDb.Update(panFileInDb)
+				}
+
+				if file.IsFolder() {
+					folderQueue.Push(file)
+				}
+			}
+			if len(panFileList) > 0 {
+				if _, er := t.panFileDb.AddFileList(panFileList); er != nil {
+					logger.Verboseln("add files to pan file db error {}", er)
+				}
+			}
+			time.Sleep(2 * time.Second) // 延迟避免触发风控
 		}
 	}
 }
