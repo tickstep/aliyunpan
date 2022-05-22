@@ -35,8 +35,7 @@ func newPanSyncDbBolt(dbFilePath string) *PanSyncDbBolt {
 }
 
 func (p *PanSyncDbBolt) Open() (bool, error) {
-	p.db = NewBoltDb(p.Path)
-	return p.db.Open()
+	return true, nil
 }
 
 // Add 增加一个数据项
@@ -46,6 +45,10 @@ func (p *PanSyncDbBolt) Add(item *PanFileItem) (bool, error) {
 	}
 	p.locker.Lock()
 	defer p.locker.Unlock()
+
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
 
 	data, err := json.Marshal(item)
 	if err != nil {
@@ -65,6 +68,10 @@ func (p *PanSyncDbBolt) AddFileList(items PanFileList) (bool, error) {
 	}
 	p.locker.Lock()
 	defer p.locker.Unlock()
+
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
 
 	boltItems := []*BoltItem{}
 	for _, item := range items {
@@ -90,6 +97,10 @@ func (p *PanSyncDbBolt) Get(filePath string) (*PanFileItem, error) {
 	p.locker.Lock()
 	defer p.locker.Unlock()
 
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
+
 	data, err := p.db.Get(filePath)
 	if err == nil && data != "" {
 		item := &PanFileItem{}
@@ -108,6 +119,10 @@ func (p *PanSyncDbBolt) GetFileList(filePath string) (PanFileList, error) {
 	}
 	p.locker.Lock()
 	defer p.locker.Unlock()
+
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
 
 	panFileList := PanFileList{}
 	dataList, err := p.db.GetFileList(filePath)
@@ -136,6 +151,10 @@ func (p *PanSyncDbBolt) Delete(filePath string) (bool, error) {
 	p.locker.Lock()
 	defer p.locker.Unlock()
 
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
+
 	return p.db.Delete(filePath)
 }
 
@@ -147,6 +166,10 @@ func (p *PanSyncDbBolt) Update(item *PanFileItem) (bool, error) {
 	p.locker.Lock()
 	defer p.locker.Unlock()
 
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
+
 	data, err := json.Marshal(item)
 	if err != nil {
 		return false, err
@@ -156,9 +179,7 @@ func (p *PanSyncDbBolt) Update(item *PanFileItem) (bool, error) {
 
 // Close 关闭数据库
 func (p *PanSyncDbBolt) Close() (bool, error) {
-	p.locker.Lock()
-	defer p.locker.Unlock()
-	return p.db.Close()
+	return true, nil
 }
 
 func newLocalSyncDbBolt(dbFilePath string) *LocalSyncDbBolt {
@@ -169,8 +190,7 @@ func newLocalSyncDbBolt(dbFilePath string) *LocalSyncDbBolt {
 }
 
 func (p *LocalSyncDbBolt) Open() (bool, error) {
-	p.db = NewBoltDb(p.Path)
-	return p.db.Open()
+	return true, nil
 }
 
 // Add 增加一个数据项
@@ -180,6 +200,10 @@ func (p *LocalSyncDbBolt) Add(item *LocalFileItem) (bool, error) {
 	}
 	p.locker.Lock()
 	defer p.locker.Unlock()
+
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
 
 	data, err := json.Marshal(item)
 	if err != nil {
@@ -199,6 +223,10 @@ func (p *LocalSyncDbBolt) AddFileList(items LocalFileList) (bool, error) {
 	}
 	p.locker.Lock()
 	defer p.locker.Unlock()
+
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
 
 	boltItems := []*BoltItem{}
 	for _, item := range items {
@@ -224,6 +252,10 @@ func (p *LocalSyncDbBolt) Get(filePath string) (*LocalFileItem, error) {
 	p.locker.Lock()
 	defer p.locker.Unlock()
 
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
+
 	data, err := p.db.Get(filePath)
 	if err == nil && data != "" {
 		item := &LocalFileItem{}
@@ -242,6 +274,10 @@ func (p *LocalSyncDbBolt) GetFileList(filePath string) (LocalFileList, error) {
 	}
 	p.locker.Lock()
 	defer p.locker.Unlock()
+
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
 
 	LocalFileList := LocalFileList{}
 	dataList, err := p.db.GetFileList(filePath)
@@ -269,7 +305,9 @@ func (p *LocalSyncDbBolt) Delete(filePath string) (bool, error) {
 	}
 	p.locker.Lock()
 	defer p.locker.Unlock()
-
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
 	return p.db.Delete(filePath)
 }
 
@@ -281,6 +319,10 @@ func (p *LocalSyncDbBolt) Update(item *LocalFileItem) (bool, error) {
 	p.locker.Lock()
 	defer p.locker.Unlock()
 
+	p.db = NewBoltDb(p.Path)
+	p.db.Open()
+	defer p.db.Close()
+
 	data, err := json.Marshal(item)
 	if err != nil {
 		return false, err
@@ -290,7 +332,5 @@ func (p *LocalSyncDbBolt) Update(item *LocalFileItem) (bool, error) {
 
 // Close 关闭数据库
 func (p *LocalSyncDbBolt) Close() (bool, error) {
-	p.locker.Lock()
-	defer p.locker.Unlock()
-	return p.db.Close()
+	return true, nil
 }

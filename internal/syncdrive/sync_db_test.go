@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/logger"
 	"io/ioutil"
 	"os"
@@ -182,11 +183,11 @@ func TestLocalSyncDbAddFileList(t *testing.T) {
 }
 
 func TestLocalGet(t *testing.T) {
-	b := NewLocalSyncDb("D:\\smb\\feny\\goprojects\\dev\\local.db")
+	b := NewLocalSyncDb("/Volumes/Downloads/dev/sync_drive/840f28af799747848c0b3155e0bdfeab/local.bolt")
 	b.Open()
 	defer b.Close()
-
-	fmt.Println(b.Get("D:\\smb\\feny\\goprojects\\dl\\a761171495\\1.jpg"))
+	v, _ := b.Get("/Volumes/Downloads/dev/upload/未命名文件夹/[HAIDAN.VIDEO].绣春刀.2014.mp4.torrent")
+	fmt.Println(utils.ObjectToJsonStr(v))
 }
 
 func TestLocalGetFileList(t *testing.T) {

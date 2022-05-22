@@ -17,11 +17,13 @@ import (
 	"compress/gzip"
 	"flag"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/tickstep/library-go/ids"
 	"io"
 	"io/ioutil"
 	"net/http/cookiejar"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -160,4 +162,22 @@ func GetUniqueKeyStr() string {
 		keyStr = "AE8627B0296A4126A1434999C45ECAB2"
 	}
 	return keyStr
+}
+
+// PathExists 文件路径是否存在
+func PathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+// ObjectToJsonStr 转换成json字符串
+func ObjectToJsonStr(v interface{}) string {
+	r, _ := jsoniter.MarshalToString(v)
+	return string(r)
 }
