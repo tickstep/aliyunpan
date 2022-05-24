@@ -8,7 +8,7 @@ import (
 )
 
 func TestSyncTask(t *testing.T) {
-	refreshToken := "f7bab...0de09517"
+	refreshToken := "84c6499b7c9344109a2fe4f6733c3afd"
 	webToken, err := aliyunpan.GetAccessTokenFromRefreshToken(refreshToken)
 	if err != nil {
 		fmt.Println("get acccess token error")
@@ -21,12 +21,12 @@ func TestSyncTask(t *testing.T) {
 	task := SyncTask{
 		Id:              "840f28af799747848c0b3155e0bdfeab",
 		DriveId:         user.FileDriveId,
-		LocalFolderPath: "/Volumes/Downloads/dev/upload",
+		LocalFolderPath: "D:\\smb\\feny\\goprojects\\dev\\upload",
 		PanFolderPath:   "/sync_drive",
 		Mode:            "sync",
 		LastSyncTime:    "",
 
-		syncDbFolderPath: "/Volumes/Downloads/dev/sync_drive",
+		syncDbFolderPath: "D:\\smb\\feny\\goprojects\\dev\\sync_drive",
 		panClient:        panClient,
 	}
 	task.Start()

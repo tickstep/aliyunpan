@@ -20,6 +20,8 @@ type (
 
 	// SyncTask 同步任务
 	SyncTask struct {
+		// Name 任务名称
+		Name string `json:"name"`
 		// Id 任务ID
 		Id string `json:"id"`
 		// DriveId 网盘ID，目前支持文件网盘
@@ -43,12 +45,6 @@ type (
 
 		panClient *aliyunpan.PanClient
 	}
-
-	// SyncTaskManager 同步任务管理器
-	SyncTaskManager struct {
-		SyncTaskList []*SyncTask
-		PanClient    *aliyunpan.PanClient
-	}
 )
 
 const (
@@ -59,6 +55,26 @@ const (
 	// SyncTwoWay 双向同步
 	SyncTwoWay SyncMode = "sync"
 )
+
+func (t *SyncTask) NameLabel() string {
+	return t.Name + "(" + t.Id + ")"
+}
+
+func (t *SyncTask) String() string {
+	builder := &strings.Builder{}
+	builder.WriteString("任务: " + t.NameLabel() + "\n")
+	mode := "双向同步"
+	if t.Mode == UploadOnly {
+		mode = "只上传"
+	}
+	if t.Mode == UploadOnly {
+		mode = "只下载"
+	}
+	builder.WriteString("同步模式: " + mode + "\n")
+	builder.WriteString("本地目录: " + t.LocalFolderPath + "\n")
+	builder.WriteString("云盘目录: " + t.PanFolderPath + "\n")
+	return builder.String()
+}
 
 // Start 启动同步任务
 func (t *SyncTask) Start() error {
@@ -106,6 +122,9 @@ func (t *SyncTask) Stop() error {
 	if t.panFileDb != nil {
 		t.panFileDb.Close()
 	}
+
+	// record the sync time
+	t.LastSyncTime = utils.NowTimeStr()
 	return nil
 }
 
@@ -297,7 +316,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 			panFileList := PanFileList{}
 			for _, file := range files {
 				file.Path = path.Join(item.Path, file.FileName)
-				fmt.Println(utils.ObjectToJsonStr(file))
+				//fmt.Println(utils.ObjectToJsonStr(file, true))
 				panFileInDb, _ := t.panFileDb.Get(file.Path)
 				if panFileInDb == nil {
 					// append

@@ -19,3 +19,7 @@ func TestConvertTime(t *testing.T) {
 	seconds = time.Duration(1246852) * time.Second
 	fmt.Println(ConvertTime(seconds))
 }
+
+func TestUuidStr(t *testing.T) {
+	fmt.Println(UuidStr())
+}

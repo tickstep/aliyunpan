@@ -187,7 +187,7 @@ func TestLocalGet(t *testing.T) {
 	b.Open()
 	defer b.Close()
 	v, _ := b.Get("/Volumes/Downloads/dev/upload/未命名文件夹/[HAIDAN.VIDEO].绣春刀.2014.mp4.torrent")
-	fmt.Println(utils.ObjectToJsonStr(v))
+	fmt.Println(utils.ObjectToJsonStr(v, true))
 }
 
 func TestLocalGetFileList(t *testing.T) {

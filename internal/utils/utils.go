@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
+	uuid "github.com/satori/go.uuid"
 	"github.com/tickstep/library-go/ids"
 	"io"
 	"io/ioutil"
@@ -177,7 +178,27 @@ func PathExists(path string) (bool, error) {
 }
 
 // ObjectToJsonStr 转换成json字符串
-func ObjectToJsonStr(v interface{}) string {
-	r, _ := jsoniter.MarshalToString(v)
-	return string(r)
+func ObjectToJsonStr(v interface{}, useIndent bool) string {
+	r := ""
+	if useIndent {
+		if data, err := jsoniter.MarshalIndent(v, "", " "); err == nil {
+			r = string(data)
+		}
+	} else {
+		if data, err := jsoniter.MarshalIndent(v, "", ""); err == nil {
+			r = string(data)
+		}
+
+	}
+	return r
+}
+
+func UuidStr() string {
+	u4 := uuid.NewV4()
+	return u4.String()
+}
+
+// NowTimeStr 当前时间字符串，格式为：2006-01-02 15:04:05
+func NowTimeStr() string {
+	return time.Now().Format("2006-01-02 15:04:05")
 }
