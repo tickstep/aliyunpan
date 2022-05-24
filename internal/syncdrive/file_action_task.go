@@ -7,18 +7,6 @@ type (
 		LocalFile *LocalFileItem
 		PanFile   *PanFileItem
 	}
-
-	FileActionTaskExecutor struct {
-		localFileDb LocalSyncDb
-		panFileDb   PanSyncDb
-	}
-
-	FileActionTaskManager struct {
-		FileActionTaskList []*FileActionTask
-
-		localFileDb LocalSyncDb
-		panFileDb   PanSyncDb
-	}
 )
 
 const (

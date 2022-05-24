@@ -121,7 +121,7 @@ func (m *SyncTaskManager) Stop() (bool, error) {
 	for _, task := range m.syncDriveConfig.SyncTaskList {
 		if e := task.Stop(); e != nil {
 			logger.Verboseln(e)
-			fmt.Println("stop sync task error: {}", task.Id)
+			fmt.Println("stop sync task error: ", task.NameLabel())
 			continue
 		}
 		fmt.Println("停止同步任务: ", task.NameLabel())
