@@ -24,6 +24,10 @@ type (
 	}
 )
 
+const (
+	DirBucketPrefix string = "##:@@"
+)
+
 func NewBoltDb(dbFilePath string) *BoltDb {
 	return &BoltDb{
 		Path:   dbFilePath,
@@ -47,25 +51,21 @@ func (b *BoltDb) addOneItem(rootBucket *bolt.Bucket, item *BoltItem) (bool, erro
 		if p == "" {
 			continue
 		}
-		bkt, _ = bkt.CreateBucketIfNotExists([]byte(p))
+		bkt, _ = bkt.CreateBucketIfNotExists([]byte(DirBucketPrefix + p))
 	}
 	if bkt == nil {
 		return false, fmt.Errorf("create or get bucket error")
 	}
 
 	fileName := path.Base(item.FilePath)
+	if e := bkt.Put([]byte(fileName), []byte(item.Data)); e != nil {
+		return false, e
+	}
 	var err error
 	if item.IsFolder {
-		bkt, err = bkt.CreateBucketIfNotExists([]byte(fileName))
+		bkt, err = bkt.CreateBucketIfNotExists([]byte(DirBucketPrefix + fileName))
 		if err != nil {
 			return false, err
-		}
-		if e := bkt.Put([]byte(DefaultDirKeyName), []byte(item.Data)); e != nil {
-			return false, e
-		}
-	} else {
-		if e := bkt.Put([]byte(fileName), []byte(item.Data)); e != nil {
-			return false, e
 		}
 	}
 	return true, nil
@@ -168,7 +168,7 @@ func (b *BoltDb) Get(filePath string) (string, error) {
 		return "", ErrItemNotExisted
 	}
 	for _, p := range parts[:len(parts)-1] {
-		bkt = bkt.Bucket([]byte(p))
+		bkt = bkt.Bucket([]byte(DirBucketPrefix + p))
 		if bkt == nil {
 			return "", ErrItemNotExisted
 		}
@@ -177,14 +177,7 @@ func (b *BoltDb) Get(filePath string) (string, error) {
 		return "", ErrItemNotExisted
 	}
 
-	dirBucket := bkt.Bucket([]byte(parts[len(parts)-1]))
-	var data []byte
-	if dirBucket != nil {
-		// is dir
-		data = dirBucket.Get([]byte(DefaultDirKeyName))
-	} else {
-		data = bkt.Get([]byte(parts[len(parts)-1]))
-	}
+	data := bkt.Get([]byte(parts[len(parts)-1]))
 	if data != nil {
 		return string(data), nil
 	}
@@ -218,26 +211,25 @@ func (b *BoltDb) GetFileList(filePath string) ([]string, error) {
 	if bkt == nil {
 		return dataList, ErrItemNotExisted
 	}
-	for _, p := range parts[:len(parts)-1] {
-		bkt = bkt.Bucket([]byte(p))
+	if len(parts) > 0 {
+		for _, p := range parts[:len(parts)-1] {
+			bkt = bkt.Bucket([]byte(DirBucketPrefix + p))
+			if bkt == nil {
+				return dataList, ErrItemNotExisted
+			}
+		}
+		bkt = bkt.Bucket([]byte(DirBucketPrefix + parts[len(parts)-1]))
 		if bkt == nil {
 			return dataList, ErrItemNotExisted
 		}
 	}
+
 	if bkt == nil {
 		return dataList, ErrItemNotExisted
 	}
 
-	dirBucket := bkt.Bucket([]byte(parts[len(parts)-1]))
-	if dirBucket == nil {
-		return dataList, ErrItemNotExisted
-	}
-
-	c := dirBucket.Cursor()
+	c := bkt.Cursor()
 	for k, v := c.First(); k != nil; k, v = c.Next() {
-		if string(k) == DefaultDirKeyName {
-			continue
-		}
 		dataList = append(dataList, string(v))
 	}
 	return dataList, nil
@@ -273,7 +265,7 @@ func (b *BoltDb) Delete(filePath string) (bool, error) {
 		return false, ErrItemNotExisted
 	}
 	for _, p := range parts[:len(parts)-1] {
-		bkt = bkt.Bucket([]byte(p))
+		bkt = bkt.Bucket([]byte(DirBucketPrefix + p))
 		if bkt == nil {
 			return false, ErrItemNotExisted
 		}
@@ -282,16 +274,16 @@ func (b *BoltDb) Delete(filePath string) (bool, error) {
 		return false, ErrItemNotExisted
 	}
 
-	targetName := []byte(parts[len(parts)-1])
-	dirBucket := bkt.Bucket(targetName)
+	targetName := parts[len(parts)-1]
+	dirBucket := bkt.Bucket([]byte(DirBucketPrefix + targetName))
 	var er error
 	if dirBucket != nil {
 		// is dir, delete bucket
-		er = bkt.DeleteBucket(targetName)
-	} else {
-		// is file, delete item
-		er = bkt.Delete(targetName)
+		er = bkt.DeleteBucket([]byte(DirBucketPrefix + targetName))
 	}
+	// delete item
+	er = bkt.Delete([]byte(targetName))
+
 	// Commit the transaction and check for error.
 	if err := tx.Commit(); err != nil {
 		return false, err
@@ -300,7 +292,7 @@ func (b *BoltDb) Delete(filePath string) (bool, error) {
 }
 
 // Update 更新数据项，数据项不存在返回错误
-func (b *BoltDb) Update(filePath string, isFolder bool, data string) (bool, error) {
+func (b *BoltDb) Update(filePath string, data string) (bool, error) {
 	filePath = FormatFilePath(filePath)
 	b.locker.Lock()
 	defer b.locker.Unlock()
@@ -334,19 +326,8 @@ func (b *BoltDb) Update(filePath string, isFolder bool, data string) (bool, erro
 
 	// update content
 	fileName := path.Base(filePath)
-	if isFolder {
-		bkt = bkt.Bucket([]byte(fileName))
-		if bkt == nil {
-			return false, ErrItemNotExisted
-		}
-		if e := bkt.Put([]byte(DefaultDirKeyName), []byte(data)); e != nil {
-			return false, e
-		}
-	} else {
-		// is file
-		if e := bkt.Put([]byte(fileName), []byte(data)); e != nil {
-			return false, e
-		}
+	if e := bkt.Put([]byte(fileName), []byte(data)); e != nil {
+		return false, e
 	}
 
 	// Commit the transaction and check for error.

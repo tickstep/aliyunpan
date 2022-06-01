@@ -21,10 +21,13 @@ type (
 		db     *BoltDb
 		locker *sync.Mutex
 	}
-)
 
-const (
-	DefaultDirKeyName string = "."
+	// SyncFileDbBolt 存储同步文件状态信息的数据库
+	SyncFileDbBolt struct {
+		Path   string
+		db     *BoltDb
+		locker *sync.Mutex
+	}
 )
 
 func newPanSyncDbBolt(dbFilePath string) *PanSyncDbBolt {
@@ -174,7 +177,7 @@ func (p *PanSyncDbBolt) Update(item *PanFileItem) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return p.db.Update(item.Path, item.IsFolder(), string(data))
+	return p.db.Update(item.Path, string(data))
 }
 
 // Close 关闭数据库
@@ -327,10 +330,141 @@ func (p *LocalSyncDbBolt) Update(item *LocalFileItem) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return p.db.Update(item.Path, item.IsFolder(), string(data))
+	return p.db.Update(item.Path, string(data))
 }
 
 // Close 关闭数据库
 func (p *LocalSyncDbBolt) Close() (bool, error) {
+	return true, nil
+}
+
+func newSyncFileDbBolt(dbFilePath string) *SyncFileDbBolt {
+	return &SyncFileDbBolt{
+		Path:   dbFilePath,
+		locker: &sync.Mutex{},
+	}
+}
+
+// Open 打开并准备数据库
+func (s *SyncFileDbBolt) Open() (bool, error) {
+	return true, nil
+}
+
+// Add 存储一个数据项
+func (s *SyncFileDbBolt) Add(item *SyncFileItem) (bool, error) {
+	if item == nil {
+		return false, fmt.Errorf("item is nil")
+	}
+	s.locker.Lock()
+	defer s.locker.Unlock()
+
+	s.db = NewBoltDb(s.Path)
+	s.db.Open()
+	defer s.db.Close()
+
+	data, err := json.Marshal(item)
+	if err != nil {
+		return false, err
+	}
+	return s.db.Add(&BoltItem{
+		FilePath: "/" + item.Id(),
+		IsFolder: false,
+		Data:     string(data),
+	})
+}
+
+// Get 获取一个数据项
+func (s *SyncFileDbBolt) Get(id string) (*SyncFileItem, error) {
+	filePath := "/" + id
+	if filePath == "" {
+		return nil, fmt.Errorf("item is nil")
+	}
+	s.locker.Lock()
+	defer s.locker.Unlock()
+
+	s.db = NewBoltDb(s.Path)
+	s.db.Open()
+	defer s.db.Close()
+
+	data, err := s.db.Get(filePath)
+	if err == nil && data != "" {
+		item := &SyncFileItem{}
+		if err := json.Unmarshal([]byte(data), item); err != nil {
+			return nil, err
+		}
+		return item, nil
+	}
+	return nil, err
+}
+
+// GetFileList 获取文件夹下的所有的文件列表
+func (s *SyncFileDbBolt) GetFileList(Status SyncFileStatus) (SyncFileList, error) {
+	filePath := "/"
+	if filePath == "" {
+		return nil, fmt.Errorf("item is nil")
+	}
+	s.locker.Lock()
+	defer s.locker.Unlock()
+
+	s.db = NewBoltDb(s.Path)
+	s.db.Open()
+	defer s.db.Close()
+
+	panFileList := SyncFileList{}
+	dataList, err := s.db.GetFileList(filePath)
+	if err == nil && len(dataList) > 0 {
+		for _, data := range dataList {
+			if data == "" {
+				continue
+			}
+			item := &SyncFileItem{}
+			if err := json.Unmarshal([]byte(data), item); err != nil {
+				return nil, err
+			}
+			if item.Status == Status {
+				panFileList = append(panFileList, item)
+			}
+		}
+		return panFileList, nil
+	}
+	return nil, err
+}
+
+// Delete 删除一个数据项，如果是文件夹，则会删除文件夹下面所有的文件列表
+func (s *SyncFileDbBolt) Delete(id string) (bool, error) {
+	filePath := "/" + id
+	if filePath == "" {
+		return false, fmt.Errorf("item is nil")
+	}
+	s.locker.Lock()
+	defer s.locker.Unlock()
+
+	s.db = NewBoltDb(s.Path)
+	s.db.Open()
+	defer s.db.Close()
+	return s.db.Delete(filePath)
+}
+
+// Update 更新一个数据项数据
+func (s *SyncFileDbBolt) Update(item *SyncFileItem) (bool, error) {
+	if item == nil {
+		return false, fmt.Errorf("item is nil")
+	}
+	s.locker.Lock()
+	defer s.locker.Unlock()
+
+	s.db = NewBoltDb(s.Path)
+	s.db.Open()
+	defer s.db.Close()
+
+	data, err := json.Marshal(item)
+	if err != nil {
+		return false, err
+	}
+	return s.db.Update("/"+item.Id(), string(data))
+}
+
+// Close 关闭数据库
+func (s *SyncFileDbBolt) Close() (bool, error) {
 	return true, nil
 }

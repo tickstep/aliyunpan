@@ -112,6 +112,8 @@ func (m *SyncTaskManager) Start() (bool, error) {
 	}
 	// save config file
 	ioutil.WriteFile(m.configFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0600)
+
+	// TODO: refresh panClient token to keep access token alive
 	return true, nil
 }
 

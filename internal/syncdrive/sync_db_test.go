@@ -197,3 +197,118 @@ func TestLocalGetFileList(t *testing.T) {
 
 	fmt.Println(b.GetFileList("D:/smb/feny/goprojects/dl/a761171495"))
 }
+
+func TestSyncDbAdd(t *testing.T) {
+	b := NewSyncFileDb("D:\\smb\\feny\\goprojects\\dev\\sync_drive\\sync.db")
+	b.Open()
+	defer b.Close()
+
+	b.Add(&SyncFileItem{
+		Action:    SyncFileActionDownload,
+		Status:    SyncFileStatusCreate,
+		LocalFile: nil,
+		PanFile: &PanFileItem{
+			Category:      "others",
+			Crc64Hash:     "16173291050517323365",
+			CreatedAt:     "2021-07-09 23:17:52",
+			DomainId:      "bj29",
+			DriveId:       "19519221",
+			FileExtension: "apk",
+			FileId:        "60e868a0a005315fe2b149b4ade47b2df8bdccee",
+			FileName:      "10000996@yunpan-release.apk",
+			FileSize:      61029089,
+			FileType:      "file",
+			ParentFileId:  "60f29e3ac420ae8c08e645db8b80b881e2a3633c",
+			Path:          "/sync_drive/10000996@yunpan-release.apk",
+			Sha1Hash:      "05A7597967C3C947D84564A7D55309DEA56ED985",
+			UpdatedAt:     "2021-07-21 17:05:49",
+			UploadId:      "rapid-9141d56d-21c3-4fcc-b41d-5df7bf47540f",
+		},
+		StatusUpdateTime: "",
+	})
+	b.Add(&SyncFileItem{
+		Action:    SyncFileActionDownload,
+		Status:    SyncFileStatusCreate,
+		LocalFile: nil,
+		PanFile: &PanFileItem{
+			Category:      "others",
+			Crc64Hash:     "16173291050517323365",
+			CreatedAt:     "2021-07-09 23:17:52",
+			DomainId:      "bj29",
+			DriveId:       "19519221",
+			FileExtension: "apk",
+			FileId:        "60e868a0a005315fe2b149b4ade47b2df8bdccee",
+			FileName:      "10000996@yunpan-release-1.apk",
+			FileSize:      61029089,
+			FileType:      "file",
+			ParentFileId:  "60f29e3ac420ae8c08e645db8b80b881e2a3633c",
+			Path:          "/sync_drive/10000996@yunpan-release-1.apk",
+			Sha1Hash:      "05A7597967C3C947D84564A7D55309DEA56ED985",
+			UpdatedAt:     "2021-07-21 17:05:49",
+			UploadId:      "rapid-9141d56d-21c3-4fcc-b41d-5df7bf47540f",
+		},
+		StatusUpdateTime: "",
+	})
+	b.Add(&SyncFileItem{
+		Action: SyncFileActionUpload,
+		Status: SyncFileStatusCreate,
+		LocalFile: &LocalFileItem{
+			FileName:      "f1.txt",
+			FileSize:      1542,
+			FileType:      "file",
+			CreatedAt:     "2020-12-12 12:51:12",
+			UpdatedAt:     "2020-12-12 12:51:12",
+			FileExtension: ".txt",
+			Sha1Hash:      "",
+			Path:          "D:\\smb\\feny\\goprojects\\dev\\fo\\f1.txt",
+		},
+		PanFile:          nil,
+		StatusUpdateTime: "",
+	})
+	//b.AddUnique(&SyncFileItem{
+	//	Action:    SyncFileActionDownload,
+	//	Status:    SyncFileStatusCreate,
+	//	LocalFile: nil,
+	//	PanFile: &PanFileItem{
+	//		Category:      "others",
+	//		Crc64Hash:     "16173291050517323365",
+	//		CreatedAt:     "2021-07-09 23:17:52",
+	//		DomainId:      "bj29",
+	//		DriveId:       "19519221",
+	//		FileExtension: "apk",
+	//		FileId:        "60e868a0a005315fe2b149b4ade47b2df8bdccee",
+	//		FileName:      "10000996@yunpan-release-1.apk",
+	//		FileSize:      61029089,
+	//		FileType:      "file",
+	//		ParentFileId:  "60f29e3ac420ae8c08e645db8b80b881e2a3633c",
+	//		Path:          "/sync_drive/10000996@yunpan-release-1.apk",
+	//		Sha1Hash:      "05A7597967C3C947D84564A7D55309DEA56ED985",
+	//		UpdatedAt:     "2021-07-21 17:05:49",
+	//		UploadId:      "rapid-9141d56d-21c3-4fcc-b41d-5df7bf47540f",
+	//	},
+	//	StatusUpdateTime: "",
+	//})
+	//b.AddUnique(&SyncFileItem{
+	//	Action:    SyncFileActionDownload,
+	//	Status:    SyncFileStatusCreate,
+	//	LocalFile: nil,
+	//	PanFile: &PanFileItem{
+	//		Category:      "others",
+	//		Crc64Hash:     "16173291050517323365",
+	//		CreatedAt:     "2021-07-09 23:17:52",
+	//		DomainId:      "bj29",
+	//		DriveId:       "19519221",
+	//		FileExtension: "apk",
+	//		FileId:        "60e868a0a005315fe2b149b4ade47b2df8bdccee",
+	//		FileName:      "10000996@yunpan-release-2.apk",
+	//		FileSize:      61029089,
+	//		FileType:      "file",
+	//		ParentFileId:  "60f29e3ac420ae8c08e645db8b80b881e2a3633c",
+	//		Path:          "/sync_drive/10000996@yunpan-release-2.apk",
+	//		Sha1Hash:      "05A7597967C3C947D84564A7D55309DEA56ED985",
+	//		UpdatedAt:     "2021-07-21 17:05:49",
+	//		UploadId:      "rapid-9141d56d-21c3-4fcc-b41d-5df7bf47540f",
+	//	},
+	//	StatusUpdateTime: "",
+	//})
+}

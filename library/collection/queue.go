@@ -1,6 +1,12 @@
 package collection
 
-import "sync"
+import (
+	"sync"
+)
+
+type QueueItem interface {
+	HashCode() string
+}
 
 type Queue struct {
 	queueList []interface{}
@@ -17,6 +23,21 @@ func (q *Queue) Push(item interface{}) {
 	defer q.mutex.Unlock()
 	if q.queueList == nil {
 		q.queueList = []interface{}{}
+	}
+	q.queueList = append(q.queueList, item)
+}
+
+func (q *Queue) PushUnique(item interface{}) {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	if q.queueList == nil {
+		q.queueList = []interface{}{}
+	} else {
+		for _, qItem := range q.queueList {
+			if item.(QueueItem).HashCode() == qItem.(QueueItem).HashCode() {
+				return
+			}
+		}
 	}
 	q.queueList = append(q.queueList, item)
 }

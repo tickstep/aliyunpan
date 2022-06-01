@@ -3,6 +3,11 @@ package syncdrive
 import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/aliyunpan/library/requester/transfer"
+	"path"
+	"strings"
+	"time"
 )
 
 type (
@@ -99,6 +104,51 @@ type (
 		// Close 关闭数据库
 		Close() (bool, error)
 	}
+
+	SyncFileAction string
+	SyncFileStatus string
+	SyncFileItem   struct {
+		Action    SyncFileAction `json:"action"`
+		Status    SyncFileStatus `json:"status"`
+		LocalFile *LocalFileItem `json:"localFile"`
+		PanFile   *PanFileItem   `json:"panFile"`
+		// LocalFolderPath 本地目录
+		LocalFolderPath string `json:"localFolderPath"`
+		// PanFolderPath 云盘目录
+		PanFolderPath    string          `json:"panFolderPath"`
+		DownloadRange    *transfer.Range `json:"downloadRange"`
+		StatusUpdateTime string          `json:"statusUpdateTime"`
+	}
+	SyncFileList []*SyncFileItem
+
+	SyncFileDb interface {
+		// Open 打开并准备数据库
+		Open() (bool, error)
+		// Add 存储一个数据项
+		Add(item *SyncFileItem) (bool, error)
+		// Get 获取一个数据项
+		Get(id string) (*SyncFileItem, error)
+		// GetFileList 获取文件夹下的所有的文件列表
+		GetFileList(Status SyncFileStatus) (SyncFileList, error)
+		// Delete 删除一个数据项，如果是文件夹，则会删除文件夹下面所有的文件列表
+		Delete(id string) (bool, error)
+		// Update 更新一个数据项数据
+		Update(item *SyncFileItem) (bool, error)
+		// Close 关闭数据库
+		Close() (bool, error)
+	}
+)
+
+const (
+	SyncFileStatusCreate      SyncFileStatus = "create"
+	SyncFileStatusUploading   SyncFileStatus = "uploading"
+	SyncFileStatusDownloading SyncFileStatus = "downloading"
+	SyncFileStatusFailed      SyncFileStatus = "failed"
+	SyncFileStatusSuccess     SyncFileStatus = "success"
+	SyncFileStatusIllegal     SyncFileStatus = "illegal"
+
+	SyncFileActionDownload SyncFileAction = "download"
+	SyncFileActionUpload   SyncFileAction = "upload"
 )
 
 var (
@@ -125,6 +175,12 @@ func NewPanFileItem(fe *aliyunpan.FileEntity) *PanFileItem {
 	}
 }
 
+func (item *PanFileItem) Id() string {
+	sb := &strings.Builder{}
+	fmt.Fprintf(sb, "%s%s", strings.ReplaceAll(item.Path, "\\", "/"), item.UpdatedAt)
+	return utils.Md5Str(sb.String())
+}
+
 func (item *PanFileItem) FormatFileName() string {
 	return item.FileName
 }
@@ -137,8 +193,26 @@ func (item *PanFileItem) IsFolder() bool {
 	return item.FileType == "folder"
 }
 
+func (item *PanFileItem) UpdateTimeUnix() int64 {
+	return item.UpdateTime().Unix()
+}
+
+func (item *PanFileItem) UpdateTime() time.Time {
+	return utils.ParseTimeStr(item.UpdatedAt)
+}
+
+func (item *PanFileItem) HashCode() string {
+	return item.Path
+}
+
 func NewPanSyncDb(dbFilePath string) PanSyncDb {
 	return interface{}(newPanSyncDbBolt(dbFilePath)).(PanSyncDb)
+}
+
+func (item *LocalFileItem) Id() string {
+	sb := &strings.Builder{}
+	fmt.Fprintf(sb, "%s%s", strings.ReplaceAll(item.Path, "\\", "/"), item.UpdatedAt)
+	return utils.Md5Str(sb.String())
 }
 
 func (item *LocalFileItem) FormatFileName() string {
@@ -153,6 +227,82 @@ func (item *LocalFileItem) IsFolder() bool {
 	return item.FileType == "folder"
 }
 
+func (item *LocalFileItem) UpdateTimeUnix() int64 {
+	return item.UpdateTime().Unix()
+}
+
+func (item *LocalFileItem) UpdateTime() time.Time {
+	return utils.ParseTimeStr(item.UpdatedAt)
+}
+
+func (item *LocalFileItem) HashCode() string {
+	return item.Path
+}
+
 func NewLocalSyncDb(dbFilePath string) LocalSyncDb {
 	return interface{}(newLocalSyncDbBolt(dbFilePath)).(LocalSyncDb)
+}
+
+func (l LocalFileList) FindFileByPath(filePath string) *LocalFileItem {
+	for _, item := range l {
+		if filePath == item.Path {
+			return item
+		}
+	}
+	return nil
+}
+
+func (p PanFileList) FindFileByPath(filePath string) *PanFileItem {
+	for _, item := range p {
+		if strings.ReplaceAll(filePath, "\\", "/") == item.Path {
+			return item
+		}
+	}
+	return nil
+}
+
+func (item *SyncFileItem) Id() string {
+	sb := &strings.Builder{}
+	if item.Action == SyncFileActionDownload {
+		fmt.Fprintf(sb, "%s%s", string(item.Action), item.PanFile.Id())
+	} else if item.Action == SyncFileActionUpload {
+		fmt.Fprintf(sb, "%s%s", string(item.Action), item.LocalFile.Id())
+	}
+	return utils.Md5Str(sb.String())
+}
+
+func (item *SyncFileItem) StatusUpdateTimeUnix() int64 {
+	if ts, er := time.Parse("2006-01-02 15:04:05", item.StatusUpdateTime); er != nil {
+		return ts.Unix()
+	}
+	return 0
+}
+
+// getPanFullPath 获取网盘文件的路径
+func (item *SyncFileItem) getPanFileFullPath() string {
+	localPath := item.LocalFile.Path
+	localPath = strings.ReplaceAll(localPath, "\\", "/")
+	localRootPath := strings.ReplaceAll(item.LocalFolderPath, "\\", "/")
+
+	relativePath := strings.TrimPrefix(localPath, localRootPath)
+	return path.Join(path.Clean(item.PanFolderPath), relativePath)
+}
+
+// getLocalFullPath 获取本地文件的路径
+func (item *SyncFileItem) getLocalFileFullPath() string {
+	panPath := item.PanFile.Path
+	panPath = strings.ReplaceAll(panPath, "\\", "/")
+	panRootPath := strings.ReplaceAll(item.PanFolderPath, "\\", "/")
+
+	relativePath := strings.TrimPrefix(panPath, panRootPath)
+	return path.Join(path.Clean(item.LocalFolderPath), relativePath)
+}
+
+// getLocalFileDownloadingFullPath 获取本地文件下载时的路径
+func (item *SyncFileItem) getLocalFileDownloadingFullPath() string {
+	return item.getLocalFileFullPath() + DownloadingFileSuffix
+}
+
+func NewSyncFileDb(dbFilePath string) SyncFileDb {
+	return interface{}(newSyncFileDbBolt(dbFilePath)).(SyncFileDb)
 }

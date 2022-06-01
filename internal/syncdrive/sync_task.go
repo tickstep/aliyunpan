@@ -38,12 +38,15 @@ type (
 		syncDbFolderPath string
 		localFileDb      LocalSyncDb
 		panFileDb        PanSyncDb
+		syncFileDb       SyncFileDb
 
 		wg         *waitgroup.WaitGroup
 		ctx        context.Context
 		cancelFunc context.CancelFunc
 
 		panClient *aliyunpan.PanClient
+
+		fileActionTaskManager *FileActionTaskManager
 	}
 )
 
@@ -76,18 +79,39 @@ func (t *SyncTask) String() string {
 	return builder.String()
 }
 
+func (t *SyncTask) setup() error {
+	t.localFileDb = NewLocalSyncDb(t.localSyncDbFullPath())
+	t.panFileDb = NewPanSyncDb(t.panSyncDbFullPath())
+	t.syncFileDb = NewSyncFileDb(t.syncFileDbFullPath())
+	if _, e := t.localFileDb.Open(); e != nil {
+		return e
+	}
+	if _, e := t.panFileDb.Open(); e != nil {
+		return e
+	}
+	return nil
+}
+
 // Start 启动同步任务
 func (t *SyncTask) Start() error {
 	if t.ctx != nil {
 		return fmt.Errorf("task have starting")
 	}
 	t.localFileDb = NewLocalSyncDb(t.localSyncDbFullPath())
-	t.panFileDb = newPanSyncDbBolt(t.panSyncDbFullPath())
+	t.panFileDb = NewPanSyncDb(t.panSyncDbFullPath())
+	t.syncFileDb = NewSyncFileDb(t.syncFileDbFullPath())
 	if _, e := t.localFileDb.Open(); e != nil {
 		return e
 	}
 	if _, e := t.panFileDb.Open(); e != nil {
 		return e
+	}
+	if _, e := t.syncFileDb.Open(); e != nil {
+		return e
+	}
+
+	if t.fileActionTaskManager == nil {
+		t.fileActionTaskManager = NewFileActionTaskManager(t)
 	}
 
 	t.wg = waitgroup.NewWaitGroup(2)
@@ -98,6 +122,8 @@ func (t *SyncTask) Start() error {
 
 	go t.scanLocalFile(t.ctx)
 	go t.scanPanFile(t.ctx)
+
+	//t.fileActionTaskManager.Start()
 	return nil
 }
 
@@ -115,12 +141,18 @@ func (t *SyncTask) Stop() error {
 	t.ctx = nil
 	t.cancelFunc = nil
 
+	// stop file action task (block routine)
+	t.fileActionTaskManager.Stop()
+
 	// release resources
 	if t.localFileDb != nil {
 		t.localFileDb.Close()
 	}
 	if t.panFileDb != nil {
 		t.panFileDb.Close()
+	}
+	if t.syncFileDb != nil {
+		t.syncFileDb.Close()
 	}
 
 	// record the sync time
@@ -144,6 +176,15 @@ func (t *SyncTask) localSyncDbFullPath() string {
 		os.MkdirAll(dir, 0600)
 	}
 	return path.Join(dir, "local.bolt")
+}
+
+// syncFileDbFullPath 同步文件过程数据库
+func (t *SyncTask) syncFileDbFullPath() string {
+	dir := path.Join(t.syncDbFolderPath, t.Id)
+	if b, _ := utils.PathExists(dir); !b {
+		os.MkdirAll(dir, 0600)
+	}
+	return path.Join(dir, "sync.bolt")
 }
 
 func newLocalFileItem(file os.FileInfo, fullPath string) *LocalFileItem {
@@ -227,6 +268,11 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 			}
 			localFileAppendList := LocalFileList{}
 			for _, file := range files {
+				if strings.HasSuffix(file.Name(), DownloadingFileSuffix) {
+					// 下载中文件，跳过
+					continue
+				}
+
 				localFile := newLocalFileItem(file, item.path+"/"+file.Name())
 				localFileInDb, _ := t.localFileDb.Get(localFile.Path)
 				if localFileInDb == nil {
@@ -234,6 +280,9 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					localFileAppendList = append(localFileAppendList, localFile)
 				} else {
 					// update newest info into DB
+					if localFile.UpdateTimeUnix() > localFileInDb.UpdateTimeUnix() {
+						localFileInDb.Sha1Hash = ""
+					}
 					localFileInDb.UpdatedAt = localFile.UpdatedAt
 					localFileInDb.CreatedAt = localFile.CreatedAt
 					localFileInDb.FileSize = localFile.FileSize

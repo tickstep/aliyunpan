@@ -23,3 +23,7 @@ func TestConvertTime(t *testing.T) {
 func TestUuidStr(t *testing.T) {
 	fmt.Println(UuidStr())
 }
+
+func TestMd5Str(t *testing.T) {
+	fmt.Println(Md5Str("123456"))
+}

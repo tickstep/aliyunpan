@@ -8,7 +8,7 @@ import (
 )
 
 func TestStart(t *testing.T) {
-	refreshToken := "927e2a3da30646d8a787e7f11c0fdf1f"
+	refreshToken := "ac1010f63...9585338b533bd4ab"
 	webToken, err := aliyunpan.GetAccessTokenFromRefreshToken(refreshToken)
 	if err != nil {
 		fmt.Println("get acccess token error")
@@ -26,6 +26,6 @@ func TestStart(t *testing.T) {
 	)
 
 	manager.Start()
-	time.Sleep(1 * time.Minute)
+	time.Sleep(5 * time.Minute)
 	manager.Stop()
 }

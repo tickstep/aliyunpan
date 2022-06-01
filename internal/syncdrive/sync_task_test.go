@@ -8,7 +8,7 @@ import (
 )
 
 func TestSyncTask(t *testing.T) {
-	refreshToken := "84c6499b7c9344109a2fe4f6733c3afd"
+	refreshToken := "84c6499b7...9a2fe4f6733c3afd"
 	webToken, err := aliyunpan.GetAccessTokenFromRefreshToken(refreshToken)
 	if err != nil {
 		fmt.Println("get acccess token error")
@@ -19,9 +19,9 @@ func TestSyncTask(t *testing.T) {
 	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{})
 	user, _ := panClient.GetUserInfo()
 	task := SyncTask{
-		Id:              "840f28af799747848c0b3155e0bdfeab",
+		Id:              "5b2d7c10-e927-4e72-8f9d-5abb3bb04814",
 		DriveId:         user.FileDriveId,
-		LocalFolderPath: "D:\\smb\\feny\\goprojects\\dev\\upload",
+		LocalFolderPath: "D:\\smb\\feny\\goprojects\\dev\\NS游戏备份",
 		PanFolderPath:   "/sync_drive",
 		Mode:            "sync",
 		LastSyncTime:    "",

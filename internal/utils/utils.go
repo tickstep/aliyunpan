@@ -15,6 +15,7 @@ package utils
 
 import (
 	"compress/gzip"
+	"crypto/md5"
 	"flag"
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
@@ -201,4 +202,23 @@ func UuidStr() string {
 // NowTimeStr 当前时间字符串，格式为：2006-01-02 15:04:05
 func NowTimeStr() string {
 	return time.Now().Format("2006-01-02 15:04:05")
+}
+
+// ParseTimeStr 反解析时间字符串
+func ParseTimeStr(value string) time.Time {
+	cz := time.FixedZone("CST", 8*3600) // 东8区
+	if t, e := time.ParseInLocation("2006-01-02 15:04:05", value, cz); e == nil {
+		return t
+	}
+	return time.Now()
+}
+
+// Md5Str MD5哈希计算
+func Md5Str(text string) string {
+	h := md5.New()
+	h.Write([]byte(text))
+	re := h.Sum(nil)
+	sb := &strings.Builder{}
+	fmt.Fprintf(sb, "%x\n", re)
+	return strings.ToLower(sb.String())
 }
