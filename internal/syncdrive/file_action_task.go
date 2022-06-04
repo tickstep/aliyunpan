@@ -45,12 +45,12 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 	logger.Verboseln("file action task")
 	logger.Verboseln(f.syncItem)
 	if f.syncItem.Action == SyncFileActionUpload {
-		if e := f.uploadFile(); e != nil {
+		if e := f.uploadFile(ctx); e != nil {
 			return e
 		}
 	}
 	if f.syncItem.Action == SyncFileActionDownload {
-		if e := f.downloadFile(); e != nil {
+		if e := f.downloadFile(ctx); e != nil {
 			// TODO: retry / cleanup downloading file
 			return e
 		} else {
@@ -91,7 +91,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 	return nil
 }
 
-func (f *FileActionTask) downloadFile() error {
+func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	// check local file existed or not
 	if b, e := utils.PathExists(f.syncItem.getLocalFileFullPath()); e == nil && b {
 		// file existed
@@ -173,36 +173,42 @@ func (f *FileActionTask) downloadFile() error {
 	f.syncFileDb.Update(f.syncItem)
 
 	for {
-		if f.syncItem.DownloadRange.End > f.syncItem.PanFile.FileSize {
-			f.syncItem.DownloadRange.End = f.syncItem.PanFile.FileSize
-		}
-		worker.SetRange(f.syncItem.DownloadRange) // 分片
-
-		// 下载分片
-		// TODO: 分片重试策略
-		worker.Execute()
-
-		if worker.GetStatus().StatusCode() == downloader.StatusCodeSuccessed {
-			if f.syncItem.DownloadRange.End == f.syncItem.PanFile.FileSize {
-				// finished
-				f.syncItem.Status = SyncFileStatusSuccess
-				f.syncItem.StatusUpdateTime = utils.NowTimeStr()
-				f.syncFileDb.Update(f.syncItem)
-				break
+		select {
+		case <-ctx.Done():
+			// cancel routine & done
+			logger.Verboseln("file download routine done")
+			return nil
+		default:
+			logger.Verboseln("do file download process")
+			if f.syncItem.DownloadRange.End > f.syncItem.PanFile.FileSize {
+				f.syncItem.DownloadRange.End = f.syncItem.PanFile.FileSize
 			}
+			worker.SetRange(f.syncItem.DownloadRange) // 分片
 
-			// 下一个分片
-			f.syncItem.DownloadRange.Begin = f.syncItem.DownloadRange.End
-			f.syncItem.DownloadRange.End += f.blockSize
+			// 下载分片
+			// TODO: 下载失败，分片重试策略
+			worker.Execute()
 
-			// 存储状态
-			f.syncFileDb.Update(f.syncItem)
+			if worker.GetStatus().StatusCode() == downloader.StatusCodeSuccessed {
+				if f.syncItem.DownloadRange.End == f.syncItem.PanFile.FileSize {
+					// finished
+					f.syncItem.Status = SyncFileStatusSuccess
+					f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+					f.syncFileDb.Update(f.syncItem)
+					return nil
+				}
+
+				// 下一个分片
+				f.syncItem.DownloadRange.Begin = f.syncItem.DownloadRange.End
+				f.syncItem.DownloadRange.End += f.blockSize
+
+				// 存储状态
+				f.syncFileDb.Update(f.syncItem)
+			}
 		}
 	}
-
-	return nil
 }
 
-func (f *FileActionTask) uploadFile() error {
+func (f *FileActionTask) uploadFile(ctx context.Context) error {
 	return nil
 }

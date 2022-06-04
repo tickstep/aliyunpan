@@ -470,16 +470,12 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 	defer f.wg.Done()
 
 	downloadWaitGroup := waitgroup.NewWaitGroup(f.fileDownloadParallel)
-	downloadCtx, downloadCancel := context.WithCancel(context.Background())
 
 	for {
 		select {
 		case <-ctx.Done():
 			// cancel routine & done
 			logger.Verboseln("file executor routine done")
-
-			// cancel all download process
-			downloadCancel()
 			downloadWaitGroup.Wait()
 			return
 		default:
@@ -499,7 +495,7 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 					downloadWaitGroup.AddDelta()
 					f.fileInProcessQueue.PushUnique(downloadItem.syncItem)
 					go func() {
-						if e := downloadItem.DoAction(downloadCtx); e == nil {
+						if e := downloadItem.DoAction(ctx); e == nil {
 							// success
 							f.fileInProcessQueue.Remove(downloadItem)
 						} else {
