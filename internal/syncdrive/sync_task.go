@@ -79,24 +79,7 @@ func (t *SyncTask) String() string {
 	return builder.String()
 }
 
-func (t *SyncTask) setup() error {
-	t.localFileDb = NewLocalSyncDb(t.localSyncDbFullPath())
-	t.panFileDb = NewPanSyncDb(t.panSyncDbFullPath())
-	t.syncFileDb = NewSyncFileDb(t.syncFileDbFullPath())
-	if _, e := t.localFileDb.Open(); e != nil {
-		return e
-	}
-	if _, e := t.panFileDb.Open(); e != nil {
-		return e
-	}
-	return nil
-}
-
-// Start 启动同步任务
-func (t *SyncTask) Start() error {
-	if t.ctx != nil {
-		return fmt.Errorf("task have starting")
-	}
+func (t *SyncTask) setupDb() error {
 	t.localFileDb = NewLocalSyncDb(t.localSyncDbFullPath())
 	t.panFileDb = NewPanSyncDb(t.panSyncDbFullPath())
 	t.syncFileDb = NewSyncFileDb(t.syncFileDbFullPath())
@@ -109,6 +92,15 @@ func (t *SyncTask) Start() error {
 	if _, e := t.syncFileDb.Open(); e != nil {
 		return e
 	}
+	return nil
+}
+
+// Start 启动同步任务
+func (t *SyncTask) Start() error {
+	if t.ctx != nil {
+		return fmt.Errorf("task have starting")
+	}
+	t.setupDb()
 
 	if t.fileActionTaskManager == nil {
 		t.fileActionTaskManager = NewFileActionTaskManager(t)
@@ -123,7 +115,10 @@ func (t *SyncTask) Start() error {
 	go t.scanLocalFile(t.ctx)
 	go t.scanPanFile(t.ctx)
 
-	//t.fileActionTaskManager.Start()
+	// start file sync manager
+	if e := t.fileActionTaskManager.Start(); e != nil {
+		return e
+	}
 	return nil
 }
 

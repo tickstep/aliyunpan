@@ -42,8 +42,8 @@ func (f *FileActionTask) HashCode() string {
 }
 
 func (f *FileActionTask) DoAction(ctx context.Context) error {
-	fmt.Println("\nfile action task")
-	fmt.Println(f.syncItem)
+	logger.Verboseln("file action task")
+	logger.Verboseln(f.syncItem)
 	if f.syncItem.Action == SyncFileActionUpload {
 		if e := f.uploadFile(); e != nil {
 			return e
@@ -93,12 +93,12 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 
 func (f *FileActionTask) downloadFile() error {
 	// check local file existed or not
-	//if b, e := utils.PathExists(f.syncItem.getLocalFileFullPath()); e == nil && b {
-	//	// file existed
-	//	logger.Verbosef("delete local old file")
-	//	os.Remove(f.syncItem.getLocalFileFullPath())
-	//	time.Sleep(200 * time.Millisecond)
-	//}
+	if b, e := utils.PathExists(f.syncItem.getLocalFileFullPath()); e == nil && b {
+		// file existed
+		logger.Verbosef("delete local old file")
+		os.Remove(f.syncItem.getLocalFileFullPath())
+		time.Sleep(200 * time.Millisecond)
+	}
 
 	durl, apierr := f.panClient.GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
 		DriveId: f.syncItem.PanFile.DriveId,
