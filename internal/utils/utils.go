@@ -219,6 +219,6 @@ func Md5Str(text string) string {
 	h.Write([]byte(text))
 	re := h.Sum(nil)
 	sb := &strings.Builder{}
-	fmt.Fprintf(sb, "%x\n", re)
+	fmt.Fprintf(sb, "%x", re)
 	return strings.ToLower(sb.String())
 }

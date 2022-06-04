@@ -27,3 +27,7 @@ func TestUuidStr(t *testing.T) {
 func TestMd5Str(t *testing.T) {
 	fmt.Println(Md5Str("123456"))
 }
+
+func TestParseTimeStr(t *testing.T) {
+	fmt.Println(ParseTimeStr(""))
+}

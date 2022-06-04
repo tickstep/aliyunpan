@@ -43,6 +43,8 @@ type (
 		Path string `json:"path"`
 		// Category 文件分类，例如：image/video/doc/others
 		Category string `json:"category"`
+		// ScanTimeAt 扫描时间
+		ScanTimeAt string `json:"scanTimeAt"`
 	}
 	PanFileList []*PanFileItem
 
@@ -83,6 +85,8 @@ type (
 		Sha1Hash string `json:"sha1Hash"`
 		// FilePath 文件的完整路径
 		Path string `json:"path"`
+		// ScanTimeAt 扫描时间
+		ScanTimeAt string `json:"scanTimeAt"`
 	}
 	LocalFileList []*LocalFileItem
 
@@ -146,6 +150,7 @@ const (
 	SyncFileStatusFailed      SyncFileStatus = "failed"
 	SyncFileStatusSuccess     SyncFileStatus = "success"
 	SyncFileStatusIllegal     SyncFileStatus = "illegal"
+	SyncFileStatusNotExisted  SyncFileStatus = "notExisted"
 
 	SyncFileActionDownload SyncFileAction = "download"
 	SyncFileActionUpload   SyncFileAction = "upload"
@@ -205,6 +210,14 @@ func (item *PanFileItem) HashCode() string {
 	return item.Path
 }
 
+func (item *PanFileItem) ScanTimeUnix() int64 {
+	return item.ScanTime().Unix()
+}
+
+func (item *PanFileItem) ScanTime() time.Time {
+	return utils.ParseTimeStr(item.ScanTimeAt)
+}
+
 func NewPanSyncDb(dbFilePath string) PanSyncDb {
 	return interface{}(newPanSyncDbBolt(dbFilePath)).(PanSyncDb)
 }
@@ -233,6 +246,14 @@ func (item *LocalFileItem) UpdateTimeUnix() int64 {
 
 func (item *LocalFileItem) UpdateTime() time.Time {
 	return utils.ParseTimeStr(item.UpdatedAt)
+}
+
+func (item *LocalFileItem) ScanTimeUnix() int64 {
+	return item.ScanTime().Unix()
+}
+
+func (item *LocalFileItem) ScanTime() time.Time {
+	return utils.ParseTimeStr(item.ScanTimeAt)
 }
 
 func (item *LocalFileItem) HashCode() string {
@@ -301,6 +322,23 @@ func (item *SyncFileItem) getLocalFileFullPath() string {
 // getLocalFileDownloadingFullPath 获取本地文件下载时的路径
 func (item *SyncFileItem) getLocalFileDownloadingFullPath() string {
 	return item.getLocalFileFullPath() + DownloadingFileSuffix
+}
+
+func (item *SyncFileItem) String() string {
+	sb := &strings.Builder{}
+	fp := ""
+	if item.Action == SyncFileActionDownload {
+		fp = item.PanFile.Path
+	} else if item.Action == SyncFileActionUpload {
+		fp = item.LocalFile.Path
+	}
+	fmt.Fprintf(sb, "ID:%s\nAction:%s\nStatus:%s\nPath:%s\n",
+		item.Id(), item.Action, item.Status, fp)
+	return sb.String()
+}
+
+func (item *SyncFileItem) HashCode() string {
+	return item.Id()
 }
 
 func NewSyncFileDb(dbFilePath string) SyncFileDb {

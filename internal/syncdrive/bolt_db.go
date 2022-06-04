@@ -315,7 +315,7 @@ func (b *BoltDb) Update(filePath string, data string) (bool, error) {
 		if p == "" {
 			continue
 		}
-		bkt = bkt.Bucket([]byte(p))
+		bkt = bkt.Bucket([]byte(DirBucketPrefix + p))
 		if bkt == nil {
 			return false, ErrItemNotExisted
 		}

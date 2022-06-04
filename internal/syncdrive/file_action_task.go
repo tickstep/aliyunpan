@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
@@ -53,6 +54,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			// TODO: retry / cleanup downloading file
 			return e
 		} else {
+			// download success, post operation
 			if b, er := utils.PathExists(f.syncItem.getLocalFileFullPath()); er == nil && b {
 				// file existed
 				// remove old local file
@@ -61,7 +63,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 				time.Sleep(200 * time.Millisecond)
 			}
 
-			// rename downloading file into local file
+			// rename downloading file into target name file
 			os.Rename(f.syncItem.getLocalFileDownloadingFullPath(), f.syncItem.getLocalFileFullPath())
 			time.Sleep(200 * time.Millisecond)
 
@@ -71,7 +73,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			}
 			time.Sleep(200 * time.Millisecond)
 
-			// save local file info
+			// save local file info into db
 			if file, er := os.Stat(f.syncItem.getLocalFileFullPath()); er == nil {
 				f.localFileDb.Add(&LocalFileItem{
 					FileName:      file.Name(),
@@ -91,12 +93,12 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 
 func (f *FileActionTask) downloadFile() error {
 	// check local file existed or not
-	if b, e := utils.PathExists(f.syncItem.getLocalFileFullPath()); e == nil && b {
-		// file existed
-		logger.Verbosef("delete local old file")
-		os.Remove(f.syncItem.getLocalFileFullPath())
-		time.Sleep(200 * time.Millisecond)
-	}
+	//if b, e := utils.PathExists(f.syncItem.getLocalFileFullPath()); e == nil && b {
+	//	// file existed
+	//	logger.Verbosef("delete local old file")
+	//	os.Remove(f.syncItem.getLocalFileFullPath())
+	//	time.Sleep(200 * time.Millisecond)
+	//}
 
 	durl, apierr := f.panClient.GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
 		DriveId: f.syncItem.PanFile.DriveId,
@@ -104,6 +106,12 @@ func (f *FileActionTask) downloadFile() error {
 	})
 	time.Sleep(time.Duration(200) * time.Millisecond)
 	if apierr != nil {
+		if apierr.Code == apierror.ApiCodeFileNotFoundCode {
+			f.syncItem.Status = SyncFileStatusNotExisted
+			f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+			f.syncFileDb.Update(f.syncItem)
+			return fmt.Errorf("文件不存在")
+		}
 		logger.Verbosef("ERROR: get download url error: %s\n", f.syncItem.PanFile.FileId)
 		return apierr
 	}
@@ -168,6 +176,7 @@ func (f *FileActionTask) downloadFile() error {
 		if f.syncItem.DownloadRange.End > f.syncItem.PanFile.FileSize {
 			f.syncItem.DownloadRange.End = f.syncItem.PanFile.FileSize
 		}
+		worker.SetRange(f.syncItem.DownloadRange) // 分片
 
 		// 下载分片
 		// TODO: 分片重试策略

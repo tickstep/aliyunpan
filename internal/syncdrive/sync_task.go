@@ -51,9 +51,9 @@ type (
 )
 
 const (
-	// UploadOnly 单向上传
+	// UploadOnly 单向上传，即备份本地文件
 	UploadOnly SyncMode = "upload"
-	// DownloadOnly 只下载
+	// DownloadOnly 只下载，即备份云盘文件
 	DownloadOnly SyncMode = "download"
 	// SyncTwoWay 双向同步
 	SyncTwoWay SyncMode = "sync"
@@ -201,6 +201,25 @@ func newLocalFileItem(file os.FileInfo, fullPath string) *LocalFileItem {
 		FileExtension: path.Ext(file.Name()),
 		Sha1Hash:      "",
 		Path:          fullPath,
+		ScanTimeAt:    utils.NowTimeStr(),
+	}
+}
+
+// clearLocalFileDb 清理本地数据库中无效的数据项
+func (t *SyncTask) clearLocalFileDb(filePath string, startTimeUnix int64) {
+	files, e := t.localFileDb.GetFileList(filePath)
+	if e != nil {
+		return
+	}
+	for _, file := range files {
+		if file.ScanTimeAt == "" || file.ScanTimeUnix() < startTimeUnix {
+			// delete item
+			t.localFileDb.Delete(file.Path)
+		} else {
+			if file.IsFolder() {
+				t.clearLocalFileDb(file.Path, startTimeUnix)
+			}
+		}
 	}
 }
 
@@ -237,10 +256,13 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 	if err != nil {
 		return
 	}
-	folderQueue.Push(folderItem{
+	folderQueue.Push(&folderItem{
 		fileInfo: rootFolder,
 		path:     t.LocalFolderPath,
 	})
+	startTimeOfThisLoop := time.Now().Unix()
+	delayTimeCount := int64(0)
+
 	t.wg.AddDelta()
 	defer t.wg.Done()
 	for {
@@ -251,14 +273,29 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 			return
 		default:
 			// 采用广度优先遍历(BFS)进行文件遍历
-			logger.Verboseln("do scan local file process")
+			if delayTimeCount > 0 {
+				time.Sleep(1 * time.Second)
+				delayTimeCount -= 1
+				continue
+			} else if delayTimeCount == 0 {
+				delayTimeCount -= 1
+				startTimeOfThisLoop = time.Now().Unix()
+				logger.Verboseln("do scan local file process at ", utils.NowTimeStr())
+			}
 			obj := folderQueue.Pop()
 			if obj == nil {
-				return
-			}
-			item := obj.(folderItem)
-			// TODO: check to run scan process or to wait
+				// clear discard file from DB
+				t.clearLocalFileDb(t.LocalFolderPath, startTimeOfThisLoop)
 
+				// restart scan loop over again
+				folderQueue.Push(&folderItem{
+					fileInfo: rootFolder,
+					path:     t.LocalFolderPath,
+				})
+				delayTimeCount = TimeSecondsOfOneMinute
+				continue
+			}
+			item := obj.(*folderItem)
 			files, err := ioutil.ReadDir(item.path)
 			if err != nil {
 				continue
@@ -277,6 +314,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 				localFileInDb, _ := t.localFileDb.Get(localFile.Path)
 				if localFileInDb == nil {
 					// append
+					localFile.ScanTimeAt = utils.NowTimeStr()
 					localFileAppendList = append(localFileAppendList, localFile)
 				} else {
 					// update newest info into DB
@@ -287,12 +325,15 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					localFileInDb.CreatedAt = localFile.CreatedAt
 					localFileInDb.FileSize = localFile.FileSize
 					localFileInDb.FileType = localFile.FileType
-					t.localFileDb.Update(localFileInDb)
+					localFileInDb.ScanTimeAt = utils.NowTimeStr()
+					if _, er := t.localFileDb.Update(localFileInDb); er != nil {
+						logger.Verboseln("local db update error ", er)
+					}
 				}
 
 				// for next term scan
 				if file.IsDir() {
-					folderQueue.Push(folderItem{
+					folderQueue.Push(&folderItem{
 						fileInfo: file,
 						path:     item.path + "/" + file.Name(),
 					})
@@ -306,6 +347,24 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 				}
 			}
 			time.Sleep(500 * time.Millisecond)
+		}
+	}
+}
+
+// clearPanFileDb 清理云盘数据库中无效的数据项
+func (t *SyncTask) clearPanFileDb(filePath string, startTimeUnix int64) {
+	files, e := t.panFileDb.GetFileList(filePath)
+	if e != nil {
+		return
+	}
+	for _, file := range files {
+		if file.ScanTimeUnix() < startTimeUnix {
+			// delete item
+			t.panFileDb.Delete(file.Path)
+		} else {
+			if file.IsFolder() {
+				t.clearPanFileDb(file.Path, startTimeUnix)
+			}
 		}
 	}
 }
@@ -324,7 +383,9 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 		if err != nil {
 			return
 		}
-		t.panFileDb.Add(NewPanFileItem(fi))
+		pFile := NewPanFileItem(fi)
+		pFile.ScanTimeAt = utils.NowTimeStr()
+		t.panFileDb.Add(pFile)
 		time.Sleep(200 * time.Millisecond)
 	}
 
@@ -334,6 +395,8 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 		return
 	}
 	folderQueue.Push(rootPanFile)
+	startTimeOfThisLoop := time.Now().Unix()
+	delayTimeCount := int64(0)
 
 	t.wg.AddDelta()
 	defer t.wg.Done()
@@ -345,10 +408,24 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 			return
 		default:
 			// 采用广度优先遍历(BFS)进行文件遍历
-			logger.Verboseln("do scan pan file process")
+			if delayTimeCount > 0 {
+				time.Sleep(1 * time.Second)
+				delayTimeCount -= 1
+				continue
+			} else if delayTimeCount == 0 {
+				delayTimeCount -= 1
+				startTimeOfThisLoop = time.Now().Unix()
+				logger.Verboseln("do scan pan file process at ", utils.NowTimeStr())
+			}
 			obj := folderQueue.Pop()
 			if obj == nil {
-				return
+				// clear discard file from DB
+				t.clearPanFileDb(t.PanFolderPath, startTimeOfThisLoop)
+
+				// restart scan loop over again
+				folderQueue.Push(rootPanFile)
+				delayTimeCount = TimeSecondsOf10Minute
+				continue
 			}
 			item := obj.(*aliyunpan.FileEntity)
 			// TODO: check to decide to sync file info or to await
@@ -369,7 +446,9 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 				panFileInDb, _ := t.panFileDb.Get(file.Path)
 				if panFileInDb == nil {
 					// append
-					panFileList = append(panFileList, NewPanFileItem(file))
+					pFile := NewPanFileItem(file)
+					pFile.ScanTimeAt = utils.NowTimeStr()
+					panFileList = append(panFileList, pFile)
 				} else {
 					// update newest info into DB
 					panFileInDb.DomainId = file.DomainId
@@ -381,6 +460,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 					panFileInDb.FileSize = file.FileSize
 					panFileInDb.UpdatedAt = file.UpdatedAt
 					panFileInDb.CreatedAt = file.CreatedAt
+					panFileInDb.ScanTimeAt = utils.NowTimeStr()
 					t.panFileDb.Update(panFileInDb)
 				}
 
@@ -393,7 +473,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 					logger.Verboseln("add files to pan file db error {}", er)
 				}
 			}
-			time.Sleep(2 * time.Second) // 延迟避免触发风控
+			time.Sleep(10 * time.Second) // 延迟避免触发风控
 		}
 	}
 }
