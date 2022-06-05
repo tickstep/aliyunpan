@@ -119,9 +119,17 @@ type (
 		// LocalFolderPath 本地目录
 		LocalFolderPath string `json:"localFolderPath"`
 		// PanFolderPath 云盘目录
-		PanFolderPath    string          `json:"panFolderPath"`
-		DownloadRange    *transfer.Range `json:"downloadRange"`
-		StatusUpdateTime string          `json:"statusUpdateTime"`
+		PanFolderPath    string `json:"panFolderPath"`
+		StatusUpdateTime string `json:"statusUpdateTime"`
+
+		DriveId        string                            `json:"driveId"`
+		UseInternalUrl bool                              `json:"useInternalUrl"`
+		DownloadRange  *transfer.Range                   `json:"downloadRange"`
+		UploadRange    *transfer.Range                   `json:"uploadRange"`
+		UploadEntity   *aliyunpan.CreateFileUploadResult `json:"uploadEntity"`
+		// UploadPartSeq 上传序号，从0开始
+		UploadPartSeq   int   `json:"uploadPartSeq"`
+		UploadBlockSize int64 `json:"uploadBlockSize"`
 	}
 	SyncFileList []*SyncFileItem
 

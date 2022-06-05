@@ -16,8 +16,8 @@ package uploader
 import (
 	"bufio"
 	"fmt"
-	"github.com/tickstep/library-go/requester/rio/speeds"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
+	"github.com/tickstep/library-go/requester/rio/speeds"
 	"io"
 	"os"
 	"sync"
@@ -33,13 +33,13 @@ type (
 	}
 
 	fileBlock struct {
-		readRange     transfer.Range
-		readed        int64
-		readerAt      io.ReaderAt
-		speedsStatRef *speeds.Speeds
+		readRange           transfer.Range
+		readed              int64
+		readerAt            io.ReaderAt
+		speedsStatRef       *speeds.Speeds
 		globalSpeedsStatRef *speeds.Speeds
-		rateLimit     *speeds.RateLimit
-		mu            sync.Mutex
+		rateLimit           *speeds.RateLimit
+		mu                  sync.Mutex
 	}
 
 	bufioFileBlock struct {
@@ -66,11 +66,11 @@ func SplitBlock(fileSize, blockSize int64) (blockList []*BlockState) {
 // NewBufioSplitUnit io.ReaderAt实现SplitUnit接口, 有Buffer支持
 func NewBufioSplitUnit(readerAt io.ReaderAt, readRange transfer.Range, speedsStat *speeds.Speeds, rateLimit *speeds.RateLimit, globalSpeedsStat *speeds.Speeds) SplitUnit {
 	su := &fileBlock{
-		readerAt:      readerAt,
-		readRange:     readRange,
-		speedsStatRef: speedsStat,
+		readerAt:            readerAt,
+		readRange:           readRange,
+		speedsStatRef:       speedsStat,
 		globalSpeedsStatRef: globalSpeedsStat,
-		rateLimit:     rateLimit,
+		rateLimit:           rateLimit,
 	}
 	return &bufioFileBlock{
 		fileBlock: su,

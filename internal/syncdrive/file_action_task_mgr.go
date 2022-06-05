@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	mapset "github.com/deckarep/golang-set"
+	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/localfile"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/aliyunpan/library/collection"
@@ -18,7 +19,8 @@ type (
 	FileActionTaskList []*FileActionTask
 
 	FileActionTaskManager struct {
-		mutex *sync.Mutex
+		mutex             *sync.Mutex
+		folderCreateMutex *sync.Mutex
 
 		task       *SyncTask
 		wg         *waitgroup.WaitGroup
@@ -28,6 +30,9 @@ type (
 		fileInProcessQueue   *collection.Queue
 		fileDownloadParallel int
 		fileUploadParallel   int
+
+		fileDownloadBlockSize int64
+		fileUploadBlockSize   int64
 	}
 
 	localFileSet struct {
@@ -42,12 +47,16 @@ type (
 
 func NewFileActionTaskManager(task *SyncTask) *FileActionTaskManager {
 	return &FileActionTaskManager{
-		mutex: &sync.Mutex{},
-		task:  task,
+		mutex:             &sync.Mutex{},
+		folderCreateMutex: &sync.Mutex{},
+		task:              task,
 
 		fileInProcessQueue:   collection.NewFifoQueue(),
 		fileDownloadParallel: 2,
-		fileUploadParallel:   2,
+		fileUploadParallel:   1,
+
+		fileDownloadBlockSize: int64(10 * 1024 * 1024),
+		fileUploadBlockSize:   aliyunpan.DefaultChunkSize,
 	}
 }
 
@@ -237,6 +246,8 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 					StatusUpdateTime: "",
 					PanFolderPath:    f.task.PanFolderPath,
 					LocalFolderPath:  f.task.LocalFolderPath,
+					DriveId:          f.task.DriveId,
+					UploadBlockSize:  f.fileUploadBlockSize,
 				},
 			}
 			f.addToSyncDb(fileActionTask)
@@ -261,6 +272,8 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 					StatusUpdateTime: "",
 					PanFolderPath:    f.task.PanFolderPath,
 					LocalFolderPath:  f.task.LocalFolderPath,
+					DriveId:          f.task.DriveId,
+					UploadBlockSize:  f.fileUploadBlockSize,
 				},
 			}
 			f.addToSyncDb(fileActionTask)
@@ -284,6 +297,10 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 		if localFile.Sha1Hash == "" {
 			// calc sha1
 			fileSum := localfile.NewLocalFileEntity(localFile.Path)
+			err := fileSum.OpenPath()
+			if err != nil {
+				logger.Verbosef("文件不可读, 错误信息: %s, 跳过...\n", err)
+			}
 			fileSum.Sum(localfile.CHECKSUM_SHA1) // block operation
 			localFile.Sha1Hash = fileSum.SHA1
 			fileSum.Close()
@@ -310,6 +327,8 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 					StatusUpdateTime: "",
 					PanFolderPath:    f.task.PanFolderPath,
 					LocalFolderPath:  f.task.LocalFolderPath,
+					DriveId:          f.task.DriveId,
+					UploadBlockSize:  f.fileUploadBlockSize,
 				},
 			}
 			f.addToSyncDb(uploadLocalFile)
@@ -323,6 +342,8 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 					StatusUpdateTime: "",
 					PanFolderPath:    f.task.PanFolderPath,
 					LocalFolderPath:  f.task.LocalFolderPath,
+					DriveId:          f.task.DriveId,
+					UploadBlockSize:  f.fileUploadBlockSize,
 				},
 			}
 			f.addToSyncDb(downloadPanFile)
@@ -337,6 +358,8 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						StatusUpdateTime: "",
 						PanFolderPath:    f.task.PanFolderPath,
 						LocalFolderPath:  f.task.LocalFolderPath,
+						DriveId:          f.task.DriveId,
+						UploadBlockSize:  f.fileUploadBlockSize,
 					},
 				}
 				f.addToSyncDb(uploadLocalFile)
@@ -350,6 +373,8 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						StatusUpdateTime: "",
 						PanFolderPath:    f.task.PanFolderPath,
 						LocalFolderPath:  f.task.LocalFolderPath,
+						DriveId:          f.task.DriveId,
+						UploadBlockSize:  f.fileUploadBlockSize,
 					},
 				}
 				f.addToSyncDb(downloadPanFile)
@@ -413,12 +438,13 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 			for _, file := range files {
 				if !f.fileInProcessQueue.Contains(file) {
 					return &FileActionTask{
-						localFileDb: f.task.localFileDb,
-						panFileDb:   f.task.panFileDb,
-						syncFileDb:  f.task.syncFileDb,
-						panClient:   f.task.panClient,
-						blockSize:   int64(10485760),
-						syncItem:    file,
+						localFileDb:          f.task.localFileDb,
+						panFileDb:            f.task.panFileDb,
+						syncFileDb:           f.task.syncFileDb,
+						panClient:            f.task.panClient,
+						blockSize:            int64(10485760),
+						syncItem:             file,
+						panFolderCreateMutex: f.folderCreateMutex,
 					}
 				}
 			}
@@ -428,12 +454,13 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 			for _, file := range files {
 				if !f.fileInProcessQueue.Contains(file) {
 					return &FileActionTask{
-						localFileDb: f.task.localFileDb,
-						panFileDb:   f.task.panFileDb,
-						syncFileDb:  f.task.syncFileDb,
-						panClient:   f.task.panClient,
-						blockSize:   int64(10485760),
-						syncItem:    file,
+						localFileDb:          f.task.localFileDb,
+						panFileDb:            f.task.panFileDb,
+						syncFileDb:           f.task.syncFileDb,
+						panClient:            f.task.panClient,
+						blockSize:            int64(10485760),
+						syncItem:             file,
+						panFolderCreateMutex: f.folderCreateMutex,
 					}
 				}
 			}
@@ -445,12 +472,13 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 			for _, file := range files {
 				if file.Action == act && !f.fileInProcessQueue.Contains(file) {
 					return &FileActionTask{
-						localFileDb: f.task.localFileDb,
-						panFileDb:   f.task.panFileDb,
-						syncFileDb:  f.task.syncFileDb,
-						panClient:   f.task.panClient,
-						blockSize:   int64(10485760),
-						syncItem:    file,
+						localFileDb:          f.task.localFileDb,
+						panFileDb:            f.task.panFileDb,
+						syncFileDb:           f.task.syncFileDb,
+						panClient:            f.task.panClient,
+						blockSize:            int64(10485760),
+						syncItem:             file,
+						panFolderCreateMutex: f.folderCreateMutex,
 					}
 				}
 			}
@@ -470,6 +498,7 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 	defer f.wg.Done()
 
 	downloadWaitGroup := waitgroup.NewWaitGroup(f.fileDownloadParallel)
+	uploadWaitGroup := waitgroup.NewWaitGroup(f.fileUploadParallel)
 
 	for {
 		select {
@@ -482,11 +511,23 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 			logger.Verboseln("do file executor process")
 
 			// do upload
-			//uploadItem := f.getFromSyncDb(SyncFileActionUpload)
-			//if uploadItem != nil {
-			//	f.fileInProcessQueue.Add(uploadItem)
-			//	uploadItem.DoAction(ctx)
-			//}
+			uploadItem := f.getFromSyncDb(SyncFileActionUpload)
+			if uploadItem != nil {
+				if uploadWaitGroup.Parallel() < f.fileUploadParallel {
+					uploadWaitGroup.AddDelta()
+					f.fileInProcessQueue.PushUnique(uploadItem.syncItem)
+					go func() {
+						if e := uploadItem.DoAction(ctx); e == nil {
+							// success
+							f.fileInProcessQueue.Remove(uploadItem)
+						} else {
+							// retry?
+							f.fileInProcessQueue.Remove(uploadItem)
+						}
+						uploadWaitGroup.Done()
+					}()
+				}
+			}
 
 			// do download
 			downloadItem := f.getFromSyncDb(SyncFileActionDownload)

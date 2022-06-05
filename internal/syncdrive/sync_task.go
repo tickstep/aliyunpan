@@ -419,7 +419,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 
 				// restart scan loop over again
 				folderQueue.Push(rootPanFile)
-				delayTimeCount = TimeSecondsOf10Minute
+				delayTimeCount = TimeSecondsOf5Minute
 				continue
 			}
 			item := obj.(*aliyunpan.FileEntity)
