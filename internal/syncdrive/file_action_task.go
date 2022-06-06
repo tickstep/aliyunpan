@@ -307,7 +307,6 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		localFileEntity, _ := os.Open(localFile.Path)
 		localFileInfo, _ := localFileEntity.Stat()
 		proofCode = aliyunpan.CalcProofCode(f.panClient.GetAccessToken(), rio.NewFileReaderAtLen64(localFileEntity), localFileInfo.Size())
-		//localFile.Close()
 
 		// 创建上传任务
 		appCreateUploadFileParam := &aliyunpan.CreateFileUploadParam{

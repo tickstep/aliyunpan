@@ -106,7 +106,7 @@ func (t *SyncTask) Start() error {
 		t.fileActionTaskManager = NewFileActionTaskManager(t)
 	}
 
-	t.wg = waitgroup.NewWaitGroup(2)
+	t.wg = waitgroup.NewWaitGroup(0)
 
 	var cancel context.CancelFunc
 	t.ctx, cancel = context.WithCancel(context.Background())

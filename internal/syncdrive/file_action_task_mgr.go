@@ -53,7 +53,7 @@ func NewFileActionTaskManager(task *SyncTask) *FileActionTaskManager {
 
 		fileInProcessQueue:   collection.NewFifoQueue(),
 		fileDownloadParallel: 2,
-		fileUploadParallel:   1,
+		fileUploadParallel:   2,
 
 		fileDownloadBlockSize: int64(10 * 1024 * 1024),
 		fileUploadBlockSize:   aliyunpan.DefaultChunkSize,
@@ -113,15 +113,8 @@ func (f *FileActionTaskManager) getLocalPathFromPanPath(panPath string) string {
 // doLocalFileDiffRoutine 对比网盘文件和本地文件信息，差异化上传或者下载文件
 func (f *FileActionTaskManager) doLocalFileDiffRoutine(ctx context.Context) {
 	localFolderQueue := collection.NewFifoQueue()
-
-	// init root folder
-	localRootFolder, e := f.task.localFileDb.Get(f.task.LocalFolderPath)
-	if e == nil {
-		localFolderQueue.Push(localRootFolder)
-	} else {
-		logger.Verboseln(e)
-		return
-	}
+	var localRootFolder *LocalFileItem
+	var er error
 
 	f.wg.AddDelta()
 	defer f.wg.Done()
@@ -132,6 +125,15 @@ func (f *FileActionTaskManager) doLocalFileDiffRoutine(ctx context.Context) {
 			logger.Verboseln("file diff routine done")
 			return
 		default:
+			if localRootFolder == nil {
+				localRootFolder, er = f.task.localFileDb.Get(f.task.LocalFolderPath)
+				if er == nil {
+					localFolderQueue.Push(localRootFolder)
+				} else {
+					time.Sleep(1 * time.Second)
+					continue
+				}
+			}
 			logger.Verboseln("do file diff process")
 			localFiles := LocalFileList{}
 			panFiles := PanFileList{}
@@ -162,15 +164,8 @@ func (f *FileActionTaskManager) doLocalFileDiffRoutine(ctx context.Context) {
 // doPanFileDiffRoutine 对比网盘文件和本地文件信息，差异化上传或者下载文件
 func (f *FileActionTaskManager) doPanFileDiffRoutine(ctx context.Context) {
 	panFolderQueue := collection.NewFifoQueue()
-
-	// init root folder
-	panRootFolder, e := f.task.panFileDb.Get(f.task.PanFolderPath)
-	if e == nil {
-		panFolderQueue.Push(panRootFolder)
-	} else {
-		logger.Verboseln(e)
-		return
-	}
+	var panRootFolder *PanFileItem
+	var er error
 
 	f.wg.AddDelta()
 	defer f.wg.Done()
@@ -181,6 +176,15 @@ func (f *FileActionTaskManager) doPanFileDiffRoutine(ctx context.Context) {
 			logger.Verboseln("file diff routine done")
 			return
 		default:
+			if panRootFolder == nil {
+				panRootFolder, er = f.task.panFileDb.Get(f.task.PanFolderPath)
+				if er == nil {
+					panFolderQueue.Push(panRootFolder)
+				} else {
+					time.Sleep(1 * time.Second)
+					continue
+				}
+			}
 			logger.Verboseln("do file diff process")
 			localFiles := LocalFileList{}
 			panFiles := PanFileList{}
@@ -386,14 +390,6 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 func (f *FileActionTaskManager) addToSyncDb(fileTask *FileActionTask) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
-
-	// sync scan time
-	//if fileTask.syncItem.Action == SyncFileActionDownload {
-	//	if (time.Now().Unix() - fileTask.syncItem.PanFile.ScanTimeUnix()) > TimeSecondsOf30Minute {
-	//		// 大于30分钟，不同步，文件信息可能已经过期
-	//		return
-	//	}
-	//}
 
 	// check sync db
 	if itemInDb, e := f.task.syncFileDb.Get(fileTask.syncItem.Id()); e == nil && itemInDb != nil {
