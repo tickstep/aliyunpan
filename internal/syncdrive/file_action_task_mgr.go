@@ -60,6 +60,8 @@ func NewFileActionTaskManager(task *SyncTask) *FileActionTaskManager {
 	}
 }
 
+// Start 启动文件动作任务管理进程
+// 通过对本地数据库的对比，决策对文件进行下载、上传、删除等动作
 func (f *FileActionTaskManager) Start() error {
 	if f.ctx != nil {
 		return fmt.Errorf("task have starting")
@@ -233,61 +235,153 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 	localFilesNeedToCheck, panFilesNeedToCheck := localFilesSet.Intersection(panFilesSet)
 
 	// download file from pan drive
-	if f.task.Mode != UploadOnly {
-		for _, file := range panFilesNeedToDownload {
-			if file.IsFolder() {
-				if panFolderQueue != nil {
-					panFolderQueue.PushUnique(file)
+	if f.task.Mode == DownloadOnly || f.task.Mode == SyncTwoWay {
+		if panFilesNeedToDownload != nil {
+			for _, file := range panFilesNeedToDownload {
+				if file.ScanStatus == ScanStatusNormal { // 下载文件
+					if file.IsFolder() {
+						if panFolderQueue != nil {
+							panFolderQueue.PushUnique(file)
+						}
+						continue
+					}
+					fileActionTask := &FileActionTask{
+						syncItem: &SyncFileItem{
+							Action:           SyncFileActionDownload,
+							Status:           SyncFileStatusCreate,
+							LocalFile:        nil,
+							PanFile:          file,
+							StatusUpdateTime: "",
+							PanFolderPath:    f.task.PanFolderPath,
+							LocalFolderPath:  f.task.LocalFolderPath,
+							DriveId:          f.task.DriveId,
+							UploadBlockSize:  f.fileUploadBlockSize,
+						},
+					}
+					f.addToSyncDb(fileActionTask)
+				} else if file.ScanStatus == ScanStatusDiscard { // 删除对应本地文件（文件夹）
+					fileActionTask := &FileActionTask{
+						syncItem: &SyncFileItem{
+							Action:           SyncFileActionDeleteLocal,
+							Status:           SyncFileStatusCreate,
+							LocalFile:        nil,
+							PanFile:          file,
+							StatusUpdateTime: "",
+							PanFolderPath:    f.task.PanFolderPath,
+							LocalFolderPath:  f.task.LocalFolderPath,
+							DriveId:          f.task.DriveId,
+							UploadBlockSize:  f.fileUploadBlockSize,
+						},
+					}
+					f.addToSyncDb(fileActionTask)
 				}
-				continue
 			}
-			fileActionTask := &FileActionTask{
-				syncItem: &SyncFileItem{
-					Action:           SyncFileActionDownload,
-					Status:           SyncFileStatusCreate,
-					LocalFile:        nil,
-					PanFile:          file,
-					StatusUpdateTime: "",
-					PanFolderPath:    f.task.PanFolderPath,
-					LocalFolderPath:  f.task.LocalFolderPath,
-					DriveId:          f.task.DriveId,
-					UploadBlockSize:  f.fileUploadBlockSize,
-				},
-			}
-			f.addToSyncDb(fileActionTask)
 		}
 	}
 
 	// upload file to pan drive
-	if f.task.Mode != DownloadOnly {
-		for _, file := range localFilesNeedToUpload {
-			if file.IsFolder() {
-				if localFolderQueue != nil {
-					localFolderQueue.PushUnique(file)
+	if f.task.Mode == UploadOnly || f.task.Mode == SyncTwoWay {
+		if localFilesNeedToUpload != nil {
+			for _, file := range localFilesNeedToUpload {
+				if file.ScanStatus == ScanStatusNormal { // 上传文件到云盘
+					if file.IsFolder() {
+						if localFolderQueue != nil {
+							localFolderQueue.PushUnique(file)
+						}
+						continue
+					}
+					fileActionTask := &FileActionTask{
+						syncItem: &SyncFileItem{
+							Action:           SyncFileActionUpload,
+							Status:           SyncFileStatusCreate,
+							LocalFile:        file,
+							PanFile:          nil,
+							StatusUpdateTime: "",
+							PanFolderPath:    f.task.PanFolderPath,
+							LocalFolderPath:  f.task.LocalFolderPath,
+							DriveId:          f.task.DriveId,
+							UploadBlockSize:  f.fileUploadBlockSize,
+						},
+					}
+					f.addToSyncDb(fileActionTask)
+				} else if file.ScanStatus == ScanStatusDiscard { // 删除对应云盘文件（文件夹）
+					fileActionTask := &FileActionTask{
+						syncItem: &SyncFileItem{
+							Action:           SyncFileActionDeletePan,
+							Status:           SyncFileStatusCreate,
+							LocalFile:        file,
+							PanFile:          nil,
+							StatusUpdateTime: "",
+							PanFolderPath:    f.task.PanFolderPath,
+							LocalFolderPath:  f.task.LocalFolderPath,
+							DriveId:          f.task.DriveId,
+							UploadBlockSize:  f.fileUploadBlockSize,
+						},
+					}
+					f.addToSyncDb(fileActionTask)
 				}
-				continue
 			}
-			fileActionTask := &FileActionTask{
-				syncItem: &SyncFileItem{
-					Action:           SyncFileActionUpload,
-					Status:           SyncFileStatusCreate,
-					LocalFile:        file,
-					PanFile:          nil,
-					StatusUpdateTime: "",
-					PanFolderPath:    f.task.PanFolderPath,
-					LocalFolderPath:  f.task.LocalFolderPath,
-					DriveId:          f.task.DriveId,
-					UploadBlockSize:  f.fileUploadBlockSize,
-				},
-			}
-			f.addToSyncDb(fileActionTask)
 		}
 	}
 
-	// compare file to decide download / upload
+	// compare file to decide download / upload / delete
 	for idx, _ := range localFilesNeedToCheck {
 		localFile := localFilesNeedToCheck[idx]
 		panFile := panFilesNeedToCheck[idx]
+
+		//
+		// do delete local / pan file check
+		//
+		if localFile.ScanStatus == ScanStatusDiscard && panFile.ScanStatus == ScanStatusDiscard {
+			// 清除过期数据项
+			f.task.localFileDb.Delete(localFile.Path)
+			f.task.panFileDb.Delete(panFile.Path)
+			continue
+		}
+		if localFile.ScanStatus == ScanStatusDiscard && panFile.ScanStatus == ScanStatusNormal && localFile.Sha1Hash == panFile.Sha1Hash {
+			if f.task.Mode == UploadOnly || f.task.Mode == SyncTwoWay {
+				// 删除对应的云盘文件
+				deletePanFile := &FileActionTask{
+					syncItem: &SyncFileItem{
+						Action:           SyncFileActionDeletePan,
+						Status:           SyncFileStatusCreate,
+						LocalFile:        localFile,
+						PanFile:          panFile,
+						StatusUpdateTime: "",
+						PanFolderPath:    f.task.PanFolderPath,
+						LocalFolderPath:  f.task.LocalFolderPath,
+						DriveId:          f.task.DriveId,
+						UploadBlockSize:  f.fileUploadBlockSize,
+					},
+				}
+				f.addToSyncDb(deletePanFile)
+			}
+			continue
+		}
+		if panFile.ScanStatus == ScanStatusDiscard && localFile.ScanStatus == ScanStatusNormal && localFile.Sha1Hash == panFile.Sha1Hash {
+			if f.task.Mode == DownloadOnly || f.task.Mode == SyncTwoWay {
+				// 删除对应的本地文件
+				deletePanFile := &FileActionTask{
+					syncItem: &SyncFileItem{
+						Action:           SyncFileActionDeleteLocal,
+						Status:           SyncFileStatusCreate,
+						LocalFile:        localFile,
+						PanFile:          panFile,
+						StatusUpdateTime: "",
+						PanFolderPath:    f.task.PanFolderPath,
+						LocalFolderPath:  f.task.LocalFolderPath,
+						DriveId:          f.task.DriveId,
+						UploadBlockSize:  f.fileUploadBlockSize,
+					},
+				}
+				f.addToSyncDb(deletePanFile)
+			}
+			continue
+		}
+
+		//
+		// do download / upload check
+		//
 		if localFile.IsFolder() {
 			if localFolderQueue != nil {
 				localFolderQueue.PushUnique(localFile)
@@ -495,6 +589,8 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 
 	downloadWaitGroup := waitgroup.NewWaitGroup(f.fileDownloadParallel)
 	uploadWaitGroup := waitgroup.NewWaitGroup(f.fileUploadParallel)
+	deleteLocalWaitGroup := waitgroup.NewWaitGroup(1)
+	deletePanWaitGroup := waitgroup.NewWaitGroup(1)
 
 	for {
 		select {
@@ -515,10 +611,10 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 					go func() {
 						if e := uploadItem.DoAction(ctx); e == nil {
 							// success
-							f.fileInProcessQueue.Remove(uploadItem)
+							f.fileInProcessQueue.Remove(uploadItem.syncItem)
 						} else {
 							// retry?
-							f.fileInProcessQueue.Remove(uploadItem)
+							f.fileInProcessQueue.Remove(uploadItem.syncItem)
 						}
 						uploadWaitGroup.Done()
 					}()
@@ -534,12 +630,50 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 					go func() {
 						if e := downloadItem.DoAction(ctx); e == nil {
 							// success
-							f.fileInProcessQueue.Remove(downloadItem)
+							f.fileInProcessQueue.Remove(downloadItem.syncItem)
 						} else {
 							// retry?
-							f.fileInProcessQueue.Remove(downloadItem)
+							f.fileInProcessQueue.Remove(downloadItem.syncItem)
 						}
 						downloadWaitGroup.Done()
+					}()
+				}
+			}
+
+			// delete local
+			deleteLocalItem := f.getFromSyncDb(SyncFileActionDeleteLocal)
+			if deleteLocalItem != nil {
+				if deleteLocalWaitGroup.Parallel() < 1 {
+					deleteLocalWaitGroup.AddDelta()
+					f.fileInProcessQueue.PushUnique(deleteLocalItem.syncItem)
+					go func() {
+						if e := deleteLocalItem.DoAction(ctx); e == nil {
+							// success
+							f.fileInProcessQueue.Remove(deleteLocalItem.syncItem)
+						} else {
+							// retry?
+							f.fileInProcessQueue.Remove(deleteLocalItem.syncItem)
+						}
+						deleteLocalWaitGroup.Done()
+					}()
+				}
+			}
+
+			// delete pan
+			deletePanItem := f.getFromSyncDb(SyncFileActionDeletePan)
+			if deletePanItem != nil {
+				if deletePanWaitGroup.Parallel() < 1 {
+					deletePanWaitGroup.AddDelta()
+					f.fileInProcessQueue.PushUnique(deletePanItem.syncItem)
+					go func() {
+						if e := deletePanItem.DoAction(ctx); e == nil {
+							// success
+							f.fileInProcessQueue.Remove(deletePanItem.syncItem)
+						} else {
+							// retry?
+							f.fileInProcessQueue.Remove(deletePanItem.syncItem)
+						}
+						deletePanWaitGroup.Done()
 					}()
 				}
 			}

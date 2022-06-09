@@ -11,6 +11,9 @@ import (
 )
 
 type (
+	// ScanStatus 扫描状态
+	ScanStatus string
+
 	// PanFileItem 网盘文件信息
 	PanFileItem struct {
 		// 网盘ID
@@ -45,6 +48,8 @@ type (
 		Category string `json:"category"`
 		// ScanTimeAt 扫描时间
 		ScanTimeAt string `json:"scanTimeAt"`
+		// ScanStatus 扫描状态
+		ScanStatus ScanStatus `json:"scanStatus"`
 	}
 	PanFileList []*PanFileItem
 
@@ -87,6 +92,8 @@ type (
 		Path string `json:"path"`
 		// ScanTimeAt 扫描时间
 		ScanTimeAt string `json:"scanTimeAt"`
+		// ScanStatus 扫描状态
+		ScanStatus ScanStatus `json:"scanStatus"`
 	}
 	LocalFileList []*LocalFileItem
 
@@ -160,8 +167,15 @@ const (
 	SyncFileStatusIllegal     SyncFileStatus = "illegal"
 	SyncFileStatusNotExisted  SyncFileStatus = "notExisted"
 
-	SyncFileActionDownload SyncFileAction = "download"
-	SyncFileActionUpload   SyncFileAction = "upload"
+	SyncFileActionDownload    SyncFileAction = "download"
+	SyncFileActionUpload      SyncFileAction = "upload"
+	SyncFileActionDeleteLocal SyncFileAction = "delete_local"
+	SyncFileActionDeletePan   SyncFileAction = "delete_pan"
+
+	// ScanStatusNormal 正常
+	ScanStatusNormal ScanStatus = "normal"
+	// ScanStatusDiscard 已过期，已删除
+	ScanStatusDiscard ScanStatus = "discard"
 )
 
 var (
@@ -185,6 +199,7 @@ func NewPanFileItem(fe *aliyunpan.FileEntity) *PanFileItem {
 		Sha1Hash:      fe.ContentHash,
 		Path:          fe.Path,
 		Category:      fe.Category,
+		ScanStatus:    ScanStatusNormal,
 	}
 }
 
@@ -292,9 +307,9 @@ func (p PanFileList) FindFileByPath(filePath string) *PanFileItem {
 
 func (item *SyncFileItem) Id() string {
 	sb := &strings.Builder{}
-	if item.Action == SyncFileActionDownload {
+	if item.Action == SyncFileActionDownload || item.Action == SyncFileActionDeleteLocal {
 		fmt.Fprintf(sb, "%s%s", string(item.Action), item.PanFile.Id())
-	} else if item.Action == SyncFileActionUpload {
+	} else if item.Action == SyncFileActionUpload || item.Action == SyncFileActionDeletePan {
 		fmt.Fprintf(sb, "%s%s", string(item.Action), item.LocalFile.Id())
 	}
 	return utils.Md5Str(sb.String())
@@ -309,6 +324,9 @@ func (item *SyncFileItem) StatusUpdateTimeUnix() int64 {
 
 // getPanFullPath 获取网盘文件的路径
 func (item *SyncFileItem) getPanFileFullPath() string {
+	if item.PanFile != nil {
+		return item.PanFile.Path
+	}
 	localPath := item.LocalFile.Path
 	localPath = strings.ReplaceAll(localPath, "\\", "/")
 	localRootPath := strings.ReplaceAll(item.LocalFolderPath, "\\", "/")
@@ -319,6 +337,9 @@ func (item *SyncFileItem) getPanFileFullPath() string {
 
 // getLocalFullPath 获取本地文件的路径
 func (item *SyncFileItem) getLocalFileFullPath() string {
+	if item.LocalFile != nil {
+		return item.LocalFile.Path
+	}
 	panPath := item.PanFile.Path
 	panPath = strings.ReplaceAll(panPath, "\\", "/")
 	panRootPath := strings.ReplaceAll(item.PanFolderPath, "\\", "/")

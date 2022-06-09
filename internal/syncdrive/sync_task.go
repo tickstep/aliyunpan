@@ -51,11 +51,11 @@ type (
 )
 
 const (
-	// UploadOnly 单向上传，即备份本地文件
+	// UploadOnly 单向上传，即备份本地文件到云盘
 	UploadOnly SyncMode = "upload"
-	// DownloadOnly 只下载，即备份云盘文件
+	// DownloadOnly 只下载，即备份云盘文件到本地
 	DownloadOnly SyncMode = "download"
-	// SyncTwoWay 双向同步
+	// SyncTwoWay 双向同步，本地和云盘文件完全保持一致
 	SyncTwoWay SyncMode = "sync"
 )
 
@@ -96,6 +96,7 @@ func (t *SyncTask) setupDb() error {
 }
 
 // Start 启动同步任务
+// 扫描本地和云盘文件信息并存储到本地数据库
 func (t *SyncTask) Start() error {
 	if t.ctx != nil {
 		return fmt.Errorf("task have starting")
@@ -197,22 +198,24 @@ func newLocalFileItem(file os.FileInfo, fullPath string) *LocalFileItem {
 		Sha1Hash:      "",
 		Path:          fullPath,
 		ScanTimeAt:    utils.NowTimeStr(),
+		ScanStatus:    ScanStatusNormal,
 	}
 }
 
-// clearLocalFileDb 清理本地数据库中无效的数据项
-func (t *SyncTask) clearLocalFileDb(filePath string, startTimeUnix int64) {
+// discardLocalFileDb 清理本地数据库中无效的数据项
+func (t *SyncTask) discardLocalFileDb(filePath string, startTimeUnix int64) {
 	files, e := t.localFileDb.GetFileList(filePath)
 	if e != nil {
 		return
 	}
 	for _, file := range files {
 		if file.ScanTimeAt == "" || file.ScanTimeUnix() < startTimeUnix {
-			// delete item
-			t.localFileDb.Delete(file.Path)
+			// label file discard
+			file.ScanStatus = ScanStatusDiscard
+			t.localFileDb.Update(file)
 		} else {
 			if file.IsFolder() {
-				t.clearLocalFileDb(file.Path, startTimeUnix)
+				t.discardLocalFileDb(file.Path, startTimeUnix)
 			}
 		}
 	}
@@ -279,8 +282,8 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 			}
 			obj := folderQueue.Pop()
 			if obj == nil {
-				// clear discard file from DB
-				t.clearLocalFileDb(t.LocalFolderPath, startTimeOfThisLoop)
+				// label discard file from DB
+				t.discardLocalFileDb(t.LocalFolderPath, startTimeOfThisLoop)
 
 				// restart scan loop over again
 				folderQueue.Push(&folderItem{
@@ -321,6 +324,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					localFileInDb.FileSize = localFile.FileSize
 					localFileInDb.FileType = localFile.FileType
 					localFileInDb.ScanTimeAt = utils.NowTimeStr()
+					localFileInDb.ScanStatus = ScanStatusNormal
 					if _, er := t.localFileDb.Update(localFileInDb); er != nil {
 						logger.Verboseln("local db update error ", er)
 					}
@@ -346,19 +350,20 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 	}
 }
 
-// clearPanFileDb 清理云盘数据库中无效的数据项
-func (t *SyncTask) clearPanFileDb(filePath string, startTimeUnix int64) {
+// discardPanFileDb 清理云盘数据库中无效的数据项
+func (t *SyncTask) discardPanFileDb(filePath string, startTimeUnix int64) {
 	files, e := t.panFileDb.GetFileList(filePath)
 	if e != nil {
 		return
 	}
 	for _, file := range files {
 		if file.ScanTimeUnix() < startTimeUnix {
-			// delete item
-			t.panFileDb.Delete(file.Path)
+			// label file discard
+			file.ScanStatus = ScanStatusDiscard
+			t.panFileDb.Update(file)
 		} else {
 			if file.IsFolder() {
-				t.clearPanFileDb(file.Path, startTimeUnix)
+				t.discardPanFileDb(file.Path, startTimeUnix)
 			}
 		}
 	}
@@ -414,8 +419,8 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 			}
 			obj := folderQueue.Pop()
 			if obj == nil {
-				// clear discard file from DB
-				t.clearPanFileDb(t.PanFolderPath, startTimeOfThisLoop)
+				// label discard file from DB
+				t.discardPanFileDb(t.PanFolderPath, startTimeOfThisLoop)
 
 				// restart scan loop over again
 				folderQueue.Push(rootPanFile)
@@ -456,6 +461,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 					panFileInDb.UpdatedAt = file.UpdatedAt
 					panFileInDb.CreatedAt = file.CreatedAt
 					panFileInDb.ScanTimeAt = utils.NowTimeStr()
+					panFileInDb.ScanStatus = ScanStatusNormal
 					t.panFileDb.Update(panFileInDb)
 				}
 

@@ -103,6 +103,29 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			}
 		}
 	}
+
+	if f.syncItem.Action == SyncFileActionDeleteLocal {
+		if e := f.deleteLocalFile(ctx); e != nil {
+			// TODO: retry
+			return e
+		} else {
+			// clear DB
+			f.localFileDb.Delete(f.syncItem.getLocalFileFullPath())
+			f.panFileDb.Delete(f.syncItem.getPanFileFullPath())
+		}
+	}
+
+	if f.syncItem.Action == SyncFileActionDeletePan {
+		if e := f.deletePanFile(ctx); e != nil {
+			// TODO: retry
+			return e
+		} else {
+			// clear DB
+			f.localFileDb.Delete(f.syncItem.getLocalFileFullPath())
+			f.panFileDb.Delete(f.syncItem.getPanFileFullPath())
+		}
+	}
+
 	return nil
 }
 
@@ -225,6 +248,16 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 }
 
 func (f *FileActionTask) uploadFile(ctx context.Context) error {
+	if b, e := utils.PathExists(f.syncItem.LocalFile.Path); e == nil {
+		if !b {
+			// 本地文件不存在，无法上传
+			f.syncItem.Status = SyncFileStatusNotExisted
+			f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+			f.syncFileDb.Update(f.syncItem)
+			return nil
+		}
+	}
+
 	localFile := localfile.NewLocalFileEntity(f.syncItem.LocalFile.Path)
 	err := localFile.OpenPath()
 	if err != nil {
@@ -431,4 +464,75 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+// deleteLocalFile 删除本地文件
+func (f *FileActionTask) deleteLocalFile(ctx context.Context) error {
+	isFolder := f.syncItem.PanFile.IsFolder()
+	localFilePath := f.syncItem.getLocalFileFullPath()
+	if b, e := utils.PathExists(localFilePath); e == nil {
+		if !b {
+			// 本地文件已经不存在
+			f.syncItem.Status = SyncFileStatusSuccess
+			f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+			f.syncFileDb.Update(f.syncItem)
+			return nil
+		}
+	}
+
+	// 删除
+	var e error
+	if isFolder {
+		e = os.RemoveAll(localFilePath)
+	} else {
+		e = os.Remove(localFilePath)
+	}
+	if e == nil {
+		f.syncItem.Status = SyncFileStatusSuccess
+	} else {
+		f.syncItem.Status = SyncFileStatusFailed
+	}
+	f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+	f.syncFileDb.Update(f.syncItem)
+	return e
+}
+
+// deletePanFile 删除云盘文件
+func (f *FileActionTask) deletePanFile(ctx context.Context) error {
+	panFilePath := f.syncItem.getPanFileFullPath()
+
+	driveId := f.syncItem.DriveId
+	panFileId := ""
+	if f.syncItem.PanFile != nil {
+		panFileId = f.syncItem.PanFile.FileId
+	} else {
+		fi, er := f.panClient.FileInfoByPath(f.syncItem.DriveId, panFilePath)
+		time.Sleep(1 * time.Second)
+		if er != nil {
+			if er.Code == apierror.ApiCodeFileNotFoundCode {
+				// 云盘文件已经不存在
+				f.syncItem.Status = SyncFileStatusSuccess
+				f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+				f.syncFileDb.Update(f.syncItem)
+				return nil
+			}
+		} else {
+			return er
+		}
+		panFileId = fi.FileId
+	}
+
+	// 删除
+	var fileDeleteResult []*aliyunpan.FileBatchActionResult
+	var err *apierror.ApiError
+	fileDeleteResult, err = f.panClient.FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: driveId, FileId: panFileId}})
+	time.Sleep(1 * time.Second)
+	if err != nil || len(fileDeleteResult) == 0 {
+		f.syncItem.Status = SyncFileStatusFailed
+	} else {
+		f.syncItem.Status = SyncFileStatusSuccess
+	}
+	f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+	f.syncFileDb.Update(f.syncItem)
+	return err
 }
