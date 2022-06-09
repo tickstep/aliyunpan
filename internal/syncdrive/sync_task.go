@@ -25,7 +25,7 @@ type (
 		// Id 任务ID
 		Id string `json:"id"`
 		// DriveId 网盘ID，目前支持文件网盘
-		DriveId string `json:"driveId"`
+		DriveId string `json:"-"`
 		// LocalFolderPath 本地目录
 		LocalFolderPath string `json:"localFolderPath"`
 		// PanFolderPath 云盘目录
@@ -66,12 +66,12 @@ func (t *SyncTask) NameLabel() string {
 func (t *SyncTask) String() string {
 	builder := &strings.Builder{}
 	builder.WriteString("任务: " + t.NameLabel() + "\n")
-	mode := "双向同步"
+	mode := "双向备份"
 	if t.Mode == UploadOnly {
-		mode = "只上传"
+		mode = "备份本地文件（只上传）"
 	}
-	if t.Mode == UploadOnly {
-		mode = "只下载"
+	if t.Mode == DownloadOnly {
+		mode = "备份云盘文件（只下载）"
 	}
 	builder.WriteString("同步模式: " + mode + "\n")
 	builder.WriteString("本地目录: " + t.LocalFolderPath + "\n")

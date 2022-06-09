@@ -435,6 +435,9 @@ func main() {
 		// 备份 backup
 		command.CmdBackup(),
 
+		// 同步备份 sync
+		command.CmdSync(),
+
 		// 上传文件/目录 upload
 		command.CmdUpload(),
 

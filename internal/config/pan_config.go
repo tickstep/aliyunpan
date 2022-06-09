@@ -308,8 +308,14 @@ func GetConfigDir() string {
 	return configDir
 }
 
+// GetPluginDir 获取插件文件夹路径
 func GetPluginDir() string {
 	return strings.TrimSuffix(GetConfigDir(), "/") + "/plugin"
+}
+
+// GetSyncDriveDir 获取同步备份的文件夹路径
+func GetSyncDriveDir() string {
+	return strings.TrimSuffix(GetConfigDir(), "/") + "/sync_drive"
 }
 
 func (c *PanConfig) ActiveUser() *PanUser {

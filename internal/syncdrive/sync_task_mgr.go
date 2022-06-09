@@ -8,6 +8,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"io/ioutil"
 	"path"
+	"time"
 )
 
 type (
@@ -63,9 +64,9 @@ func (m *SyncTaskManager) parseConfigFile() error {
 	m.syncDriveConfig = r
 
 	if b, _ := utils.PathExists(configFilePath); b != true {
-		text := utils.ObjectToJsonStr(r, true)
-		ioutil.WriteFile(configFilePath, []byte(text), 0600)
-		return nil
+		//text := utils.ObjectToJsonStr(r, true)
+		//ioutil.WriteFile(configFilePath, []byte(text), 0600)
+		return fmt.Errorf("备份配置文件不存在")
 	}
 	data, e := ioutil.ReadFile(configFilePath)
 	if e != nil {
@@ -109,11 +110,10 @@ func (m *SyncTaskManager) Start() (bool, error) {
 		}
 		fmt.Println("\n启动同步任务")
 		fmt.Println(task)
+		time.Sleep(200 * time.Millisecond)
 	}
 	// save config file
 	ioutil.WriteFile(m.configFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0600)
-
-	// TODO: refresh panClient token to keep access token alive
 	return true, nil
 }
 
