@@ -8,7 +8,7 @@ import (
 )
 
 func TestStart(t *testing.T) {
-	refreshToken := "ac1010f63...9585338b533bd4ab"
+	refreshToken := "1640cc2d4ea...6b8ccb4d6242161a7"
 	webToken, err := aliyunpan.GetAccessTokenFromRefreshToken(refreshToken)
 	if err != nil {
 		fmt.Println("get acccess token error")
@@ -22,10 +22,14 @@ func TestStart(t *testing.T) {
 	manager := NewSyncTaskManager(
 		user.FileDriveId,
 		panClient,
-		"/Volumes/Downloads/dev/sync_drive",
+		"D:\\smb\\feny\\goprojects\\dev\\sync_drive",
+		1,
+		1,
+		int64(256*1024),
+		aliyunpan.DefaultChunkSize,
 	)
 
 	manager.Start()
-	time.Sleep(5 * time.Minute)
+	time.Sleep(30 * time.Minute)
 	manager.Stop()
 }

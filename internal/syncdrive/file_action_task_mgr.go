@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	mapset "github.com/deckarep/golang-set"
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/localfile"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/aliyunpan/library/collection"
@@ -52,11 +51,11 @@ func NewFileActionTaskManager(task *SyncTask) *FileActionTaskManager {
 		task:              task,
 
 		fileInProcessQueue:   collection.NewFifoQueue(),
-		fileDownloadParallel: 2,
-		fileUploadParallel:   2,
+		fileDownloadParallel: task.fileDownloadParallel,
+		fileUploadParallel:   task.fileUploadParallel,
 
-		fileDownloadBlockSize: int64(10 * 1024 * 1024),
-		fileUploadBlockSize:   aliyunpan.DefaultChunkSize,
+		fileDownloadBlockSize: task.fileDownloadBlockSize,
+		fileUploadBlockSize:   task.fileUploadBlockSize,
 	}
 }
 
@@ -247,15 +246,16 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 					}
 					fileActionTask := &FileActionTask{
 						syncItem: &SyncFileItem{
-							Action:           SyncFileActionDownload,
-							Status:           SyncFileStatusCreate,
-							LocalFile:        nil,
-							PanFile:          file,
-							StatusUpdateTime: "",
-							PanFolderPath:    f.task.PanFolderPath,
-							LocalFolderPath:  f.task.LocalFolderPath,
-							DriveId:          f.task.DriveId,
-							UploadBlockSize:  f.fileUploadBlockSize,
+							Action:            SyncFileActionDownload,
+							Status:            SyncFileStatusCreate,
+							LocalFile:         nil,
+							PanFile:           file,
+							StatusUpdateTime:  "",
+							PanFolderPath:     f.task.PanFolderPath,
+							LocalFolderPath:   f.task.LocalFolderPath,
+							DriveId:           f.task.DriveId,
+							DownloadBlockSize: f.fileDownloadBlockSize,
+							UploadBlockSize:   f.fileUploadBlockSize,
 						},
 					}
 					f.addToSyncDb(fileActionTask)
@@ -264,15 +264,16 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 				if f.task.Mode == DownloadOnly || f.task.Mode == SyncTwoWay {
 					fileActionTask := &FileActionTask{
 						syncItem: &SyncFileItem{
-							Action:           SyncFileActionDeleteLocal,
-							Status:           SyncFileStatusCreate,
-							LocalFile:        nil,
-							PanFile:          file,
-							StatusUpdateTime: "",
-							PanFolderPath:    f.task.PanFolderPath,
-							LocalFolderPath:  f.task.LocalFolderPath,
-							DriveId:          f.task.DriveId,
-							UploadBlockSize:  f.fileUploadBlockSize,
+							Action:            SyncFileActionDeleteLocal,
+							Status:            SyncFileStatusCreate,
+							LocalFile:         nil,
+							PanFile:           file,
+							StatusUpdateTime:  "",
+							PanFolderPath:     f.task.PanFolderPath,
+							LocalFolderPath:   f.task.LocalFolderPath,
+							DriveId:           f.task.DriveId,
+							DownloadBlockSize: f.fileDownloadBlockSize,
+							UploadBlockSize:   f.fileUploadBlockSize,
 						},
 					}
 					f.addToSyncDb(fileActionTask)
@@ -297,15 +298,16 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 					}
 					fileActionTask := &FileActionTask{
 						syncItem: &SyncFileItem{
-							Action:           SyncFileActionUpload,
-							Status:           SyncFileStatusCreate,
-							LocalFile:        file,
-							PanFile:          nil,
-							StatusUpdateTime: "",
-							PanFolderPath:    f.task.PanFolderPath,
-							LocalFolderPath:  f.task.LocalFolderPath,
-							DriveId:          f.task.DriveId,
-							UploadBlockSize:  f.fileUploadBlockSize,
+							Action:            SyncFileActionUpload,
+							Status:            SyncFileStatusCreate,
+							LocalFile:         file,
+							PanFile:           nil,
+							StatusUpdateTime:  "",
+							PanFolderPath:     f.task.PanFolderPath,
+							LocalFolderPath:   f.task.LocalFolderPath,
+							DriveId:           f.task.DriveId,
+							DownloadBlockSize: f.fileDownloadBlockSize,
+							UploadBlockSize:   f.fileUploadBlockSize,
 						},
 					}
 					f.addToSyncDb(fileActionTask)
@@ -314,15 +316,16 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 				if f.task.Mode == UploadOnly || f.task.Mode == SyncTwoWay {
 					fileActionTask := &FileActionTask{
 						syncItem: &SyncFileItem{
-							Action:           SyncFileActionDeletePan,
-							Status:           SyncFileStatusCreate,
-							LocalFile:        file,
-							PanFile:          nil,
-							StatusUpdateTime: "",
-							PanFolderPath:    f.task.PanFolderPath,
-							LocalFolderPath:  f.task.LocalFolderPath,
-							DriveId:          f.task.DriveId,
-							UploadBlockSize:  f.fileUploadBlockSize,
+							Action:            SyncFileActionDeletePan,
+							Status:            SyncFileStatusCreate,
+							LocalFile:         file,
+							PanFile:           nil,
+							StatusUpdateTime:  "",
+							PanFolderPath:     f.task.PanFolderPath,
+							LocalFolderPath:   f.task.LocalFolderPath,
+							DriveId:           f.task.DriveId,
+							DownloadBlockSize: f.fileDownloadBlockSize,
+							UploadBlockSize:   f.fileUploadBlockSize,
 						},
 					}
 					f.addToSyncDb(fileActionTask)
@@ -353,15 +356,16 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 				// 删除对应的云盘文件
 				deletePanFile := &FileActionTask{
 					syncItem: &SyncFileItem{
-						Action:           SyncFileActionDeletePan,
-						Status:           SyncFileStatusCreate,
-						LocalFile:        localFile,
-						PanFile:          panFile,
-						StatusUpdateTime: "",
-						PanFolderPath:    f.task.PanFolderPath,
-						LocalFolderPath:  f.task.LocalFolderPath,
-						DriveId:          f.task.DriveId,
-						UploadBlockSize:  f.fileUploadBlockSize,
+						Action:            SyncFileActionDeletePan,
+						Status:            SyncFileStatusCreate,
+						LocalFile:         localFile,
+						PanFile:           panFile,
+						StatusUpdateTime:  "",
+						PanFolderPath:     f.task.PanFolderPath,
+						LocalFolderPath:   f.task.LocalFolderPath,
+						DriveId:           f.task.DriveId,
+						DownloadBlockSize: f.fileDownloadBlockSize,
+						UploadBlockSize:   f.fileUploadBlockSize,
 					},
 				}
 				f.addToSyncDb(deletePanFile)
@@ -376,15 +380,16 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 				// 删除对应的本地文件
 				deletePanFile := &FileActionTask{
 					syncItem: &SyncFileItem{
-						Action:           SyncFileActionDeleteLocal,
-						Status:           SyncFileStatusCreate,
-						LocalFile:        localFile,
-						PanFile:          panFile,
-						StatusUpdateTime: "",
-						PanFolderPath:    f.task.PanFolderPath,
-						LocalFolderPath:  f.task.LocalFolderPath,
-						DriveId:          f.task.DriveId,
-						UploadBlockSize:  f.fileUploadBlockSize,
+						Action:            SyncFileActionDeleteLocal,
+						Status:            SyncFileStatusCreate,
+						LocalFile:         localFile,
+						PanFile:           panFile,
+						StatusUpdateTime:  "",
+						PanFolderPath:     f.task.PanFolderPath,
+						LocalFolderPath:   f.task.LocalFolderPath,
+						DriveId:           f.task.DriveId,
+						DownloadBlockSize: f.fileDownloadBlockSize,
+						UploadBlockSize:   f.fileUploadBlockSize,
 					},
 				}
 				f.addToSyncDb(deletePanFile)
@@ -434,30 +439,32 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 		if f.task.Mode == UploadOnly {
 			uploadLocalFile := &FileActionTask{
 				syncItem: &SyncFileItem{
-					Action:           SyncFileActionUpload,
-					Status:           SyncFileStatusCreate,
-					LocalFile:        localFile,
-					PanFile:          nil,
-					StatusUpdateTime: "",
-					PanFolderPath:    f.task.PanFolderPath,
-					LocalFolderPath:  f.task.LocalFolderPath,
-					DriveId:          f.task.DriveId,
-					UploadBlockSize:  f.fileUploadBlockSize,
+					Action:            SyncFileActionUpload,
+					Status:            SyncFileStatusCreate,
+					LocalFile:         localFile,
+					PanFile:           nil,
+					StatusUpdateTime:  "",
+					PanFolderPath:     f.task.PanFolderPath,
+					LocalFolderPath:   f.task.LocalFolderPath,
+					DriveId:           f.task.DriveId,
+					DownloadBlockSize: f.fileDownloadBlockSize,
+					UploadBlockSize:   f.fileUploadBlockSize,
 				},
 			}
 			f.addToSyncDb(uploadLocalFile)
 		} else if f.task.Mode == DownloadOnly {
 			downloadPanFile := &FileActionTask{
 				syncItem: &SyncFileItem{
-					Action:           SyncFileActionDownload,
-					Status:           SyncFileStatusCreate,
-					LocalFile:        nil,
-					PanFile:          panFile,
-					StatusUpdateTime: "",
-					PanFolderPath:    f.task.PanFolderPath,
-					LocalFolderPath:  f.task.LocalFolderPath,
-					DriveId:          f.task.DriveId,
-					UploadBlockSize:  f.fileUploadBlockSize,
+					Action:            SyncFileActionDownload,
+					Status:            SyncFileStatusCreate,
+					LocalFile:         nil,
+					PanFile:           panFile,
+					StatusUpdateTime:  "",
+					PanFolderPath:     f.task.PanFolderPath,
+					LocalFolderPath:   f.task.LocalFolderPath,
+					DriveId:           f.task.DriveId,
+					DownloadBlockSize: f.fileDownloadBlockSize,
+					UploadBlockSize:   f.fileUploadBlockSize,
 				},
 			}
 			f.addToSyncDb(downloadPanFile)
@@ -465,30 +472,32 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 			if localFile.UpdateTimeUnix() > panFile.UpdateTimeUnix() { // upload file
 				uploadLocalFile := &FileActionTask{
 					syncItem: &SyncFileItem{
-						Action:           SyncFileActionUpload,
-						Status:           SyncFileStatusCreate,
-						LocalFile:        localFile,
-						PanFile:          nil,
-						StatusUpdateTime: "",
-						PanFolderPath:    f.task.PanFolderPath,
-						LocalFolderPath:  f.task.LocalFolderPath,
-						DriveId:          f.task.DriveId,
-						UploadBlockSize:  f.fileUploadBlockSize,
+						Action:            SyncFileActionUpload,
+						Status:            SyncFileStatusCreate,
+						LocalFile:         localFile,
+						PanFile:           nil,
+						StatusUpdateTime:  "",
+						PanFolderPath:     f.task.PanFolderPath,
+						LocalFolderPath:   f.task.LocalFolderPath,
+						DriveId:           f.task.DriveId,
+						DownloadBlockSize: f.fileDownloadBlockSize,
+						UploadBlockSize:   f.fileUploadBlockSize,
 					},
 				}
 				f.addToSyncDb(uploadLocalFile)
 			} else if localFile.UpdateTimeUnix() < panFile.UpdateTimeUnix() { // download file
 				downloadPanFile := &FileActionTask{
 					syncItem: &SyncFileItem{
-						Action:           SyncFileActionDownload,
-						Status:           SyncFileStatusCreate,
-						LocalFile:        nil,
-						PanFile:          panFile,
-						StatusUpdateTime: "",
-						PanFolderPath:    f.task.PanFolderPath,
-						LocalFolderPath:  f.task.LocalFolderPath,
-						DriveId:          f.task.DriveId,
-						UploadBlockSize:  f.fileUploadBlockSize,
+						Action:            SyncFileActionDownload,
+						Status:            SyncFileStatusCreate,
+						LocalFile:         nil,
+						PanFile:           panFile,
+						StatusUpdateTime:  "",
+						PanFolderPath:     f.task.PanFolderPath,
+						LocalFolderPath:   f.task.LocalFolderPath,
+						DriveId:           f.task.DriveId,
+						DownloadBlockSize: f.fileDownloadBlockSize,
+						UploadBlockSize:   f.fileUploadBlockSize,
 					},
 				}
 				f.addToSyncDb(downloadPanFile)
@@ -548,7 +557,6 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						panFileDb:            f.task.panFileDb,
 						syncFileDb:           f.task.syncFileDb,
 						panClient:            f.task.panClient,
-						blockSize:            int64(10485760),
 						syncItem:             file,
 						panFolderCreateMutex: f.folderCreateMutex,
 					}
@@ -564,7 +572,6 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						panFileDb:            f.task.panFileDb,
 						syncFileDb:           f.task.syncFileDb,
 						panClient:            f.task.panClient,
-						blockSize:            int64(10485760),
 						syncItem:             file,
 						panFolderCreateMutex: f.folderCreateMutex,
 					}
@@ -582,7 +589,6 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						panFileDb:            f.task.panFileDb,
 						syncFileDb:           f.task.syncFileDb,
 						panClient:            f.task.panClient,
-						blockSize:            int64(10485760),
 						syncItem:             file,
 						panFolderCreateMutex: f.folderCreateMutex,
 					}

@@ -11,7 +11,7 @@ import (
 )
 
 func TestFileActionMgrStart(t *testing.T) {
-	refreshToken := "ac1010f6396...585338b533bd4ab"
+	refreshToken := "1640cc2d4ea...cb4d6242161a7"
 	webToken, err := aliyunpan.GetAccessTokenFromRefreshToken(refreshToken)
 	if err != nil {
 		fmt.Println("get acccess token error")
@@ -24,15 +24,20 @@ func TestFileActionMgrStart(t *testing.T) {
 	task := &SyncTask{
 		Id:              "5b2d7c10-e927-4e72-8f9d-5abb3bb04814",
 		DriveId:         user.FileDriveId,
-		LocalFolderPath: "/Volumes/Downloads/dev/folder",
+		LocalFolderPath: "D:\\smb\\feny\\goprojects\\dev\\NS游戏备份",
 		PanFolderPath:   "/sync_drive",
 		Mode:            "sync",
 		LastSyncTime:    "2022-05-26 19:29:19",
 
-		syncDbFolderPath: "/Volumes/Downloads/dev/sync_drive",
+		syncDbFolderPath: "D:\\smb\\feny\\goprojects\\dev\\sync_drive",
 		panClient:        panClient,
+
+		fileDownloadParallel:  2,
+		fileUploadParallel:    2,
+		fileDownloadBlockSize: int64(256 * 1024),
+		fileUploadBlockSize:   aliyunpan.DefaultChunkSize,
 	}
-	task.setup()
+	task.setupDb()
 
 	ft := NewFileActionTaskManager(task)
 	ft.Start()

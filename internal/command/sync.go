@@ -15,6 +15,7 @@ package command
 
 import (
 	"fmt"
+	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/syncdrive"
@@ -36,13 +37,15 @@ func CmdSync() cli.Command {
 	备份功能支持一下三种模式：
 	1. upload 
        备份本地文件，即上传本地文件到网盘，始终保持本地文件有一个完整的备份在网盘
-
 	2. download 
        备份云盘文件，即下载网盘文件到本地，始终保持网盘的文件有一个完整的备份在本地
-
 	3. sync 
        双向备份，保持网盘文件和本地文件严格一致
 
+  示例:
+    1. 将本地的 C:\Users\Administrator\Video 整个目录备份到网盘 /视频 目录
+    注意区别反斜杠 "\" 和 斜杠 "/" !!!
+    aliyunpan-go backup C:/Users/Administrator/Video /视频
 `,
 		Category: "阿里云盘",
 		Before:   cmder.ReloadConfigFunc,
@@ -51,25 +54,56 @@ func CmdSync() cli.Command {
 				fmt.Println("未登录账号")
 				return nil
 			}
-			blockSize := int64(c.Int("bs") * 1024)
-			RunSync(blockSize)
+			dp := c.Int("dp")
+			if dp == 0 {
+				dp = config.Config.MaxDownloadParallel
+			}
+			if dp == 0 {
+				dp = 5
+			}
+
+			up := c.Int("up")
+			if up == 0 {
+				up = config.Config.MaxUploadParallel
+			}
+			if up == 0 {
+				up = 5
+			}
+
+			downloadBlockSize := int64(config.Config.CacheSize)
+			if downloadBlockSize == 0 {
+				downloadBlockSize = int64(256 * 1024)
+			}
+
+			uploadBlockSize := int64(c.Int("ubs") * 1024)
+			if uploadBlockSize == 0 {
+				uploadBlockSize = aliyunpan.DefaultChunkSize
+			}
+
+			RunSync(up, dp, uploadBlockSize, downloadBlockSize)
 			return nil
 		},
 		Flags: []cli.Flag{
-			cli.BoolFlag{
-				Name:  "log",
-				Usage: "开启log输出",
+			cli.IntFlag{
+				Name:  "dp",
+				Usage: "Download Parallel, 下载并发数量，即可以同时并发下载多少个文件。0代表跟从配置文件设置（取值范围:1 ~ 10）",
+				Value: 0,
 			},
 			cli.IntFlag{
-				Name:  "bs",
-				Usage: "block size，上传分片大小，单位KB。推荐值：1024 ~ 10240",
+				Name:  "up",
+				Usage: "upload parallel, 上传并发数量，即可以同时并发上传多少个文件。0代表跟从配置文件设置（取值范围:1 ~ 10）",
+				Value: 0,
+			},
+			cli.IntFlag{
+				Name:  "ubs",
+				Usage: "upload block size，上传分片大小，单位KB。推荐值：1024 ~ 10240",
 				Value: 10240,
 			},
 		},
 	}
 }
 
-func RunSync(uploadBlockSize int64) {
+func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64) {
 	activeUser := GetActiveUser()
 	panClient := activeUser.PanClient()
 
@@ -92,7 +126,8 @@ func RunSync(uploadBlockSize int64) {
 	}
 
 	fmt.Println("启动同步备份进程")
-	syncMgr := syncdrive.NewSyncTaskManager(activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath)
+	syncMgr := syncdrive.NewSyncTaskManager(activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath,
+		fileDownloadParallel, fileUploadParallel, downloadBlockSize, uploadBlockSize)
 	if _, e := syncMgr.Start(); e != nil {
 		fmt.Println("启动任务失败：", e)
 		return

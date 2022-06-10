@@ -46,6 +46,11 @@ type (
 
 		panClient *aliyunpan.PanClient
 
+		fileDownloadParallel  int
+		fileUploadParallel    int
+		fileDownloadBlockSize int64
+		fileUploadBlockSize   int64
+
 		fileActionTaskManager *FileActionTaskManager
 	}
 )

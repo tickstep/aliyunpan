@@ -14,7 +14,13 @@ import (
 type (
 	// SyncTaskManager 同步任务管理器
 	SyncTaskManager struct {
-		syncDriveConfig      *SyncDriveConfig
+		syncDriveConfig *SyncDriveConfig
+
+		fileDownloadParallel  int
+		fileUploadParallel    int
+		fileDownloadBlockSize int64
+		fileUploadBlockSize   int64
+
 		DriveId              string
 		PanClient            *aliyunpan.PanClient
 		SyncConfigFolderPath string
@@ -31,11 +37,17 @@ var (
 	ErrSyncTaskListEmpty error = fmt.Errorf("no sync task")
 )
 
-func NewSyncTaskManager(driveId string, panClient *aliyunpan.PanClient, syncConfigFolderPath string) *SyncTaskManager {
+func NewSyncTaskManager(driveId string, panClient *aliyunpan.PanClient, syncConfigFolderPath string, fileDownloadParallel, fileUploadParallel int, fileDownloadBlockSize, fileUploadBlockSize int64) *SyncTaskManager {
 	return &SyncTaskManager{
 		DriveId:              driveId,
 		PanClient:            panClient,
 		SyncConfigFolderPath: syncConfigFolderPath,
+
+		fileDownloadParallel: fileDownloadParallel,
+		fileUploadParallel:   fileUploadParallel,
+
+		fileDownloadBlockSize: fileDownloadBlockSize,
+		fileUploadBlockSize:   fileUploadBlockSize,
 	}
 }
 
@@ -103,6 +115,10 @@ func (m *SyncTaskManager) Start() (bool, error) {
 		task.DriveId = m.DriveId
 		task.syncDbFolderPath = m.SyncConfigFolderPath
 		task.panClient = m.PanClient
+		task.fileUploadParallel = m.fileUploadParallel
+		task.fileDownloadParallel = m.fileDownloadParallel
+		task.fileUploadBlockSize = m.fileUploadBlockSize
+		task.fileDownloadBlockSize = m.fileDownloadBlockSize
 		if e := task.Start(); e != nil {
 			logger.Verboseln(e)
 			fmt.Println("start sync task error: {}", task.Id)

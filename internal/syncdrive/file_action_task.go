@@ -30,7 +30,6 @@ type (
 		syncFileDb  SyncFileDb
 
 		panClient *aliyunpan.PanClient
-		blockSize int64
 
 		syncItem *SyncFileItem
 
@@ -200,7 +199,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	if f.syncItem.DownloadRange == nil {
 		f.syncItem.DownloadRange = &transfer.Range{
 			Begin: 0,
-			End:   f.blockSize,
+			End:   f.syncItem.DownloadBlockSize,
 		}
 	}
 	worker.SetRange(f.syncItem.DownloadRange) // 分片
@@ -238,7 +237,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 
 				// 下一个分片
 				f.syncItem.DownloadRange.Begin = f.syncItem.DownloadRange.End
-				f.syncItem.DownloadRange.End += f.blockSize
+				f.syncItem.DownloadRange.End += f.syncItem.DownloadBlockSize
 
 				// 存储状态
 				f.syncFileDb.Update(f.syncItem)
