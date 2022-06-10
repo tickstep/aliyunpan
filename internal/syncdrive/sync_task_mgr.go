@@ -70,7 +70,7 @@ func (m *SyncTaskManager) parseConfigFile() error {
 	 ]
 	}
 	*/
-	configFilePath := m.configFilePath()
+	configFilePath := m.ConfigFilePath()
 	r := &SyncDriveConfig{
 		ConfigVer:    "1.0",
 		SyncTaskList: []*SyncTask{},
@@ -79,8 +79,8 @@ func (m *SyncTaskManager) parseConfigFile() error {
 
 	if b, _ := utils.PathExists(configFilePath); b != true {
 		//text := utils.ObjectToJsonStr(r, true)
-		//ioutil.WriteFile(configFilePath, []byte(text), 0600)
-		return fmt.Errorf("备份配置文件不存在")
+		//ioutil.WriteFile(ConfigFilePath, []byte(text), 0600)
+		return fmt.Errorf("备份配置文件不存在：" + m.ConfigFilePath())
 	}
 	data, e := ioutil.ReadFile(configFilePath)
 	if e != nil {
@@ -96,14 +96,14 @@ func (m *SyncTaskManager) parseConfigFile() error {
 	return nil
 }
 
-func (m *SyncTaskManager) configFilePath() string {
+func (m *SyncTaskManager) ConfigFilePath() string {
 	return path.Join(m.SyncConfigFolderPath, "sync_drive_config.json")
 }
 
 // Start 启动同步进程
 func (m *SyncTaskManager) Start() (bool, error) {
-	if m.parseConfigFile() != nil {
-		return false, nil
+	if er := m.parseConfigFile(); er != nil {
+		return false, er
 	}
 	if m.syncDriveConfig.SyncTaskList == nil || len(m.syncDriveConfig.SyncTaskList) == 0 {
 		return false, ErrSyncTaskListEmpty
@@ -132,7 +132,7 @@ func (m *SyncTaskManager) Start() (bool, error) {
 		time.Sleep(200 * time.Millisecond)
 	}
 	// save config file
-	ioutil.WriteFile(m.configFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0600)
+	ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0600)
 	return true, nil
 }
 
@@ -149,6 +149,6 @@ func (m *SyncTaskManager) Stop() (bool, error) {
 	}
 
 	// save config file
-	ioutil.WriteFile(m.configFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0600)
+	ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0600)
 	return true, nil
 }

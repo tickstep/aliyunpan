@@ -172,11 +172,11 @@ func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, up
 	if useInternalUrl {
 		typeUrlStr = "阿里ECS内部链接"
 	}
-	fmt.Printf("链接类型：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",
-		typeUrlStr, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
-		converter.ConvertFileSize(uploadBlockSize, 2))
 	syncMgr := syncdrive.NewSyncTaskManager(activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath,
 		fileDownloadParallel, fileUploadParallel, downloadBlockSize, uploadBlockSize, useInternalUrl)
+	fmt.Printf("备份配置文件：%s\n链接类型：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",
+		syncMgr.ConfigFilePath(), typeUrlStr, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
+		converter.ConvertFileSize(uploadBlockSize, 2))
 	if _, e := syncMgr.Start(); e != nil {
 		fmt.Println("启动任务失败：", e)
 		return
