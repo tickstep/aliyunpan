@@ -50,6 +50,7 @@ type (
 		fileUploadParallel    int
 		fileDownloadBlockSize int64
 		fileUploadBlockSize   int64
+		useInternalUrl        bool
 
 		fileActionTaskManager *FileActionTaskManager
 	}

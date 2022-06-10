@@ -20,6 +20,7 @@ type (
 		fileUploadParallel    int
 		fileDownloadBlockSize int64
 		fileUploadBlockSize   int64
+		useInternalUrl        bool
 
 		DriveId              string
 		PanClient            *aliyunpan.PanClient
@@ -37,17 +38,18 @@ var (
 	ErrSyncTaskListEmpty error = fmt.Errorf("no sync task")
 )
 
-func NewSyncTaskManager(driveId string, panClient *aliyunpan.PanClient, syncConfigFolderPath string, fileDownloadParallel, fileUploadParallel int, fileDownloadBlockSize, fileUploadBlockSize int64) *SyncTaskManager {
+func NewSyncTaskManager(driveId string, panClient *aliyunpan.PanClient, syncConfigFolderPath string,
+	fileDownloadParallel, fileUploadParallel int, fileDownloadBlockSize, fileUploadBlockSize int64, useInternalUrl bool) *SyncTaskManager {
 	return &SyncTaskManager{
 		DriveId:              driveId,
 		PanClient:            panClient,
 		SyncConfigFolderPath: syncConfigFolderPath,
 
-		fileDownloadParallel: fileDownloadParallel,
-		fileUploadParallel:   fileUploadParallel,
-
+		fileDownloadParallel:  fileDownloadParallel,
+		fileUploadParallel:    fileUploadParallel,
 		fileDownloadBlockSize: fileDownloadBlockSize,
 		fileUploadBlockSize:   fileUploadBlockSize,
+		useInternalUrl:        useInternalUrl,
 	}
 }
 
@@ -119,6 +121,7 @@ func (m *SyncTaskManager) Start() (bool, error) {
 		task.fileDownloadParallel = m.fileDownloadParallel
 		task.fileUploadBlockSize = m.fileUploadBlockSize
 		task.fileDownloadBlockSize = m.fileDownloadBlockSize
+		task.useInternalUrl = m.useInternalUrl
 		if e := task.Start(); e != nil {
 			logger.Verboseln(e)
 			fmt.Println("start sync task error: {}", task.Id)

@@ -32,6 +32,8 @@ type (
 
 		fileDownloadBlockSize int64
 		fileUploadBlockSize   int64
+
+		useInternalUrl bool
 	}
 
 	localFileSet struct {
@@ -56,6 +58,7 @@ func NewFileActionTaskManager(task *SyncTask) *FileActionTaskManager {
 
 		fileDownloadBlockSize: task.fileDownloadBlockSize,
 		fileUploadBlockSize:   task.fileUploadBlockSize,
+		useInternalUrl:        task.useInternalUrl,
 	}
 }
 
@@ -256,6 +259,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 							DriveId:           f.task.DriveId,
 							DownloadBlockSize: f.fileDownloadBlockSize,
 							UploadBlockSize:   f.fileUploadBlockSize,
+							UseInternalUrl:    f.useInternalUrl,
 						},
 					}
 					f.addToSyncDb(fileActionTask)
@@ -274,6 +278,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 							DriveId:           f.task.DriveId,
 							DownloadBlockSize: f.fileDownloadBlockSize,
 							UploadBlockSize:   f.fileUploadBlockSize,
+							UseInternalUrl:    f.useInternalUrl,
 						},
 					}
 					f.addToSyncDb(fileActionTask)
@@ -308,6 +313,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 							DriveId:           f.task.DriveId,
 							DownloadBlockSize: f.fileDownloadBlockSize,
 							UploadBlockSize:   f.fileUploadBlockSize,
+							UseInternalUrl:    f.useInternalUrl,
 						},
 					}
 					f.addToSyncDb(fileActionTask)
@@ -326,6 +332,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 							DriveId:           f.task.DriveId,
 							DownloadBlockSize: f.fileDownloadBlockSize,
 							UploadBlockSize:   f.fileUploadBlockSize,
+							UseInternalUrl:    f.useInternalUrl,
 						},
 					}
 					f.addToSyncDb(fileActionTask)
@@ -366,6 +373,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						DriveId:           f.task.DriveId,
 						DownloadBlockSize: f.fileDownloadBlockSize,
 						UploadBlockSize:   f.fileUploadBlockSize,
+						UseInternalUrl:    f.useInternalUrl,
 					},
 				}
 				f.addToSyncDb(deletePanFile)
@@ -390,6 +398,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						DriveId:           f.task.DriveId,
 						DownloadBlockSize: f.fileDownloadBlockSize,
 						UploadBlockSize:   f.fileUploadBlockSize,
+						UseInternalUrl:    f.useInternalUrl,
 					},
 				}
 				f.addToSyncDb(deletePanFile)
@@ -449,6 +458,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 					DriveId:           f.task.DriveId,
 					DownloadBlockSize: f.fileDownloadBlockSize,
 					UploadBlockSize:   f.fileUploadBlockSize,
+					UseInternalUrl:    f.useInternalUrl,
 				},
 			}
 			f.addToSyncDb(uploadLocalFile)
@@ -465,6 +475,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 					DriveId:           f.task.DriveId,
 					DownloadBlockSize: f.fileDownloadBlockSize,
 					UploadBlockSize:   f.fileUploadBlockSize,
+					UseInternalUrl:    f.useInternalUrl,
 				},
 			}
 			f.addToSyncDb(downloadPanFile)
@@ -482,6 +493,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						DriveId:           f.task.DriveId,
 						DownloadBlockSize: f.fileDownloadBlockSize,
 						UploadBlockSize:   f.fileUploadBlockSize,
+						UseInternalUrl:    f.useInternalUrl,
 					},
 				}
 				f.addToSyncDb(uploadLocalFile)
@@ -498,6 +510,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						DriveId:           f.task.DriveId,
 						DownloadBlockSize: f.fileDownloadBlockSize,
 						UploadBlockSize:   f.fileUploadBlockSize,
+						UseInternalUrl:    f.useInternalUrl,
 					},
 				}
 				f.addToSyncDb(downloadPanFile)

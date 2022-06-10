@@ -20,6 +20,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/syncdrive"
 	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"os"
@@ -43,9 +44,8 @@ func CmdSync() cli.Command {
        双向备份，保持网盘文件和本地文件严格一致
 
   示例:
-    1. 将本地的 C:\Users\Administrator\Video 整个目录备份到网盘 /视频 目录
-    注意区别反斜杠 "\" 和 斜杠 "/" !!!
-    aliyunpan-go backup C:/Users/Administrator/Video /视频
+    1. 启动同步备份任务
+    aliyunpan-go sync start
 `,
 		Category: "阿里云盘",
 		Before:   cmder.ReloadConfigFunc,
@@ -59,7 +59,7 @@ func CmdSync() cli.Command {
 				dp = config.Config.MaxDownloadParallel
 			}
 			if dp == 0 {
-				dp = 5
+				dp = 2
 			}
 
 			up := c.Int("up")
@@ -67,7 +67,7 @@ func CmdSync() cli.Command {
 				up = config.Config.MaxUploadParallel
 			}
 			if up == 0 {
-				up = 5
+				up = 2
 			}
 
 			downloadBlockSize := int64(config.Config.CacheSize)
@@ -86,7 +86,7 @@ func CmdSync() cli.Command {
 		Flags: []cli.Flag{
 			cli.IntFlag{
 				Name:  "dp",
-				Usage: "Download Parallel, 下载并发数量，即可以同时并发下载多少个文件。0代表跟从配置文件设置（取值范围:1 ~ 10）",
+				Usage: "download parallel, 下载并发数量，即可以同时并发下载多少个文件。0代表跟从配置文件设置（取值范围:1 ~ 10）",
 				Value: 0,
 			},
 			cli.IntFlag{
@@ -104,6 +104,7 @@ func CmdSync() cli.Command {
 }
 
 func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64) {
+	useInternalUrl := config.Config.TransferUrlType == 2
 	activeUser := GetActiveUser()
 	panClient := activeUser.PanClient()
 
@@ -126,8 +127,15 @@ func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, up
 	}
 
 	fmt.Println("启动同步备份进程")
+	typeUrlStr := "默认"
+	if useInternalUrl {
+		typeUrlStr = "阿里ECS内部链接"
+	}
+	fmt.Printf("链接类型：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",
+		typeUrlStr, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
+		converter.ConvertFileSize(uploadBlockSize, 2))
 	syncMgr := syncdrive.NewSyncTaskManager(activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath,
-		fileDownloadParallel, fileUploadParallel, downloadBlockSize, uploadBlockSize)
+		fileDownloadParallel, fileUploadParallel, downloadBlockSize, uploadBlockSize, useInternalUrl)
 	if _, e := syncMgr.Start(); e != nil {
 		fmt.Println("启动任务失败：", e)
 		return

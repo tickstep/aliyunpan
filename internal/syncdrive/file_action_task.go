@@ -184,7 +184,11 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 		return nil
 	}
 
-	worker := downloader.NewWorker(0, f.syncItem.PanFile.DriveId, f.syncItem.PanFile.FileId, durl.Url, writer, nil)
+	downloadUrl := durl.Url
+	if f.syncItem.UseInternalUrl {
+		downloadUrl = durl.InternalUrl
+	}
+	worker := downloader.NewWorker(0, f.syncItem.PanFile.DriveId, f.syncItem.PanFile.FileId, downloadUrl, writer, nil)
 
 	client := requester.NewHTTPClient()
 	client.SetKeepAlive(true)
