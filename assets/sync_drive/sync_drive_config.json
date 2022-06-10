@@ -1,0 +1,11 @@
+{
+ "configVer": "1.0",
+ "syncTaskList": [
+  {
+   "name": "设计文档备份",
+   "localFolderPath": "D:\\tickstep\\Documents\\设计文档",
+   "panFolderPath": "/sync_drive/我的文档",
+   "mode": "upload"
+  }
+ ]
+}
