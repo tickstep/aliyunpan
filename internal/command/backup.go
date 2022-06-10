@@ -33,6 +33,7 @@ func CmdBackup() cli.Command {
 	return cli.Command{
 		Name: "backup",
 		Description: `备份指定 <文件/目录> 到云盘 <目标目录> 中
+该功能已过期，下个版本会删除，请使用sync命令替代。
 
 和上传的功能一样，只是备份多进行了如下操作
 
@@ -65,7 +66,7 @@ func CmdBackup() cli.Command {
     4)排除~号开头的文件：-exn "^~"
     5)排除 myfile.txt 文件：-exn "^myfile.txt$"
 `,
-		Usage:     "备份文件或目录",
+		Usage:     "备份文件或目录(Deprecated)",
 		UsageText: "backup <文件/目录路径1> <文件/目录2> <文件/目录3> ... <目标目录>",
 		Category:  "阿里云盘",
 		Before:    cmder.ReloadConfigFunc,
@@ -145,7 +146,7 @@ func DelRemoteFileFromDB(driveId string, localDir string, savePath string, flagS
 
 		// 本地文件不存在
 		// 删除网盘对应文件
-		fileDeleteResult, err := activeUser.PanClient().FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId:driveId, FileId:ent.FileId}})
+		fileDeleteResult, err := activeUser.PanClient().FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: driveId, FileId: ent.FileId}})
 		if err != nil || len(fileDeleteResult) == 0 {
 			fmt.Println("删除网盘文件或目录失败", ent.Path, err)
 		} else {
@@ -176,7 +177,7 @@ func DelRemoteFileFromDB(driveId string, localDir string, savePath string, flagS
 
 	syncFunc = func(curPath, parentID string) {
 		param := &aliyunpan.FileListParam{
-			DriveId: driveId,
+			DriveId:      driveId,
 			ParentFileId: parentID,
 		}
 		fileResult, err := activeUser.PanClient().FileListGetAll(param)
@@ -193,7 +194,7 @@ func DelRemoteFileFromDB(driveId string, localDir string, savePath string, flagS
 				Size:     fileEntity.FileSize,
 				IsFolder: fileEntity.IsFolder(),
 				Path:     path.Join(curPath, fileEntity.FileName),
-				SHA1:      strings.ToLower(fileEntity.ContentHash),
+				SHA1:     strings.ToLower(fileEntity.ContentHash),
 			}
 
 			if !isLocalFileExist(ufm) {
@@ -248,6 +249,8 @@ func checkPath(localdir string) (string, error) {
 }
 
 func Backup(c *cli.Context) error {
+	fmt.Println("该功能已过期，下个版本会删除，请使用sync命令替代。")
+
 	if c.NArg() < 2 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return nil
@@ -265,9 +268,9 @@ func Backup(c *cli.Context) error {
 		NoRapidUpload: c.Bool("norapid"),
 		ShowProgress:  !c.Bool("np"),
 		IsOverwrite:   true,
-		DriveId:      parseDriveId(c),
-		ExcludeNames: c.StringSlice("exn"),
-		BlockSize: int64(c.Int("bs") * 1024),
+		DriveId:       parseDriveId(c),
+		ExcludeNames:  c.StringSlice("exn"),
+		BlockSize:     int64(c.Int("bs") * 1024),
 	}
 
 	localCount := c.NArg() - 1
