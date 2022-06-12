@@ -300,7 +300,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					fileInfo: rootFolder,
 					path:     t.LocalFolderPath,
 				})
-				delayTimeCount = TimeSecondsOfOneMinute
+				delayTimeCount = TimeSecondsOf30Seconds
 				continue
 			}
 			item := obj.(*folderItem)
@@ -434,7 +434,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 
 				// restart scan loop over again
 				folderQueue.Push(rootPanFile)
-				delayTimeCount = TimeSecondsOf5Minute
+				delayTimeCount = TimeSecondsOfOneMinute
 				continue
 			}
 			item := obj.(*aliyunpan.FileEntity)
