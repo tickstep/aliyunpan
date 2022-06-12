@@ -65,7 +65,7 @@ func CmdSync() cli.Command {
  "syncTaskList": [
   {
    "name": "设计文档备份",
-   "localFolderPath": "D:\\tickstep\\Documents\\设计文档",
+   "localFolderPath": "D:/tickstep/Documents/设计文档",
    "panFolderPath": "/sync_drive/我的文档",
    "mode": "upload"
   }
@@ -75,7 +75,7 @@ func CmdSync() cli.Command {
 name - 任务名称
 localFolderPath - 本地目录
 panFolderPath - 网盘目录
-mode - 模式: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+mode - 模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
 
 	例子:
 	1. 查看帮助
@@ -84,8 +84,8 @@ mode - 模式: upload(备份本地文件到云盘),download(备份云盘文件�
 	2. 使用默认配置启动同步备份服务
 	aliyunpan sync start
 
-	3. 启动sync服务，并配置下载并发为2，上传并发为1，上传分片大小为1MB
-	aliyunpan sync start -dp 2 -up 1 -ubs 1024
+	3. 启动sync服务，并配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
+	aliyunpan sync start -dp 2 -up 1 -dbs 256 -ubs 1024
 
 `,
 				Action: func(c *cli.Context) error {
@@ -109,7 +109,10 @@ mode - 模式: upload(备份本地文件到云盘),download(备份云盘文件�
 						up = 2
 					}
 
-					downloadBlockSize := int64(config.Config.CacheSize)
+					downloadBlockSize := int64(c.Int("dbs") * 1024)
+					if downloadBlockSize == 0 {
+						downloadBlockSize = int64(config.Config.CacheSize)
+					}
 					if downloadBlockSize == 0 {
 						downloadBlockSize = int64(256 * 1024)
 					}
@@ -132,6 +135,11 @@ mode - 模式: upload(备份本地文件到云盘),download(备份云盘文件�
 						Name:  "up",
 						Usage: "upload parallel, 上传并发数量，即可以同时并发上传多少个文件。0代表跟从配置文件设置（取值范围:1 ~ 10）",
 						Value: 0,
+					},
+					cli.IntFlag{
+						Name:  "dbs",
+						Usage: "download block size，下载分片大小，单位KB。推荐值：1 ~ 256",
+						Value: 256,
 					},
 					cli.IntFlag{
 						Name:  "ubs",
@@ -168,7 +176,7 @@ func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, up
 	}
 
 	fmt.Println("启动同步备份进程")
-	typeUrlStr := "默认"
+	typeUrlStr := "默认链接"
 	if useInternalUrl {
 		typeUrlStr = "阿里ECS内部链接"
 	}
