@@ -138,8 +138,8 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 					},
 					cli.IntFlag{
 						Name:  "dbs",
-						Usage: "download block size，下载分片大小，单位KB。推荐值：1 ~ 256",
-						Value: 256,
+						Usage: "download block size，下载分片大小，单位KB。推荐值：1024 ~ 10240",
+						Value: 1024,
 					},
 					cli.IntFlag{
 						Name:  "ubs",
@@ -154,6 +154,8 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 
 func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64) {
 	useInternalUrl := config.Config.TransferUrlType == 2
+	maxDownloadRate := config.Config.MaxDownloadRate
+	maxUploadRate := config.Config.MaxUploadRate
 	activeUser := GetActiveUser()
 	panClient := activeUser.PanClient()
 
@@ -181,7 +183,8 @@ func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, up
 		typeUrlStr = "阿里ECS内部链接"
 	}
 	syncMgr := syncdrive.NewSyncTaskManager(activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath,
-		fileDownloadParallel, fileUploadParallel, downloadBlockSize, uploadBlockSize, useInternalUrl)
+		fileDownloadParallel, fileUploadParallel, downloadBlockSize, uploadBlockSize, useInternalUrl,
+		maxDownloadRate, maxUploadRate)
 	fmt.Printf("备份配置文件：%s\n链接类型：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",
 		syncMgr.ConfigFilePath(), typeUrlStr, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
 		converter.ConvertFileSize(uploadBlockSize, 2))

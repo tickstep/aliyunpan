@@ -39,7 +39,7 @@ func TestFileActionMgrStart(t *testing.T) {
 	}
 	task.setupDb()
 
-	ft := NewFileActionTaskManager(task)
+	ft := NewFileActionTaskManager(task, 0, 0)
 	ft.Start()
 
 	//go func() {

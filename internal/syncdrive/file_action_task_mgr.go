@@ -33,6 +33,9 @@ type (
 		fileDownloadBlockSize int64
 		fileUploadBlockSize   int64
 
+		maxDownloadRate int64 // 限制最大下载速度
+		maxUploadRate   int64 // 限制最大上传速度
+
 		useInternalUrl bool
 	}
 
@@ -46,7 +49,7 @@ type (
 	}
 )
 
-func NewFileActionTaskManager(task *SyncTask) *FileActionTaskManager {
+func NewFileActionTaskManager(task *SyncTask, maxDownloadRate, maxUploadRate int64) *FileActionTaskManager {
 	return &FileActionTaskManager{
 		mutex:             &sync.Mutex{},
 		folderCreateMutex: &sync.Mutex{},
@@ -59,6 +62,9 @@ func NewFileActionTaskManager(task *SyncTask) *FileActionTaskManager {
 		fileDownloadBlockSize: task.fileDownloadBlockSize,
 		fileUploadBlockSize:   task.fileUploadBlockSize,
 		useInternalUrl:        task.useInternalUrl,
+
+		maxDownloadRate: maxDownloadRate,
+		maxUploadRate:   maxUploadRate,
 	}
 }
 
@@ -571,6 +577,8 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						syncFileDb:           f.task.syncFileDb,
 						panClient:            f.task.panClient,
 						syncItem:             file,
+						maxDownloadRate:      f.maxDownloadRate,
+						maxUploadRate:        f.maxUploadRate,
 						panFolderCreateMutex: f.folderCreateMutex,
 					}
 				}
@@ -586,6 +594,8 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						syncFileDb:           f.task.syncFileDb,
 						panClient:            f.task.panClient,
 						syncItem:             file,
+						maxDownloadRate:      f.maxDownloadRate,
+						maxUploadRate:        f.maxUploadRate,
 						panFolderCreateMutex: f.folderCreateMutex,
 					}
 				}
@@ -603,6 +613,8 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						syncFileDb:           f.task.syncFileDb,
 						panClient:            f.task.panClient,
 						syncItem:             file,
+						maxDownloadRate:      f.maxDownloadRate,
+						maxUploadRate:        f.maxUploadRate,
 						panFolderCreateMutex: f.folderCreateMutex,
 					}
 				}

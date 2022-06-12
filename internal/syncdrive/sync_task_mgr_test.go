@@ -28,6 +28,7 @@ func TestStart(t *testing.T) {
 		int64(256*1024),
 		aliyunpan.DefaultChunkSize,
 		false,
+		0, 0,
 	)
 
 	manager.Start()

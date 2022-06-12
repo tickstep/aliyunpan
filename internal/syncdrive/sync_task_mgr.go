@@ -22,6 +22,9 @@ type (
 		fileUploadBlockSize   int64
 		useInternalUrl        bool
 
+		maxDownloadRate int64 // 限制最大下载速度
+		maxUploadRate   int64 // 限制最大上传速度
+
 		DriveId              string
 		PanClient            *aliyunpan.PanClient
 		SyncConfigFolderPath string
@@ -39,7 +42,8 @@ var (
 )
 
 func NewSyncTaskManager(driveId string, panClient *aliyunpan.PanClient, syncConfigFolderPath string,
-	fileDownloadParallel, fileUploadParallel int, fileDownloadBlockSize, fileUploadBlockSize int64, useInternalUrl bool) *SyncTaskManager {
+	fileDownloadParallel, fileUploadParallel int, fileDownloadBlockSize, fileUploadBlockSize int64, useInternalUrl bool,
+	maxDownloadRate, maxUploadRate int64) *SyncTaskManager {
 	return &SyncTaskManager{
 		DriveId:              driveId,
 		PanClient:            panClient,
@@ -50,6 +54,9 @@ func NewSyncTaskManager(driveId string, panClient *aliyunpan.PanClient, syncConf
 		fileDownloadBlockSize: fileDownloadBlockSize,
 		fileUploadBlockSize:   fileUploadBlockSize,
 		useInternalUrl:        useInternalUrl,
+
+		maxDownloadRate: maxDownloadRate,
+		maxUploadRate:   maxUploadRate,
 	}
 }
 
@@ -122,6 +129,8 @@ func (m *SyncTaskManager) Start() (bool, error) {
 		task.fileUploadBlockSize = m.fileUploadBlockSize
 		task.fileDownloadBlockSize = m.fileDownloadBlockSize
 		task.useInternalUrl = m.useInternalUrl
+		task.maxDownloadRate = m.maxDownloadRate
+		task.maxUploadRate = m.maxUploadRate
 		if e := task.Start(); e != nil {
 			logger.Verboseln(e)
 			fmt.Println("start sync task error: {}", task.Id)

@@ -52,6 +52,9 @@ type (
 		fileUploadBlockSize   int64
 		useInternalUrl        bool
 
+		maxDownloadRate int64 // 限制最大下载速度
+		maxUploadRate   int64 // 限制最大上传速度
+
 		fileActionTaskManager *FileActionTaskManager
 	}
 )
@@ -110,7 +113,7 @@ func (t *SyncTask) Start() error {
 	t.setupDb()
 
 	if t.fileActionTaskManager == nil {
-		t.fileActionTaskManager = NewFileActionTaskManager(t)
+		t.fileActionTaskManager = NewFileActionTaskManager(t, t.maxDownloadRate, t.maxUploadRate)
 	}
 
 	t.wg = waitgroup.NewWaitGroup(0)
@@ -385,21 +388,18 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 			continue
 		}
 		fullPath += "/" + p
-		fi, err := t.panClient.FileInfoByPath(t.DriveId, fullPath)
-		if err != nil {
-			return
-		}
-		pFile := NewPanFileItem(fi)
-		pFile.ScanTimeAt = utils.NowTimeStr()
-		t.panFileDb.Add(pFile)
-		time.Sleep(200 * time.Millisecond)
 	}
-
-	folderQueue := collection.NewFifoQueue()
-	rootPanFile, err := t.panClient.FileInfoByPath(t.DriveId, t.PanFolderPath)
+	fi, err := t.panClient.FileInfoByPath(t.DriveId, fullPath)
 	if err != nil {
 		return
 	}
+	pFile := NewPanFileItem(fi)
+	pFile.ScanTimeAt = utils.NowTimeStr()
+	t.panFileDb.Add(pFile)
+	time.Sleep(200 * time.Millisecond)
+
+	folderQueue := collection.NewFifoQueue()
+	rootPanFile := fi
 	folderQueue.Push(rootPanFile)
 	startTimeOfThisLoop := time.Now().Unix()
 	delayTimeCount := int64(0)
@@ -452,9 +452,9 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 				panFileInDb, _ := t.panFileDb.Get(file.Path)
 				if panFileInDb == nil {
 					// append
-					pFile := NewPanFileItem(file)
-					pFile.ScanTimeAt = utils.NowTimeStr()
-					panFileList = append(panFileList, pFile)
+					pFile1 := NewPanFileItem(file)
+					pFile1.ScanTimeAt = utils.NowTimeStr()
+					panFileList = append(panFileList, pFile1)
 				} else {
 					// update newest info into DB
 					panFileInDb.DomainId = file.DomainId
@@ -480,7 +480,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 					logger.Verboseln("add files to pan file db error {}", er)
 				}
 			}
-			time.Sleep(10 * time.Second) // 延迟避免触发风控
+			time.Sleep(2 * time.Second) // 延迟避免触发风控
 		}
 	}
 }

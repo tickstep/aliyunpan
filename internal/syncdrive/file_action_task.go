@@ -14,6 +14,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio"
+	"github.com/tickstep/library-go/requester/rio/speeds"
 	"os"
 	"path"
 	"path/filepath"
@@ -31,7 +32,9 @@ type (
 
 		panClient *aliyunpan.PanClient
 
-		syncItem *SyncFileItem
+		syncItem        *SyncFileItem
+		maxDownloadRate int64 // 限制最大下载速度
+		maxUploadRate   int64 // 限制最大上传速度
 
 		panFolderCreateMutex *sync.Mutex
 	}
@@ -57,8 +60,14 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 		} else {
 			// upload success, post operation
 			// save local file info into db
-			if file, er := f.panClient.FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
-				f.panFileDb.Add(NewPanFileItem(file))
+			if f.syncItem.UploadEntity != nil && f.syncItem.UploadEntity.FileId != "" {
+				if file, er := f.panClient.FileInfoById(f.syncItem.DriveId, f.syncItem.UploadEntity.FileId); er == nil {
+					f.panFileDb.Add(NewPanFileItem(file))
+				}
+			} else {
+				if file, er := f.panClient.FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
+					f.panFileDb.Add(NewPanFileItem(file))
+				}
 			}
 		}
 	}
@@ -190,6 +199,29 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	}
 	worker := downloader.NewWorker(0, f.syncItem.PanFile.DriveId, f.syncItem.PanFile.FileId, downloadUrl, writer, nil)
 
+	// 限速
+	if f.maxDownloadRate > 0 {
+		rl := speeds.NewRateLimit(f.maxDownloadRate)
+		defer rl.Stop()
+		status := &transfer.DownloadStatus{}
+		status.SetRateLimit(rl)
+		worker.SetDownloadStatus(status)
+
+		//go func() {
+		//	for {
+		//		time.Sleep(1000 * time.Millisecond)
+		//		builder := &strings.Builder{}
+		//		status.UpdateSpeeds()
+		//		fmt.Fprintf(builder, "\r↓ %s/%s %s/s ............",
+		//			converter.ConvertFileSize(status.Downloaded(), 2),
+		//			converter.ConvertFileSize(status.TotalSize(), 2),
+		//			converter.ConvertFileSize(status.SpeedsPerSecond(), 2),
+		//		)
+		//		fmt.Print(builder.String())
+		//	}
+		//}()
+	}
+
 	client := requester.NewHTTPClient()
 	client.SetKeepAlive(true)
 	client.SetTimeout(10 * time.Minute)
@@ -246,6 +278,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 				// 存储状态
 				f.syncFileDb.Update(f.syncItem)
 			}
+			// TODO: 下载链接过期处理
 		}
 	}
 }
@@ -290,27 +323,27 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		}
 
 		// 检查同名文件是否存在
-		efi, apierr := f.panClient.FileInfoByPath(f.syncItem.DriveId, targetPanFilePath)
-		if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
-			return apierr
+		panFileId := ""
+		if panFileInDb, e := f.panFileDb.Get(targetPanFilePath); e == nil {
+			if panFileInDb != nil {
+				panFileId = panFileInDb.FileId
+			}
+		} else {
+			efi, apierr := f.panClient.FileInfoByPath(f.syncItem.DriveId, targetPanFilePath)
+			if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
+				return apierr
+			}
+			if efi != nil && efi.FileId != "" {
+				panFileId = efi.FileId
+			}
+			time.Sleep(5 * time.Second)
 		}
-		if efi != nil && efi.FileId != "" {
-			if strings.ToUpper(efi.ContentHash) == strings.ToUpper(sha1Str) {
-				logger.Verbosef("检测到同名文件，文件内容完全一致，无需重复上传: %s\n", targetPanFilePath)
-				f.syncItem.Status = SyncFileStatusSuccess
-				f.syncItem.StatusUpdateTime = utils.NowTimeStr()
-				f.syncFileDb.Update(f.syncItem)
-				return nil
-			}
-			// existed, delete it
-			var fileDeleteResult []*aliyunpan.FileBatchActionResult
-			var err *apierror.ApiError
-			fileDeleteResult, err = f.panClient.FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: efi.DriveId, FileId: efi.FileId}})
-			if err != nil || len(fileDeleteResult) == 0 {
-				return err
-			}
-			time.Sleep(time.Duration(500) * time.Millisecond)
-			logger.Verbosef("检测到同名文件，已移动到回收站: %s\n", targetPanFilePath)
+		if strings.ToUpper(panFileId) == strings.ToUpper(sha1Str) {
+			logger.Verbosef("检测到同名文件，文件内容完全一致，无需重复上传: %s\n", targetPanFilePath)
+			f.syncItem.Status = SyncFileStatusSuccess
+			f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+			f.syncFileDb.Update(f.syncItem)
+			return nil
 		}
 
 		// 创建文件夹
@@ -351,7 +384,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			Size:            localFile.Length,
 			ContentHash:     sha1Str,
 			ContentHashName: "sha1",
-			CheckNameMode:   "auto_rename",
+			CheckNameMode:   "overwrite", // 覆盖云盘文件
 			ParentFileId:    panDirFileId,
 			BlockSize:       f.syncItem.UploadBlockSize,
 			ProofCode:       proofCode,
@@ -410,6 +443,12 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 	// 但是不支持分片同时上传，必须单线程，并且按照顺序从1开始一个一个上传
 	worker := panupload.NewPanUpload(f.panClient, f.syncItem.getPanFileFullPath(), f.syncItem.DriveId, f.syncItem.UploadEntity, f.syncItem.UseInternalUrl)
 
+	// 限速配置
+	var rateLimit *speeds.RateLimit
+	if f.maxUploadRate > 0 {
+		rateLimit = speeds.NewRateLimit(f.maxUploadRate)
+	}
+
 	// 上传客户端
 	uploadClient := requester.NewHTTPClient()
 	uploadClient.SetTimeout(0)
@@ -434,7 +473,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			if f.syncItem.UploadRange.End > f.syncItem.LocalFile.FileSize {
 				f.syncItem.UploadRange.End = f.syncItem.LocalFile.FileSize
 			}
-			fileReader := uploader.NewBufioSplitUnit(rio.NewFileReaderAtLen64(localFile.GetFile()), *f.syncItem.UploadRange, nil, nil, nil)
+			fileReader := uploader.NewBufioSplitUnit(rio.NewFileReaderAtLen64(localFile.GetFile()), *f.syncItem.UploadRange, nil, rateLimit, nil)
 
 			if uploadDone, terr := worker.UploadFile(ctx, f.syncItem.UploadPartSeq, f.syncItem.UploadRange.Begin, f.syncItem.UploadRange.End, fileReader, uploadClient); terr == nil {
 				if uploadDone {
