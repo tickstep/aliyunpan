@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/GeertJohan/go.incremental v1.0.0
 	github.com/boltdb/bolt v1.3.1 // indirect
-	github.com/deckarep/golang-set v1.8.0 // indirect
+	github.com/deckarep/golang-set v1.8.0
 	github.com/dop251/goja v0.0.0-20220408131256-ffe77e20c6f1
 	github.com/json-iterator/go v1.1.12
 	github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1
@@ -14,7 +14,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.2-0.20190618033246-cc27d85e17ce
 	github.com/peterh/liner v1.2.1
 	github.com/satori/go.uuid v1.2.0
-	github.com/tickstep/aliyunpan-api v0.0.6
+	github.com/tickstep/aliyunpan-api v0.0.7
 	github.com/tickstep/bolt v1.3.3
 	github.com/tickstep/library-go v0.0.5
 	github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f
