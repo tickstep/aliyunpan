@@ -222,6 +222,7 @@ func (t *SyncTask) discardLocalFileDb(filePath string, startTimeUnix int64) {
 			// label file discard
 			file.ScanStatus = ScanStatusDiscard
 			t.localFileDb.Update(file)
+			logger.Verboseln("label local file discard: ", utils.ObjectToJsonStr(file, false))
 		} else {
 			if file.IsFolder() {
 				t.discardLocalFileDb(file.Path, startTimeUnix)
@@ -323,6 +324,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					// append
 					localFile.ScanTimeAt = utils.NowTimeStr()
 					localFileAppendList = append(localFileAppendList, localFile)
+					logger.Verboseln("add local file to db: ", utils.ObjectToJsonStr(localFile, false))
 				} else {
 					// update newest info into DB
 					if localFile.UpdateTimeUnix() > localFileInDb.UpdateTimeUnix() {
@@ -334,6 +336,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					localFileInDb.FileType = localFile.FileType
 					localFileInDb.ScanTimeAt = utils.NowTimeStr()
 					localFileInDb.ScanStatus = ScanStatusNormal
+					logger.Verboseln("update local file to db: ", utils.ObjectToJsonStr(localFileInDb, false))
 					if _, er := t.localFileDb.Update(localFileInDb); er != nil {
 						logger.Verboseln("local db update error ", er)
 					}
@@ -370,6 +373,7 @@ func (t *SyncTask) discardPanFileDb(filePath string, startTimeUnix int64) {
 			// label file discard
 			file.ScanStatus = ScanStatusDiscard
 			t.panFileDb.Update(file)
+			logger.Verboseln("label pan file discard: ", utils.ObjectToJsonStr(file, false))
 		} else {
 			if file.IsFolder() {
 				t.discardPanFileDb(file.Path, startTimeUnix)
@@ -455,6 +459,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 					pFile1 := NewPanFileItem(file)
 					pFile1.ScanTimeAt = utils.NowTimeStr()
 					panFileList = append(panFileList, pFile1)
+					logger.Verboseln("add pan file to db: ", utils.ObjectToJsonStr(pFile1, false))
 				} else {
 					// update newest info into DB
 					panFileInDb.DomainId = file.DomainId
@@ -468,6 +473,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 					panFileInDb.CreatedAt = file.CreatedAt
 					panFileInDb.ScanTimeAt = utils.NowTimeStr()
 					panFileInDb.ScanStatus = ScanStatusNormal
+					logger.Verboseln("update pan file to db: ", utils.ObjectToJsonStr(panFileInDb, false))
 					t.panFileDb.Update(panFileInDb)
 				}
 

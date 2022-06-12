@@ -144,7 +144,7 @@ func (f *FileActionTaskManager) doLocalFileDiffRoutine(ctx context.Context) {
 					continue
 				}
 			}
-			logger.Verboseln("do file diff process")
+			//logger.Verboseln("do file diff process")
 			localFiles := LocalFileList{}
 			panFiles := PanFileList{}
 			var err error
@@ -195,7 +195,7 @@ func (f *FileActionTaskManager) doPanFileDiffRoutine(ctx context.Context) {
 					continue
 				}
 			}
-			logger.Verboseln("do file diff process")
+			//logger.Verboseln("do file diff process")
 			localFiles := LocalFileList{}
 			panFiles := PanFileList{}
 			var err error
@@ -445,7 +445,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 
 		if strings.ToLower(panFile.Sha1Hash) == strings.ToLower(localFile.Sha1Hash) {
 			// do nothing
-			logger.Verboseln("no need to update file: ", localFile.Path)
+			logger.Verboseln("file is the same, no need to update file: ", localFile.Path)
 			continue
 		}
 
@@ -647,7 +647,7 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 			downloadWaitGroup.Wait()
 			return
 		default:
-			logger.Verboseln("do file executor process")
+			//logger.Verboseln("do file executor process")
 
 			// do upload
 			uploadItem := f.getFromSyncDb(SyncFileActionUpload)

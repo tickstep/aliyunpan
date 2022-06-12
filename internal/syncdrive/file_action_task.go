@@ -51,8 +51,7 @@ func (f *FileActionTask) HashCode() string {
 }
 
 func (f *FileActionTask) DoAction(ctx context.Context) error {
-	logger.Verboseln("file action task")
-	logger.Verboseln(f.syncItem)
+	logger.Verboseln("file action task：", utils.ObjectToJsonStr(f.syncItem, false))
 	if f.syncItem.Action == SyncFileActionUpload {
 		if e := f.uploadFile(ctx); e != nil {
 			// TODO: retry / cleanup downloading file
