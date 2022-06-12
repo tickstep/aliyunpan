@@ -2,7 +2,7 @@ version: '3'
 
 services:
   webdav:
-    image: tickstep/aliyunpan-webdav:tag
+    image: tickstep/aliyunpan-webdav:v0.1.0
     container_name: aliyunpan-webdav
     restart: always
     ports:
@@ -10,7 +10,7 @@ services:
     environment:
       - TZ=Asia/Shanghai
       # refresh token
-      - ALIYUNPAN_REFRESH_TOKEN=b9123...13e66a1
+      - ALIYUNPAN_REFRESH_TOKEN=4dd40e8b165...42b8833e4a507b6
       # webdav 登录用户名
       - ALIYUNPAN_AUTH_USER=admin
       # webdav 登录密码

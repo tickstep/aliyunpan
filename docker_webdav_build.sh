@@ -23,7 +23,7 @@ unzip -d ./out ./out/$ZIP_FILE_NAME.zip
 mv ./out/$ZIP_FILE_NAME ./out/binary_files
 
 docker build \
--f ./docker/Dockerfile \
+-f ./docker/webdav/Dockerfile \
 -t $docker_image_name:$version-$ARCH \
 --build-arg DOCKER_IMAGE_HASH=$DOCKER_IMAGE_HASH \
 --no-cache .
@@ -39,7 +39,7 @@ unzip -d ./out ./out/$ZIP_FILE_NAME.zip
 mv ./out/$ZIP_FILE_NAME ./out/binary_files
 
 docker build \
--f ./docker/Dockerfile \
+-f ./docker/webdav/Dockerfile \
 -t $docker_image_name:$version-$ARCH \
 --build-arg DOCKER_IMAGE_HASH=$DOCKER_IMAGE_HASH \
 --no-cache .
@@ -55,7 +55,7 @@ unzip -d ./out ./out/$ZIP_FILE_NAME.zip
 mv ./out/$ZIP_FILE_NAME ./out/binary_files
 
 docker build \
--f ./docker/Dockerfile \
+-f ./docker/webdav/Dockerfile \
 -t $docker_image_name:$version-$ARCH \
 --build-arg DOCKER_IMAGE_HASH=$DOCKER_IMAGE_HASH \
 --no-cache .
@@ -71,7 +71,7 @@ unzip -d ./out ./out/$ZIP_FILE_NAME.zip
 mv ./out/$ZIP_FILE_NAME ./out/binary_files
 
 docker build \
--f ./docker/Dockerfile \
+-f ./docker/webdav/Dockerfile \
 -t $docker_image_name:$version-$ARCH \
 --build-arg DOCKER_IMAGE_HASH=$DOCKER_IMAGE_HASH \
 --no-cache .
@@ -87,7 +87,7 @@ unzip -d ./out ./out/$ZIP_FILE_NAME.zip
 mv ./out/$ZIP_FILE_NAME ./out/binary_files
 
 docker build \
--f ./docker/Dockerfile \
+-f ./docker/webdav/Dockerfile \
 -t $docker_image_name:$version-$ARCH \
 --build-arg DOCKER_IMAGE_HASH=$DOCKER_IMAGE_HASH \
 --no-cache .

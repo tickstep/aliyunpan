@@ -25,7 +25,7 @@ RUN cd /home/app
 RUN mkdir /home/app/config
 
 # 复制文件
-COPY ./docker/app.sh /home/app/app.sh
+COPY ./docker/webdav/app.sh /home/app/app.sh
 RUN chmod +x /home/app/app.sh
 
 COPY ./out/binary_files/aliyunpan /home/app
