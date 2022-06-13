@@ -7,7 +7,7 @@ FROM alpine@sha256:$DOCKER_IMAGE_HASH
 LABEL author="tickstep"
 LABEL email="tickstep@outlook.com"
 LABEL version="1.0"
-LABEL description="webdav file server for aliyun cloud drive"
+LABEL description="sync & backup service for aliyun cloud drive"
 
 # 时区
 ENV TZ=Asia/Shanghai
@@ -24,8 +24,12 @@ RUN cd /home/app
 # 创建配置文件目录
 RUN mkdir /home/app/config
 
+# 创建数据文件夹
+RUN mkdir /home/app/data
+RUN chmod 777 /home/app/data
+
 # 复制文件
-COPY ./docker/webdav/app.sh /home/app/app.sh
+COPY ./docker/sync/app.sh /home/app/app.sh
 RUN chmod +x /home/app/app.sh
 
 COPY ./out/binary_files/aliyunpan /home/app
@@ -33,14 +37,19 @@ COPY ./out/binary_files/plugin /home/app/config
 COPY ./out/binary_files/sync_drive /home/app/config
 #RUN chmod +x /home/app/aliyunpan
 
-EXPOSE 23077
+# 环境变量
 ENV ALIYUNPAN_CONFIG_DIR=/home/app/config
-ENV ALIYUNPAN_AUTH_USER=admin
-ENV ALIYUNPAN_AUTH_PASSWORD=admin
-ENV ALIYUNPAN_PAN_DRIVE=File
-ENV ALIYUNPAN_PAN_DIR=/
+
 ENV ALIYUNPAN_REFRESH_TOKEN=""
 ENV ALIYUNPAN_TRANSFER_URL_TYPE=0
-ENV ALIYUNPAN_BLOCK_SIZE=10240
 
+ENV ALIYUNPAN_DOWNLOAD_PARALLEL=2
+ENV ALIYUNPAN_UPLOAD_PARALLEL=2
+ENV ALIYUNPAN_DOWNLOAD_BLOCK_SIZE=1024
+ENV ALIYUNPAN_UPLOAD_BLOCK_SIZE=10240
+ENV ALIYUNPAN_LOCAL_DIR=/home/app/data
+ENV ALIYUNPAN_PAN_DIR=/sync_drive
+ENV ALIYUNPAN_SYNC_MODE=upload
+
+# 运行
 ENTRYPOINT ./app.sh

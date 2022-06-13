@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+  webdav:
+    image: tickstep/aliyunpan-sync:v0.1.5-amd64
+    container_name: aliyunpan-sync
+    restart: always
+    volumes:
+      - ./data:/home/app/data:rw
+    environment:
+      - TZ=Asia/Shanghai
+      # refresh token
+      - ALIYUNPAN_REFRESH_TOKEN=8bf31a...7628a8ad5a0975bf2d9
+      # 上传下载链接类型：1-默认 2-阿里ECS环境
+      - ALIYUNPAN_TRANSFER_URL_TYPE=1
+      # 下载文件并发数
+      - ALIYUNPAN_DOWNLOAD_PARALLEL=2
+      # 上传文件并发数
+      - ALIYUNPAN_UPLOAD_PARALLEL=2
+      # 下载数据块大小，单位为KB，默认为10240KB，建议范围1024KB~10240KB
+      - ALIYUNPAN_DOWNLOAD_BLOCK_SIZE=1024
+      # 上传数据块大小，单位为KB，默认为10240KB，建议范围1024KB~10240KB
+      - ALIYUNPAN_UPLOAD_BLOCK_SIZE=10240
+      # 指定网盘文件夹作为备份目录，建议不要指定根目录
+      - ALIYUNPAN_PAN_DIR=/my_sync_dir
+      # 备份模式：upload(备份本地文件到云盘), download(备份云盘文件到本地), sync(双向同步备份)
+      - ALIYUNPAN_SYNC_MODE=upload
+
+
+
