@@ -32,6 +32,14 @@ func (p *IdlePlugin) DownloadFileFinishCallback(context *Context, params *Downlo
 	return nil
 }
 
+func (p *IdlePlugin) SyncScanLocalFilePrepareCallback(context *Context, params *SyncScanLocalFilePrepareParams) (*SyncScanLocalFilePrepareResult, error) {
+	return nil, nil
+}
+
+func (p *IdlePlugin) SyncScanPanFilePrepareCallback(context *Context, params *SyncScanPanFilePrepareParams) (*SyncScanPanFilePrepareResult, error) {
+	return nil, nil
+}
+
 func (p *IdlePlugin) Stop() error {
 	return nil
 }

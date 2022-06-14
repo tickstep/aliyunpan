@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/logger"
 	"io/ioutil"
@@ -25,6 +26,7 @@ type (
 		maxDownloadRate int64 // 限制最大下载速度
 		maxUploadRate   int64 // 限制最大上传速度
 
+		PanUser              *config.PanUser
 		DriveId              string
 		PanClient            *aliyunpan.PanClient
 		SyncConfigFolderPath string
@@ -41,10 +43,11 @@ var (
 	ErrSyncTaskListEmpty error = fmt.Errorf("no sync task")
 )
 
-func NewSyncTaskManager(driveId string, panClient *aliyunpan.PanClient, syncConfigFolderPath string,
+func NewSyncTaskManager(user *config.PanUser, driveId string, panClient *aliyunpan.PanClient, syncConfigFolderPath string,
 	fileDownloadParallel, fileUploadParallel int, fileDownloadBlockSize, fileUploadBlockSize int64, useInternalUrl bool,
 	maxDownloadRate, maxUploadRate int64) *SyncTaskManager {
 	return &SyncTaskManager{
+		PanUser:              user,
 		DriveId:              driveId,
 		PanClient:            panClient,
 		SyncConfigFolderPath: syncConfigFolderPath,
@@ -121,6 +124,7 @@ func (m *SyncTaskManager) Start() (bool, error) {
 		if len(task.Id) == 0 {
 			task.Id = utils.UuidStr()
 		}
+		task.panUser = m.PanUser
 		task.DriveId = m.DriveId
 		task.syncDbFolderPath = m.SyncConfigFolderPath
 		task.panClient = m.PanClient

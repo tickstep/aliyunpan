@@ -182,7 +182,7 @@ func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, up
 	if useInternalUrl {
 		typeUrlStr = "阿里ECS内部链接"
 	}
-	syncMgr := syncdrive.NewSyncTaskManager(activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath,
+	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath,
 		fileDownloadParallel, fileUploadParallel, downloadBlockSize, uploadBlockSize, useInternalUrl,
 		maxDownloadRate, maxUploadRate)
 	fmt.Printf("备份配置文件：%s\n链接类型：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",

@@ -20,6 +20,7 @@ func TestStart(t *testing.T) {
 	user, _ := panClient.GetUserInfo()
 
 	manager := NewSyncTaskManager(
+		nil,
 		user.FileDriveId,
 		panClient,
 		"D:\\smb\\feny\\goprojects\\dev\\sync_drive",

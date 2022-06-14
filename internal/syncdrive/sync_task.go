@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/aliyunpan/library/collection"
@@ -44,6 +46,7 @@ type (
 		ctx        context.Context
 		cancelFunc context.CancelFunc
 
+		panUser   *config.PanUser
 		panClient *aliyunpan.PanClient
 
 		fileDownloadParallel  int
@@ -56,6 +59,8 @@ type (
 		maxUploadRate   int64 // 限制最大上传速度
 
 		fileActionTaskManager *FileActionTaskManager
+
+		plugin plugins.Plugin
 	}
 )
 
@@ -114,6 +119,11 @@ func (t *SyncTask) Start() error {
 
 	if t.fileActionTaskManager == nil {
 		t.fileActionTaskManager = NewFileActionTaskManager(t, t.maxDownloadRate, t.maxUploadRate)
+	}
+
+	if t.plugin == nil {
+		pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+		t.plugin, _ = pluginManger.GetPlugin()
 	}
 
 	t.wg = waitgroup.NewWaitGroup(0)
@@ -231,6 +241,25 @@ func (t *SyncTask) discardLocalFileDb(filePath string, startTimeUnix int64) {
 	}
 }
 
+func (t *SyncTask) skipLocalFile(file *LocalFileItem) bool {
+	// 插件回调
+	pluginParam := &plugins.SyncScanLocalFilePrepareParams{
+		LocalFilePath:      file.Path,
+		LocalFileName:      file.FileName,
+		LocalFileSize:      file.FileSize,
+		LocalFileType:      file.FileType,
+		LocalFileUpdatedAt: file.UpdatedAt,
+		DriveId:            t.DriveId,
+	}
+	if result, er := t.plugin.SyncScanLocalFilePrepareCallback(plugins.GetContext(t.panUser), pluginParam); er == nil && result != nil {
+		if strings.Compare("no", result.SyncScanLocalApproved) == 0 {
+			// skip this file
+			return true
+		}
+	}
+	return false
+}
+
 // scanLocalFile 本地文件循环扫描进程
 func (t *SyncTask) scanLocalFile(ctx context.Context) {
 	type folderItem struct {
@@ -319,6 +348,11 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 				}
 
 				localFile := newLocalFileItem(file, item.path+"/"+file.Name())
+				if t.skipLocalFile(localFile) {
+					logger.Verboseln("插件禁止扫描本地文件: ", localFile.Path)
+					continue
+				}
+
 				localFileInDb, _ := t.localFileDb.Get(localFile.Path)
 				if localFileInDb == nil {
 					// append
@@ -380,6 +414,26 @@ func (t *SyncTask) discardPanFileDb(filePath string, startTimeUnix int64) {
 			}
 		}
 	}
+}
+
+func (t *SyncTask) skipPanFile(file *PanFileItem) bool {
+	// 插件回调
+	pluginParam := &plugins.SyncScanPanFilePrepareParams{
+		DriveId:            file.DriveId,
+		DriveFileName:      file.FileName,
+		DriveFilePath:      file.Path,
+		DriveFileSha1:      file.Sha1Hash,
+		DriveFileSize:      file.FileSize,
+		DriveFileType:      file.FileType,
+		DriveFileUpdatedAt: file.UpdatedAt,
+	}
+	if result, er := t.plugin.SyncScanPanFilePrepareCallback(plugins.GetContext(t.panUser), pluginParam); er == nil && result != nil {
+		if strings.Compare("no", result.SyncScanPanApproved) == 0 {
+			// skip this file
+			return true
+		}
+	}
+	return false
 }
 
 // scanPanFile 云盘文件循环扫描进程
@@ -452,14 +506,17 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 			panFileList := PanFileList{}
 			for _, file := range files {
 				file.Path = path.Join(item.Path, file.FileName)
-				//fmt.Println(utils.ObjectToJsonStr(file, true))
+				panFile := NewPanFileItem(file)
+				if t.skipPanFile(panFile) {
+					logger.Verboseln("插件禁止扫描云盘文件: ", panFile.Path)
+					continue
+				}
 				panFileInDb, _ := t.panFileDb.Get(file.Path)
 				if panFileInDb == nil {
 					// append
-					pFile1 := NewPanFileItem(file)
-					pFile1.ScanTimeAt = utils.NowTimeStr()
-					panFileList = append(panFileList, pFile1)
-					logger.Verboseln("add pan file to db: ", utils.ObjectToJsonStr(pFile1, false))
+					panFile.ScanTimeAt = utils.NowTimeStr()
+					panFileList = append(panFileList, panFile)
+					logger.Verboseln("add pan file to db: ", utils.ObjectToJsonStr(panFile, false))
 				} else {
 					// update newest info into DB
 					panFileInDb.DomainId = file.DomainId

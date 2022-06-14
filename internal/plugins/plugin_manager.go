@@ -18,6 +18,16 @@ type (
 )
 
 func GetContext(user *config.PanUser) *Context {
+	if user == nil {
+		return &Context{
+			AppName:      "aliyunpan",
+			Version:      config.AppVersion,
+			UserId:       "",
+			Nickname:     "",
+			FileDriveId:  "",
+			AlbumDriveId: "",
+		}
+	}
 	return &Context{
 		AppName:      "aliyunpan",
 		Version:      config.AppVersion,

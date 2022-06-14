@@ -152,6 +152,44 @@ func (js *JsPlugin) DownloadFileFinishCallback(context *Context, params *Downloa
 	return nil
 }
 
+// SyncScanLocalFilePrepareCallback 同步备份-扫描本地文件的回调函数
+func (js *JsPlugin) SyncScanLocalFilePrepareCallback(context *Context, params *SyncScanLocalFilePrepareParams) (*SyncScanLocalFilePrepareResult, error) {
+	var fn func(*Context, *SyncScanLocalFilePrepareParams) (*SyncScanLocalFilePrepareResult, error)
+	if !js.isHandlerFuncExisted("syncScanLocalFilePrepareCallback") {
+		return nil, nil
+	}
+	err := js.vm.ExportTo(js.vm.Get("syncScanLocalFilePrepareCallback"), &fn)
+	if err != nil {
+		logger.Verboseln("Js函数映射到 Go 函数失败！")
+		return nil, nil
+	}
+	r, er := fn(context, params)
+	if er != nil {
+		logger.Verboseln(er)
+		return nil, er
+	}
+	return r, nil
+}
+
+// SyncScanPanFilePrepareCallback 同步备份-扫描本地文件的回调函数
+func (js *JsPlugin) SyncScanPanFilePrepareCallback(context *Context, params *SyncScanPanFilePrepareParams) (*SyncScanPanFilePrepareResult, error) {
+	var fn func(*Context, *SyncScanPanFilePrepareParams) (*SyncScanPanFilePrepareResult, error)
+	if !js.isHandlerFuncExisted("syncScanPanFilePrepareCallback") {
+		return nil, nil
+	}
+	err := js.vm.ExportTo(js.vm.Get("syncScanPanFilePrepareCallback"), &fn)
+	if err != nil {
+		logger.Verboseln("Js函数映射到 Go 函数失败！")
+		return nil, nil
+	}
+	r, er := fn(context, params)
+	if er != nil {
+		logger.Verboseln(er)
+		return nil, er
+	}
+	return r, nil
+}
+
 func (js *JsPlugin) Stop() error {
 	return nil
 }
