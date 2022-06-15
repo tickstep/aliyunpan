@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  webdav:
+  sync:
     image: tickstep/aliyunpan-sync:v0.1.5
     container_name: aliyunpan-sync
     restart: always
