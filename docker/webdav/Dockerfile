@@ -29,8 +29,10 @@ COPY ./docker/webdav/app.sh /home/app/app.sh
 RUN chmod +x /home/app/app.sh
 
 COPY ./out/binary_files/aliyunpan /home/app
-COPY ./out/binary_files/plugin /home/app/config
-COPY ./out/binary_files/sync_drive /home/app/config
+RUN mkdir /home/app/config/plugin
+COPY ./out/binary_files/plugin /home/app/config/plugin
+RUN mkdir /home/app/config/sync_drive
+COPY ./out/binary_files/sync_drive /home/app/config/sync_drive
 #RUN chmod +x /home/app/aliyunpan
 
 EXPOSE 23077
