@@ -193,8 +193,8 @@ func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, up
 		return
 	}
 	c := ""
+	fmt.Print("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止：")
 	for strings.ToLower(c) != "y" {
-		fmt.Print("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止：")
 		fmt.Scan(&c)
 	}
 	fmt.Println("正在停止同步备份任务，请稍等...")
