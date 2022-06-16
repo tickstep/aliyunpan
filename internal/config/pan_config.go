@@ -195,8 +195,8 @@ func (c *PanConfig) lazyOpenConfigFile() (err error) {
 	}
 
 	c.fileMu.Lock()
-	os.MkdirAll(filepath.Dir(c.configFilePath), 0700)
-	c.configFile, err = os.OpenFile(c.configFilePath, os.O_CREATE|os.O_RDWR, 0600)
+	os.MkdirAll(filepath.Dir(c.configFilePath), 0755)
+	c.configFile, err = os.OpenFile(c.configFilePath, os.O_CREATE|os.O_RDWR, 0755)
 	c.fileMu.Unlock()
 
 	if err != nil {

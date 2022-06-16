@@ -89,7 +89,7 @@ func (m *SyncTaskManager) parseConfigFile() error {
 
 	if b, _ := utils.PathExists(configFilePath); b != true {
 		//text := utils.ObjectToJsonStr(r, true)
-		//ioutil.WriteFile(ConfigFilePath, []byte(text), 0600)
+		//ioutil.WriteFile(ConfigFilePath, []byte(text), 0755)
 		return fmt.Errorf("备份配置文件不存在：" + m.ConfigFilePath())
 	}
 	data, e := ioutil.ReadFile(configFilePath)
@@ -145,7 +145,7 @@ func (m *SyncTaskManager) Start() (bool, error) {
 		time.Sleep(200 * time.Millisecond)
 	}
 	// save config file
-	ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0600)
+	ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0755)
 	return true, nil
 }
 
@@ -162,6 +162,6 @@ func (m *SyncTaskManager) Stop() (bool, error) {
 	}
 
 	// save config file
-	ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0600)
+	ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0755)
 	return true, nil
 }

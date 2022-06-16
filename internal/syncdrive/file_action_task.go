@@ -176,7 +176,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	}
 	localDir := path.Dir(f.syncItem.getLocalFileFullPath())
 	if b, e := utils.PathExists(localDir); e == nil && !b {
-		os.MkdirAll(localDir, 0600)
+		os.MkdirAll(localDir, 0755)
 		time.Sleep(200 * time.Millisecond)
 	}
 	writer, file, err := downloader.NewDownloaderWriterByFilename(f.syncItem.getLocalFileDownloadingFullPath(), os.O_CREATE|os.O_WRONLY, 0666)

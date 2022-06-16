@@ -36,7 +36,7 @@ func NewBoltDb(dbFilePath string) *BoltDb {
 }
 
 func (b *BoltDb) Open() (bool, error) {
-	db, err := bolt.Open(b.Path, 0600, &bolt.Options{Timeout: 5 * time.Second})
+	db, err := bolt.Open(b.Path, 0755, &bolt.Options{Timeout: 5 * time.Second})
 	if err != nil {
 		return false, err
 	}

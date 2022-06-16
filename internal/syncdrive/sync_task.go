@@ -179,7 +179,7 @@ func (t *SyncTask) Stop() error {
 func (t *SyncTask) panSyncDbFullPath() string {
 	dir := path.Join(t.syncDbFolderPath, t.Id)
 	if b, _ := utils.PathExists(dir); !b {
-		os.MkdirAll(dir, 0600)
+		os.MkdirAll(dir, 0755)
 	}
 	return path.Join(dir, "pan.bolt")
 }
@@ -188,7 +188,7 @@ func (t *SyncTask) panSyncDbFullPath() string {
 func (t *SyncTask) localSyncDbFullPath() string {
 	dir := path.Join(t.syncDbFolderPath, t.Id)
 	if b, _ := utils.PathExists(dir); !b {
-		os.MkdirAll(dir, 0600)
+		os.MkdirAll(dir, 0755)
 	}
 	return path.Join(dir, "local.bolt")
 }
@@ -197,7 +197,7 @@ func (t *SyncTask) localSyncDbFullPath() string {
 func (t *SyncTask) syncFileDbFullPath() string {
 	dir := path.Join(t.syncDbFolderPath, t.Id)
 	if b, _ := utils.PathExists(dir); !b {
-		os.MkdirAll(dir, 0600)
+		os.MkdirAll(dir, 0755)
 	}
 	return path.Join(dir, "sync.bolt")
 }

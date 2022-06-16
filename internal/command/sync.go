@@ -173,7 +173,7 @@ func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, up
 	syncFolderRootPath := config.GetSyncDriveDir()
 	if b, e := utils.PathExists(syncFolderRootPath); e == nil {
 		if !b {
-			os.MkdirAll(syncFolderRootPath, 0600)
+			os.MkdirAll(syncFolderRootPath, 0755)
 		}
 	}
 
