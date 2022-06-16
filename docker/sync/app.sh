@@ -5,7 +5,7 @@ chmod +x ./aliyunpan
 readonly sync_drive_config_file="$ALIYUNPAN_CONFIG_DIR/sync_drive/sync_drive_config.json"
 if test -s $sync_drive_config_file
 then
-  echo "sync_drive_config.json is existed"
+  echo "using existed sync_drive_config.json file"
 else
   echo "generate sync_drive_config.json file"
   tee $sync_drive_config_file << EOF
