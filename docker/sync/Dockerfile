@@ -31,6 +31,8 @@ RUN chmod 777 /home/app/data
 # 复制文件
 COPY ./docker/sync/app.sh /home/app/app.sh
 RUN chmod +x /home/app/app.sh
+COPY ./docker/sync/health_check.sh /home/app/health_check.sh
+RUN chmod +x /home/app/health_check.sh
 
 COPY ./out/binary_files/aliyunpan /home/app
 RUN mkdir -p /home/app/config/plugin
@@ -38,6 +40,9 @@ COPY ./out/binary_files/plugin /home/app/config/plugin
 RUN mkdir -p /home/app/config/sync_drive
 COPY ./out/binary_files/sync_drive /home/app/config/sync_drive
 #RUN chmod +x /home/app/aliyunpan
+
+# 健康检查
+HEALTHCHECK --start-period=5s --interval=10s --timeout=5s --retries=3 CMD /bin/sh /home/app/health_check.sh
 
 # 环境变量
 ENV ALIYUNPAN_CONFIG_DIR=/home/app/config
