@@ -312,10 +312,11 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			sha1Str = f.syncItem.LocalFile.Sha1Hash
 		} else {
 			logger.Verbosef("正在计算文件SHA1: %s\n", localFile.Path)
-			localFile.Sum(localfile.CHECKSUM_SHA1)
-			sha1Str = localFile.SHA1
 			if localFile.Length == 0 {
 				sha1Str = aliyunpan.DefaultZeroSizeFileContentHash
+			} else {
+				localFile.Sum(localfile.CHECKSUM_SHA1)
+				sha1Str = localFile.SHA1
 			}
 			f.syncItem.LocalFile.Sha1Hash = sha1Str
 			f.syncFileDb.Update(f.syncItem)

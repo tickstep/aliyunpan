@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	mapset "github.com/deckarep/golang-set"
+	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/localfile"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/aliyunpan/library/collection"
@@ -430,14 +431,18 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 
 		if localFile.Sha1Hash == "" {
 			// calc sha1
-			fileSum := localfile.NewLocalFileEntity(localFile.Path)
-			err := fileSum.OpenPath()
-			if err != nil {
-				logger.Verbosef("文件不可读, 错误信息: %s, 跳过...\n", err)
+			if localFile.FileSize == 0 {
+				localFile.Sha1Hash = aliyunpan.DefaultZeroSizeFileContentHash
+			} else {
+				fileSum := localfile.NewLocalFileEntity(localFile.Path)
+				err := fileSum.OpenPath()
+				if err != nil {
+					logger.Verbosef("文件不可读, 错误信息: %s, 跳过...\n", err)
+				}
+				fileSum.Sum(localfile.CHECKSUM_SHA1) // block operation
+				localFile.Sha1Hash = fileSum.SHA1
+				fileSum.Close()
 			}
-			fileSum.Sum(localfile.CHECKSUM_SHA1) // block operation
-			localFile.Sha1Hash = fileSum.SHA1
-			fileSum.Close()
 
 			// save sha1
 			f.task.localFileDb.Update(localFile)
