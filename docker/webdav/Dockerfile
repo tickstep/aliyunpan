@@ -27,6 +27,8 @@ RUN mkdir -p /home/app/config
 # 复制文件
 COPY ./docker/webdav/app.sh /home/app/app.sh
 RUN chmod +x /home/app/app.sh
+COPY ./docker/webdav/health_check.sh /home/app/health_check.sh
+RUN chmod +x /home/app/health_check.sh
 
 COPY ./out/binary_files/aliyunpan /home/app
 RUN mkdir -p /home/app/config/plugin
@@ -35,7 +37,13 @@ RUN mkdir -p /home/app/config/sync_drive
 COPY ./out/binary_files/sync_drive /home/app/config/sync_drive
 #RUN chmod +x /home/app/aliyunpan
 
+# 健康检查
+HEALTHCHECK --start-period=5s --interval=10s --timeout=5s --retries=3 CMD /bin/sh /home/app/health_check.sh
+
+# 端口
 EXPOSE 23077
+
+# 环境变量
 ENV ALIYUNPAN_CONFIG_DIR=/home/app/config
 ENV ALIYUNPAN_AUTH_USER=admin
 ENV ALIYUNPAN_AUTH_PASSWORD=admin
