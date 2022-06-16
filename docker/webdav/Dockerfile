@@ -22,16 +22,16 @@ WORKDIR /home/app
 RUN cd /home/app
 
 # 创建配置文件目录
-RUN mkdir /home/app/config
+RUN mkdir -p /home/app/config
 
 # 复制文件
 COPY ./docker/webdav/app.sh /home/app/app.sh
 RUN chmod +x /home/app/app.sh
 
 COPY ./out/binary_files/aliyunpan /home/app
-RUN mkdir /home/app/config/plugin
+RUN mkdir -p /home/app/config/plugin
 COPY ./out/binary_files/plugin /home/app/config/plugin
-RUN mkdir /home/app/config/sync_drive
+RUN mkdir -p /home/app/config/sync_drive
 COPY ./out/binary_files/sync_drive /home/app/config/sync_drive
 #RUN chmod +x /home/app/aliyunpan
 
