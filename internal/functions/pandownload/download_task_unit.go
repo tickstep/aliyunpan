@@ -348,6 +348,9 @@ func (dtu *DownloadTaskUnit) OnFailed(lastRunResult *taskframework.TaskUnitRunRe
 }
 
 func (dtu *DownloadTaskUnit) pluginCallback(result string) {
+	if dtu.fileInfo == nil {
+		return
+	}
 	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
 	plugin, _ := pluginManger.GetPlugin()
 	pluginParam := &plugins.DownloadFileFinishParams{

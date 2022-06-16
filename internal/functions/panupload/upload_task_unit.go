@@ -267,6 +267,9 @@ func (utu *UploadTaskUnit) OnFailed(lastRunResult *taskframework.TaskUnitRunResu
 }
 
 func (utu *UploadTaskUnit) pluginCallback(result string) {
+	if utu.LocalFileChecksum == nil {
+		return
+	}
 	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
 	plugin, _ := pluginManger.GetPlugin()
 	_, fileName := filepath.Split(utu.LocalFileChecksum.Path)
