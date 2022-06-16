@@ -16,11 +16,11 @@ package uploader
 import (
 	"context"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio"
 	"github.com/tickstep/library-go/requester/rio/speeds"
-	"github.com/tickstep/aliyunpan/internal/utils"
 	"sync"
 	"time"
 )
@@ -44,13 +44,13 @@ type (
 
 		instanceState *InstanceState
 
-		multiUpload MultiUpload       // 上传体接口
-		file        rio.ReaderAtLen64 // 上传
-		config      *MultiUploaderConfig
-		workers     workerList
-		speedsStat  *speeds.Speeds
-		rateLimit   *speeds.RateLimit
-		globalSpeedsStat  *speeds.Speeds // 全局速度统计
+		multiUpload      MultiUpload       // 上传体接口
+		file             rio.ReaderAtLen64 // 上传
+		config           *MultiUploaderConfig
+		workers          workerList
+		speedsStat       *speeds.Speeds
+		rateLimit        *speeds.RateLimit
+		globalSpeedsStat *speeds.Speeds // 全局速度统计
 
 		executeTime             time.Time
 		finished                chan struct{}
@@ -71,12 +71,12 @@ type (
 )
 
 // NewMultiUploader 初始化上传
-func NewMultiUploader(multiUpload MultiUpload, file rio.ReaderAtLen64, config *MultiUploaderConfig, uploadOpEntity *aliyunpan.CreateFileUploadResult, globalSpeedsStat  *speeds.Speeds) *MultiUploader {
+func NewMultiUploader(multiUpload MultiUpload, file rio.ReaderAtLen64, config *MultiUploaderConfig, uploadOpEntity *aliyunpan.CreateFileUploadResult, globalSpeedsStat *speeds.Speeds) *MultiUploader {
 	return &MultiUploader{
-		multiUpload: multiUpload,
-		file:        file,
-		config:      config,
-		UploadOpEntity: uploadOpEntity,
+		multiUpload:      multiUpload,
+		file:             file,
+		config:           config,
+		UploadOpEntity:   uploadOpEntity,
 		globalSpeedsStat: globalSpeedsStat,
 	}
 }
@@ -123,7 +123,7 @@ func (muer *MultiUploader) check() {
 }
 
 // Execute 执行上传
-func (muer *MultiUploader) Execute() {
+func (muer *MultiUploader) Execute() error {
 	muer.check()
 	muer.lazyInit()
 
@@ -171,6 +171,7 @@ func (muer *MultiUploader) Execute() {
 		utils.TriggerOnSync(muer.onSuccessEvent)
 	}
 	utils.TriggerOnSync(muer.onFinishEvent)
+	return err
 }
 
 // InstanceState 返回断点续传信息
@@ -178,8 +179,8 @@ func (muer *MultiUploader) InstanceState() *InstanceState {
 	blockStates := make([]*BlockState, 0, len(muer.workers))
 	for _, wer := range muer.workers {
 		blockStates = append(blockStates, &BlockState{
-			ID:       wer.id,
-			Range:    wer.splitUnit.Range(),
+			ID:         wer.id,
+			Range:      wer.splitUnit.Range(),
 			UploadDone: wer.uploadDone,
 		})
 	}

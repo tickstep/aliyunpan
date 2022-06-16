@@ -15,8 +15,8 @@ package uploader
 
 import (
 	"context"
-	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/oleiade/lane"
+	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/library-go/requester"
 	"os"
 	"strconv"
@@ -27,7 +27,7 @@ type (
 		id         int
 		partOffset int64
 		splitUnit  SplitUnit
-		uploadDone   bool
+		uploadDone bool
 	}
 
 	workerList []*worker
@@ -114,11 +114,10 @@ func (muer *MultiUploader) upload() (uperr error) {
 						} else if me.NeedStartOver {
 							uploaderVerbose.Warnf("upload start over: %d\n", wer.id)
 							// 从头开始上传
-							uploadDeque = lane.NewDeque()
-							for _,item := range muer.workers {
-								item.uploadDone = false
-								uploadDeque.Append(item)
-							}
+							muer.closeCanceledOnce.Do(func() { // 只关闭一次
+								close(muer.canceled)
+							})
+							uperr = me.Err
 							return
 						}
 					}

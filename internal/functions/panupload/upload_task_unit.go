@@ -218,8 +218,12 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 		}
 		return
 	})
-	muer.Execute()
-
+	er := muer.Execute()
+	if er != nil {
+		result.ResultMessage = StrUploadFailed
+		result.NeedRetry = true
+		result.Err = er
+	}
 	return
 }
 
@@ -498,6 +502,15 @@ stepUploadRapidUpload:
 stepUploadUpload:
 	// 正常上传流程
 	uploadResult := utu.upload()
-
+	if uploadResult != nil && uploadResult.Err != nil {
+		if uploadResult.Err == uploadPartNotSeq {
+			fmt.Printf("[%s] %s 文件分片上传顺序错误，开始重新上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+			// 需要重新从0开始上传
+			uploadResult = nil
+			utu.LocalFileChecksum.UploadOpEntity = nil
+			utu.state = nil
+			goto StepUploadPrepareUpload
+		}
+	}
 	return uploadResult
 }

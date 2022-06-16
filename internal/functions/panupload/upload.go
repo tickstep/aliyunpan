@@ -150,7 +150,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 					errResp := &apierror.ErrorXmlResp{}
 					if err := xml.Unmarshal(buf, errResp); err == nil {
 						if errResp.Code != "" {
-							if "PartNotSequential" == errResp.Code {
+							if "PartNotSequential" == errResp.Code || "NoSuchUpload" == errResp.Code {
 								respError = uploadPartNotSeq
 								respErr = &uploader.MultiError{
 									Err:           uploadPartNotSeq,
