@@ -286,6 +286,12 @@ func (der *Downloader) checkLoadBalancers() *LoadBalancerResponseList {
 func (der *Downloader) Execute() error {
 	der.lazyInit()
 
+	// zero file, no need to download data
+	if der.fileInfo.FileSize == 0 {
+		cmdutil.Trigger(der.onFinishEvent)
+		return nil
+	}
+
 	var (
 		loadBalancerResponseList = der.checkLoadBalancers()
 		bii                      *transfer.DownloadInstanceInfo
