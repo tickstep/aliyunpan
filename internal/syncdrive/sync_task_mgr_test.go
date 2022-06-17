@@ -32,7 +32,7 @@ func TestStart(t *testing.T) {
 		0, 0,
 	)
 
-	manager.Start()
+	manager.Start(nil)
 	time.Sleep(30 * time.Minute)
 	manager.Stop()
 }

@@ -30,6 +30,9 @@ type (
 		DriveId              string
 		PanClient            *aliyunpan.PanClient
 		SyncConfigFolderPath string
+
+		// useConfigFile 是否使用配置文件启动
+		useConfigFile bool
 	}
 
 	// SyncDriveConfig 同步盘配置文件
@@ -111,9 +114,19 @@ func (m *SyncTaskManager) ConfigFilePath() string {
 }
 
 // Start 启动同步进程
-func (m *SyncTaskManager) Start() (bool, error) {
-	if er := m.parseConfigFile(); er != nil {
-		return false, er
+func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
+	if tasks != nil && len(tasks) > 0 {
+		m.syncDriveConfig = &SyncDriveConfig{
+			ConfigVer:    "1.0",
+			SyncTaskList: []*SyncTask{},
+		}
+		m.syncDriveConfig.SyncTaskList = tasks
+		m.useConfigFile = false
+	} else {
+		if er := m.parseConfigFile(); er != nil {
+			return false, er
+		}
+		m.useConfigFile = true
 	}
 	if m.syncDriveConfig.SyncTaskList == nil || len(m.syncDriveConfig.SyncTaskList) == 0 {
 		return false, ErrSyncTaskListEmpty
@@ -145,7 +158,9 @@ func (m *SyncTaskManager) Start() (bool, error) {
 		time.Sleep(200 * time.Millisecond)
 	}
 	// save config file
-	ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0755)
+	if m.useConfigFile {
+		ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0755)
+	}
 	return true, nil
 }
 
@@ -162,6 +177,8 @@ func (m *SyncTaskManager) Stop() (bool, error) {
 	}
 
 	// save config file
-	ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0755)
+	if m.useConfigFile {
+		ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0755)
+	}
 	return true, nil
 }

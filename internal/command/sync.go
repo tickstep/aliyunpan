@@ -24,6 +24,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"os"
+	"path"
 	"strings"
 	"time"
 )
@@ -34,7 +35,9 @@ func CmdSync() cli.Command {
 		Usage:     "同步备份功能(Beta)",
 		UsageText: cmder.App().Name + " sync",
 		Description: `
-	备份功能。指定本地目录和对应的一个网盘目录，以备份文件。网盘目录必须和本地目录独占使用，不要用作其他他用途，不然备份可能会有问题。
+    备份功能。支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
+    指定本地目录和对应的一个网盘目录，以备份文件。网盘目录必须和本地目录独占使用，不要用作其他他用途，不然备份可能会有问题。
+
 	备份功能支持以下三种模式：
 	1. upload 
        备份本地文件，即上传本地文件到网盘，始终保持本地文件有一个完整的备份在网盘
@@ -58,8 +61,9 @@ func CmdSync() cli.Command {
 				Usage:     "启动sync同步备份任务",
 				UsageText: cmder.App().Name + " sync start [arguments...]",
 				Description: `
-使用备份配置文件启动sync同步备份任务。备份配置文件必须存在，不然启动失败。
-同步备份任务的配置文件保存在：(配置目录)/sync_drive/sync_drive_config.json，样例如下：
+备份本地文件到文件网盘，或者备份文件网盘的文件到本地。支持命令行配置启动或者使用备份配置文件启动同步备份任务。
+   
+配置文件保存在：(配置目录)/sync_drive/sync_drive_config.json，样例如下：
 {
  "configVer": "1.0",
  "syncTaskList": [
@@ -76,15 +80,25 @@ name - 任务名称
 localFolderPath - 本地目录
 panFolderPath - 网盘目录
 mode - 模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
-
+    
 	例子:
 	1. 查看帮助
 	aliyunpan sync start -h
+    
+	2. 使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份上传到云盘目录 /sync_drive/我的文档
+	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "upload"
 
-	2. 使用默认配置启动同步备份服务
+	3. 使用命令行配置启动同步备份服务，将云盘目录 /sync_drive/我的文档 中的文件备份下载到本地目录 D:\tickstep\Documents\设计文档
+	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "download"
+
+	4. 使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份到云盘目录 /sync_drive/我的文档
+       同时配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
+	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "upload" -dp 2 -up 1 -dbs 256 -ubs 1024
+    
+	5. 使用配置文件启动同步备份服务，使用配置文件可以支持同时启动多个备份任务。配置文件必须存在，否则启动失败。
 	aliyunpan sync start
 
-	3. 启动sync服务，并配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
+	6. 使用配置文件启动同步备份服务，并配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
 	aliyunpan sync start -dp 2 -up 1 -dbs 256 -ubs 1024
 
 `,
@@ -122,10 +136,48 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 						uploadBlockSize = aliyunpan.DefaultChunkSize
 					}
 
-					RunSync(dp, up, downloadBlockSize, uploadBlockSize)
+					var task *syncdrive.SyncTask
+					localDir := c.String("ldir")
+					panDir := c.String("pdir")
+					mode := c.String("upload")
+					if localDir != "" && panDir != "" {
+						if b, e := utils.PathExists(localDir); e == nil {
+							if !b {
+								fmt.Println("本地文件夹不存在：", localDir)
+								return nil
+							}
+						} else {
+							fmt.Println("本地文件夹不存在：", localDir)
+							return nil
+						}
+						task = &syncdrive.SyncTask{}
+						task.LocalFolderPath = path.Clean(strings.ReplaceAll(localDir, "\\", "/"))
+						task.PanFolderPath = panDir
+						task.Mode = syncdrive.SyncMode(mode)
+						if task.Mode == "" {
+							task.Mode = syncdrive.UploadOnly
+						}
+						task.Name = path.Base(task.LocalFolderPath)
+						task.Id = utils.Md5Str(task.LocalFolderPath)
+					}
+
+					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize)
 					return nil
 				},
 				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "ldir",
+						Usage: "local dir, 本地文件夹完整路径",
+					},
+					cli.StringFlag{
+						Name:  "pdir",
+						Usage: "pan dir, 云盘文件夹完整路径",
+					},
+					cli.StringFlag{
+						Name:  "mode",
+						Usage: "备份模式, 支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)",
+						Value: "upload",
+					},
 					cli.IntFlag{
 						Name:  "dp",
 						Usage: "download parallel, 下载并发数量，即可以同时并发下载多少个文件。0代表跟从配置文件设置（取值范围:1 ~ 10）",
@@ -152,7 +204,7 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 	}
 }
 
-func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64) {
+func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64) {
 	useInternalUrl := config.Config.TransferUrlType == 2
 	maxDownloadRate := config.Config.MaxDownloadRate
 	maxUploadRate := config.Config.MaxUploadRate
@@ -177,6 +229,12 @@ func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, up
 		}
 	}
 
+	var tasks []*syncdrive.SyncTask
+	if defaultTask != nil {
+		tasks = []*syncdrive.SyncTask{}
+		tasks = append(tasks, defaultTask)
+	}
+
 	fmt.Println("启动同步备份进程")
 	typeUrlStr := "默认链接"
 	if useInternalUrl {
@@ -185,10 +243,14 @@ func RunSync(fileDownloadParallel, fileUploadParallel int, downloadBlockSize, up
 	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath,
 		fileDownloadParallel, fileUploadParallel, downloadBlockSize, uploadBlockSize, useInternalUrl,
 		maxDownloadRate, maxUploadRate)
+	syncConfigFile := syncMgr.ConfigFilePath()
+	if tasks != nil {
+		syncConfigFile = "(使用命令行配置)"
+	}
 	fmt.Printf("备份配置文件：%s\n链接类型：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",
-		syncMgr.ConfigFilePath(), typeUrlStr, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
+		syncConfigFile, typeUrlStr, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
 		converter.ConvertFileSize(uploadBlockSize, 2))
-	if _, e := syncMgr.Start(); e != nil {
+	if _, e := syncMgr.Start(tasks); e != nil {
 		fmt.Println("启动任务失败：", e)
 		return
 	}
