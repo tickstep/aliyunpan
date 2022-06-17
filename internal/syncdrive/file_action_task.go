@@ -61,10 +61,12 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			// save local file info into db
 			if f.syncItem.UploadEntity != nil && f.syncItem.UploadEntity.FileId != "" {
 				if file, er := f.panClient.FileInfoById(f.syncItem.DriveId, f.syncItem.UploadEntity.FileId); er == nil {
+					file.Path = f.syncItem.getPanFileFullPath()
 					f.panFileDb.Add(NewPanFileItem(file))
 				}
 			} else {
 				if file, er := f.panClient.FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
+					file.Path = f.syncItem.getPanFileFullPath()
 					f.panFileDb.Add(NewPanFileItem(file))
 				}
 			}

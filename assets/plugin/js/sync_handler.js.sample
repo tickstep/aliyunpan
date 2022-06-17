@@ -60,6 +60,11 @@ function syncScanLocalFilePrepareCallback(context, params) {
         result["syncScanLocalApproved"] = "no";
     }
 
+	// 禁止~$开头文件上传（office暂存临时文件）
+    if (params["localFileName"].indexOf("~$") == 0) {
+        result["syncScanLocalApproved"] = "no";
+    }
+
     // 禁止.txt文件上传（正则表达式方式）
     if (params["localFileName"].search(/.txt$/i) >= 0) {
         result["syncScanLocalApproved"] = "no";
