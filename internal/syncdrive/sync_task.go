@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/utils"
@@ -116,6 +117,19 @@ func (t *SyncTask) Start() error {
 		return fmt.Errorf("task have starting")
 	}
 	t.setupDb()
+
+	// check root dir
+	if b, e := utils.PathExists(t.LocalFolderPath); e == nil {
+		if !b {
+			// create local root folder
+			os.MkdirAll(t.LocalFolderPath, 0755)
+		}
+	}
+	if _, er := t.panClient.FileInfoByPath(t.DriveId, t.PanFolderPath); er != nil {
+		if er.Code == apierror.ApiCodeFileNotFoundCode {
+			t.panClient.MkdirByFullPath(t.DriveId, t.PanFolderPath)
+		}
+	}
 
 	if t.fileActionTaskManager == nil {
 		t.fileActionTaskManager = NewFileActionTaskManager(t, t.maxDownloadRate, t.maxUploadRate)

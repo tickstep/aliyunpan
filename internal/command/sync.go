@@ -139,22 +139,28 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 					var task *syncdrive.SyncTask
 					localDir := c.String("ldir")
 					panDir := c.String("pdir")
-					mode := c.String("upload")
+					mode := c.String("mode")
 					if localDir != "" && panDir != "" {
-						if b, e := utils.PathExists(localDir); e == nil {
-							if !b {
-								fmt.Println("本地文件夹不存在：", localDir)
-								return nil
-							}
-						} else {
-							fmt.Println("本地文件夹不存在：", localDir)
-							return nil
-						}
+						//if b, e := utils.PathExists(localDir); e == nil {
+						//	if !b {
+						//		fmt.Println("本地文件夹不存在：", localDir)
+						//		return nil
+						//	}
+						//} else {
+						//	fmt.Println("本地文件夹不存在：", localDir)
+						//	return nil
+						//}
 						task = &syncdrive.SyncTask{}
 						task.LocalFolderPath = path.Clean(strings.ReplaceAll(localDir, "\\", "/"))
 						task.PanFolderPath = panDir
-						task.Mode = syncdrive.SyncMode(mode)
-						if task.Mode == "" {
+						task.Mode = syncdrive.UploadOnly
+						if mode == string(syncdrive.UploadOnly) {
+							task.Mode = syncdrive.UploadOnly
+						} else if mode == string(syncdrive.DownloadOnly) {
+							task.Mode = syncdrive.DownloadOnly
+						} else if mode == string(syncdrive.SyncTwoWay) {
+							task.Mode = syncdrive.SyncTwoWay
+						} else {
 							task.Mode = syncdrive.UploadOnly
 						}
 						task.Name = path.Base(task.LocalFolderPath)
