@@ -152,11 +152,11 @@ $docker_image_name:$version-armv5
 echo "push manifest to docker hub"
 docker manifest push $docker_image_name:$version
 
-echo "clear local docker image"
-docker rmi $docker_image_name:$version-amd64
-docker rmi $docker_image_name:$version-386
-docker rmi $docker_image_name:$version-arm64
-docker rmi $docker_image_name:$version-armv7
-docker rmi $docker_image_name:$version-armv5
+#echo "clear local docker image"
+#docker rmi $docker_image_name:$version-amd64
+#docker rmi $docker_image_name:$version-386
+#docker rmi $docker_image_name:$version-arm64
+#docker rmi $docker_image_name:$version-armv7
+#docker rmi $docker_image_name:$version-armv5
 
 echo "ALL DONE"
