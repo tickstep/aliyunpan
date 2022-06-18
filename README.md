@@ -1,5 +1,5 @@
 # 关于
-阿里云盘CLI。仿 Linux shell 文件处理命令的阿里云盘命令行客户端，支持webdav文件协议。
+阿里云盘CLI。仿 Linux shell 文件处理命令的阿里云盘命令行客户端，支持webdav文件协议，支持同步备份功能。
 
 # 特色
 1. 多平台支持, 支持 Windows, macOS, linux(x86/x64/arm), android, iOS 等
@@ -8,7 +8,7 @@
 4. ~~支持导入/导出功能，快速备份（导出）和恢复（导入）网盘的文件~~
 5. [下载](#下载文件目录)网盘内文件, 支持多个文件或目录下载, 支持断点续传和单文件并行下载
 6. [上传](#上传文件目录)本地文件, 支持多个文件或目录上传，支持排除指定文件夹/文件（正则表达式）功能
-7. [备份本地文件](#备份本地文件目录)支持备份本地文件夹到网盘中，保持本地文件和网盘文件同步。常用于嵌入式或者NAS等设备。
+7. [同步备份功能](#同步备份功能)支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份保持本地文件和网盘文件同步。常用于嵌入式或者NAS等设备，支持docker镜像部署。
 8. 命令和文件路径输入支持Tab键自动补全
 9. 支持阿里云ECS环境下使用内网链接上传/下载，速度更快(只支持阿里经典网络，最高可达100MB/s)，还可以节省公网带宽流量(配置transfer_url_type=2即可)
 10. 支持webdav文件协议，可以将阿里云盘当做webdav文件网盘挂载到Windows, macOS, linux的磁盘中进行使用。webdav部署支持docker镜像，镜像只有不到10MB非常小巧。
@@ -54,7 +54,6 @@
   * [列出目录](#列出目录)
   * [下载文件/目录](#下载文件目录)
   * [上传文件/目录](#上传文件目录)
-  * [备份本地文件/目录](#备份本地文件目录)  
   * [手动秒传文件](#手动秒传文件)
   * [创建目录](#创建目录)
   * [删除文件/目录](#删除文件目录)
@@ -67,6 +66,12 @@
     + [列出已分享文件/目录](#列出已分享文件目录)
     + [取消分享文件/目录](#取消分享文件目录)
     + [分享秒传链接](#分享秒传链接)
+  * [同步备份功能](#同步备份功能)
+    + [常用命令说明](#常用命令说明)
+    + [备份配置文件说明](#备份配置文件说明)
+    + [命令行启动](#命令行启动)
+    + [Linux后台启动](#Linux后台启动)
+    + [Docker运行](#Docker运行)
   * [webdav文件服务](#webdav文件服务)   
     + [常用命令说明](#常用命令说明)
     + [命令行启动](#命令行启动)
@@ -376,37 +381,6 @@ aliyunpan upload -exn "\.jpg$" -exn "\.mp3$" C:/Users/Administrator/Video /视�
 5)排除 myfile.txt 文件：-exn "^myfile.txt$"
 ```
 
-## 备份本地文件/目录
-
-本地备份功能一般用于NAS等系统，日常只进行增量备份操作，默认情况下本地删除不影响网盘文件。
-
-比如在手机上备分照片目录，就可以使用这个功能定时备份，备份完成后本地文件可安全删除。
-
-基本用法和`upload`命令一样，额外增加两个参数
-
->1. delete 用于同步删除操作（只通过本地数据库记录对比）。 
->2. sync 使网盘上的文件和本地文件同步（本地为主），会删除网盘中不存在于本地的文件或目录（速度比较慢）。  
->sync 和 delete 的区别在于sync是通过网盘文件列表和本地文件进行判断。  
->delete 只通过本地数据库进行判断,正常情况下使用 delete 就够用了。
- 
-和 `upload` 相比由于增加了本地数据库，可以快速判断文件是否有更新等，大大减少了 API 的调用，操作速度更快。
-
-```
-aliyunpan backup <本地目录1> <目录2> <目录3> ... <目标目录>
-注：
-1. 默认不删除网盘文件，可用 delete 或 sync 参数进行同步删除。
-```
-
-### 例子:
-```
-# 将本地的 C:\Users\Administrator\Desktop 备份到网盘 /test 目录
-# 注意区别反斜杠 "\" 和 斜杠 "/" !!!
-aliyunpan backup C:/Users/Administrator/Desktop /test
-
-# 将本地的 C:\Users\Administrator\Desktop 备份到网盘 /test 目录，但排除所有 @eadir 目录
-aliyunpan backup -exn "^@eadir$" C:/Users/Administrator/Desktop /test
-```
-
 ## 手动秒传上传文件
 通过秒传链接上传文件到网盘，秒传链接可以通过share命令获取
 ```
@@ -564,6 +538,339 @@ aliyunpan share mc -hp 1.mp4
 aliyunpan share mc share_folder/
 ```
 
+## 同步备份功能
+同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
+指定本地目录和对应的一个网盘目录，以备份文件。网盘目录必须和本地目录独占使用，不要用作其他他用途，不然备份可能会有问题。
+
+备份功能支持以下三种模式：
+1. 备份本地文件，即上传本地文件到网盘，始终保持本地文件有一个完整的备份在网盘
+2. 备份云盘文件，即下载网盘文件到本地，始终保持网盘的文件有一个完整的备份在本地
+3. 双向备份，保持网盘文件和本地文件严格一致
+
+备份功能一般用于NAS等系统，进行文件备份。比如在备份照片，就可以使用这个功能定期备份照片到云盘，十分好用。   
+   
+### 常用命令说明
+```
+查看同步备份功能说明
+aliyunpan sync
+
+查看如何配置和启动同步备份功能
+aliyunpan sync start -h
+
+使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份上传到云盘目录 /sync_drive/我的文档
+aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "upload"
+
+使用命令行配置启动同步备份服务，将云盘目录 /sync_drive/我的文档 中的文件备份下载到本地目录 D:\tickstep\Documents\设计文档
+aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "download"
+
+使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份到云盘目录 /sync_drive/我的文档
+同时配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
+aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "upload" -dp 2 -up 1 -dbs 256 -ubs 1024
+    
+使用配置文件启动同步备份服务，使用配置文件可以支持同时启动多个备份任务。配置文件必须存在，否则启动失败。
+aliyunpan sync start
+
+使用配置文件启动同步备份服务，并配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
+aliyunpan sync start -dp 2 -up 1 -dbs 256 -ubs 1024
+```
+
+### 备份配置文件说明
+如果你只有一个文件夹进行备份建议直接使用命令行配置启动即可。如果需要同时启动多个备份任务，则可以使用备份配置文件启动同步备份任务。   
+配置文件如下所示，如果你有通过环境变量ALIYUNPAN_CONFIG_DIR设置配置目录，则需要将sync_drive文件夹拷贝到配置的目录中才可以生效。
+```
+配置文件需要保存在：(配置目录)/sync_drive/sync_drive_config.json，样例如下：
+
+{
+ "configVer": "1.0",
+ "syncTaskList": [
+  {
+   "name": "设计文档备份",
+   "localFolderPath": "D:/tickstep/Documents/设计文档",
+   "panFolderPath": "/备份盘/我的文档",
+   "mode": "upload"
+  },
+  {
+   "name": "手机图片备份",
+   "localFolderPath": "D:/tickstep/Photos/手机图片",
+   "panFolderPath": "/备份盘/手机图片",
+   "mode": "upload"
+  }
+ ]
+}
+
+相关字段说明如下：
+name - 任务名称
+localFolderPath - 本地目录
+panFolderPath - 网盘目录
+mode - 模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+```
+
+### 命令行启动
+需要先进行登录。然后使用以下命令运行即可，该命令是阻塞的不会退出。
+
+```
+使用命令行配置启动同步备份服务，将本地目录 /tickstep/Documents/设计文档 中的文件备份上传到云盘目录 /备份盘/我的文档
+./aliyunpan sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload"
+
+参数说明
+ldir：本地目录
+pdir：云盘目录
+mode：备份模式，支持：upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+
+--------------------------------------------------------------
+正常会有以下的输出：
+
+启动同步备份进程
+备份配置文件：(使用命令行配置)
+链接类型：默认链接
+下载并发：2
+上传并发：2
+下载分片大小：1.00MB
+上传分片大小：10.00MB
+
+启动同步任务
+任务: 设计文档(de3d6b69a607497b73624bcca0845f19)
+同步模式: 备份本地文件（只上传）
+本地目录: /tickstep/Documents/设计文档
+云盘目录: /备份盘/我的文档
+```
+
+### Linux后台启动
+建议结合nohup进行启动。
+
+sync.sh脚本，内容如下
+```
+# 请更改成你自己的目录
+cd /path/to/aliyunpan/folder
+
+chmod +x ./aliyunpan
+
+# 指定refresh token用于登录
+./aliyunpan login -RefreshToken=9078907....adg9087
+
+# 上传下载链接类型：1-默认 2-阿里ECS环境
+./aliyunpan config set -transfer_url_type 1
+
+# 指定配置参数并进行启动
+# 支持的模式：upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+./aliyunpan sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload"
+```
+
+增加脚本执行权限
+```
+$ chmod +x sync.sh
+```
+
+然后启动该脚本进行后台运行
+```
+$ nohup ./sync.sh >/dev/null 2>&1 &
+```
+
+### Docker运行
+详情文档请参考dockerhub网址：[tickstep/aliyunpan-sync](https://hub.docker.com/r/tickstep/aliyunpan-sync)
+
+1. 直接运行   
+```
+docker run -d --name=aliyunpan-sync --restart=always -v "<your local dir>:/home/app/data" -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" tickstep/aliyunpan-sync
+
+<your local dir>：本地目录绝对路径，例如：/tickstep/Documents/设计文档
+ALIYUNPAN_PAN_DIR：云盘目录
+ALIYUNPAN_REFRESH_TOKEN RefreshToken
+ALIYUNPAN_SYNC_MODE：备份模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+```
+
+2. docker-compose运行   
+docker-compose.yml 文件如下所示，为了方便说明增加了相关的注释，部署的时候可以去掉注释。
+
+```
+version: '3'
+services:
+  sync:
+    image: tickstep/aliyunpan-sync:<tag>
+    container_name: aliyunpan-sync
+    restart: always
+    volumes:
+      # 指定本地备份目录绝对路径：/tickstep/Documents/设计文档
+      - /tickstep/Documents/设计文档:/home/app/data:rw
+      # （可选）可以指定JS插件sync_handler.js用于过滤文件，详见下面的插件说明
+      #- ./plugin/js/sync_handler.js:/home/app/config/plugin/js/sync_handler.js
+    environment:
+      - TZ=Asia/Shanghai
+      # refresh token
+      - ALIYUNPAN_REFRESH_TOKEN=41804446a...bf7f069cab2
+      # 上传下载链接类型：1-默认 2-阿里ECS环境
+      - ALIYUNPAN_TRANSFER_URL_TYPE=1
+      # 下载文件并发数
+      - ALIYUNPAN_DOWNLOAD_PARALLEL=2
+      # 上传文件并发数
+      - ALIYUNPAN_UPLOAD_PARALLEL=2
+      # 下载数据块大小，单位为KB，默认为10240KB，建议范围1024KB~10240KB
+      - ALIYUNPAN_DOWNLOAD_BLOCK_SIZE=1024
+      # 上传数据块大小，单位为KB，默认为10240KB，建议范围1024KB~10240KB
+      - ALIYUNPAN_UPLOAD_BLOCK_SIZE=10240
+      # 指定网盘文件夹作为备份目录，不要指定根目录
+      - ALIYUNPAN_PAN_DIR=/备份盘/我的文档
+      # 备份模式：upload(备份本地文件到云盘), download(备份云盘文件到本地), sync(双向同步备份)
+      - ALIYUNPAN_SYNC_MODE=upload
+```
+
+3. sync_handler.js插件说明   
+可以使用JS插件过滤备份的文件。
+```javascript
+// ==========================================================================================
+// aliyunpan JS插件回调处理函数
+// 支持 JavaScript ECMAScript 5.1 语言规范
+//
+// 更多内容请查看官方文档：https://github.com/tickstep/aliyunpan
+// ==========================================================================================
+
+// ------------------------------------------------------------------------------------------
+// 函数说明：同步备份-扫描本地文件前的回调函数
+//
+// 参数说明
+// context - 当前调用的上下文信息
+// {
+// 	"appName": "aliyunpan",
+// 	"version": "v0.1.3",
+// 	"userId": "11001d48564f43b3bc5662874f04bb11",
+// 	"nickname": "tickstep",
+// 	"fileDriveId": "19519111",
+// 	"albumDriveId": "29519122"
+// }
+// appName - 应用名称，当前固定为aliyunpan
+// version - 版本号
+// userId - 当前登录用户的ID
+// nickname - 用户昵称
+// fileDriveId - 用户文件网盘ID
+// albumDriveId - 用户相册网盘ID
+//
+// params - 扫描本地文件前参数
+// {
+// 	"localFilePath": "D:\\Program Files\\aliyunpan\\Downloads\\token.bat",
+// 	"localFileName": "token.bat",
+// 	"localFileSize": 125330,
+// 	"localFileType": "file",
+// 	"localFileUpdatedAt": "2022-04-14 07:05:12",
+// 	"driveId": "19519221"
+// }
+// localFilePath - 本地文件绝对完整路径
+// localFileName - 本地文件名
+// localFileSize - 本地文件大小，单位B
+// localFileType - 本地文件类型，file-文件，folder-文件夹
+// localFileUpdatedAt - 文件修改时间
+// driveId - 备份的目标网盘ID
+//
+// 返回值说明
+// {
+// 	"syncScanLocalApproved": "yes"
+// }
+// syncScanLocalApproved - 该文件是否确认扫描，yes-允许扫描，no-禁止扫描。
+//                禁止扫描的文件不会执行后续的动作，例如上传，下载。
+// ------------------------------------------------------------------------------------------
+function syncScanLocalFilePrepareCallback(context, params) {
+	console.log(params);
+    var result = {
+        "syncScanLocalApproved": "yes"
+    };
+
+    // 禁止.开头文件上传
+    if (params["localFileName"].indexOf(".") == 0) {
+        result["syncScanLocalApproved"] = "no";
+    }
+
+	// 禁止~$开头文件上传（office暂存临时文件）
+    if (params["localFileName"].indexOf("~$") == 0) {
+        result["syncScanLocalApproved"] = "no";
+    }
+
+    // 禁止.txt文件上传（正则表达式方式）
+    if (params["localFileName"].search(/.txt$/i) >= 0) {
+        result["syncScanLocalApproved"] = "no";
+    }
+
+    // 禁止password.key文件上传
+    if (params["localFileName"] == "password.key") {
+        result["syncScanLocalApproved"] = "no";
+    }
+	
+	// 禁止@eadir文件上传
+	if (params["localFileName"] == "@eadir") {
+        result["syncScanLocalApproved"] = "no";
+    }
+    return result;
+}
+
+
+// ------------------------------------------------------------------------------------------
+// 函数说明：同步备份-扫描云盘文件前的回调函数
+// 
+// 参数说明
+// context - 当前调用的上下文信息
+// {
+// 	"appName": "aliyunpan",
+// 	"version": "v0.1.3",
+// 	"userId": "11001d48564f43b3bc5662874f04bb11",
+// 	"nickname": "tickstep",
+// 	"fileDriveId": "19519111",
+// 	"albumDriveId": "29519122"
+// }
+// appName - 应用名称，当前固定为aliyunpan
+// version - 版本号
+// userId - 当前登录用户的ID
+// nickname - 用户昵称
+// fileDriveId - 用户文件网盘ID
+// albumDriveId - 用户相册网盘ID
+//
+// params - 扫描云盘文件前参数
+// {
+// 	"driveId": "19519221",
+// 	"driveFileName": "token.bat",
+// 	"driveFilePath": "/aliyunpan/Downloads/token.bat",
+// 	"driveFileSha1": "08FBE28A5B8791A2F50225E2EC5CEEC3C7955A11",
+// 	"driveFileSize": 125330,
+// 	"driveFileType": "file",
+// 	"driveFileUpdatedAt": "2022-04-14 07:05:12"
+// }
+// driveId - 网盘ID
+// driveFileName - 网盘文件名
+// driveFilePath - 网盘文件绝对完整路径
+// driveFileSize - 网盘文件大小，单位B
+// driveFileSha1 - 网盘文件SHA1
+// driveFileType - 网盘文件类型，file-文件，folder-文件夹
+// driveFileUpdatedAt - 网盘文件修改时间
+// 
+// 返回值说明
+// {
+// 	"syncScanPanApproved": "yes"
+// }
+// syncScanPanApproved - 该文件是否确认扫描，yes-允许扫描，no-禁止扫描。
+//                       禁止扫描的文件不会执行后续的动作，例如上传，下载。
+// ------------------------------------------------------------------------------------------
+function syncScanPanFilePrepareCallback(context, params) {
+    console.log(params);
+
+    var result = {
+        "syncScanPanApproved": "yes"
+    };
+
+    // 禁止.开头文件下载
+    if (params["driveFileName"].indexOf(".") == 0) {
+        result["syncScanPanApproved"] = "no";
+    }
+
+    // 禁止~$开头文件下载（office暂存临时文件）
+    if (params["driveFileName"].indexOf("~$") == 0) {
+        result["syncScanPanApproved"] = "no";
+    }
+
+    // 禁止.txt文件下载（正则表达式方式）
+    // if (params["driveFileName"].search(/.txt$/i) >= 0) {
+    //     result["syncScanPanApproved"] = "no";
+    // }
+
+    return result;
+}
+```
 
 ## webdav文件服务
 本文命令可以让阿里云盘变身为webdav协议的文件服务器。这样你可以把阿里云盘挂载为Windows、Linux、Mac系统的磁盘，可以通过NAS系统做文件管理或文件同步等等。
@@ -725,9 +1032,10 @@ server {
 7.下载的文件进行改名，但是网盘的文件保持不变   
 8.下载的文件路径进行更改，但是网盘的文件保持不变   
 9.下载文件完成后，通过HTTP通知其他服务   
+10.同步备份功能，支持过滤本地文件，或者过滤云盘文件。定制上传或者下载需要同步的文件
    
 ### 如何使用
-JS插件的样本文件默认存放在程序所在的plugin/js文件夹下，分为下载(download_handler.js.sample)和上传(upload_handler.js.sample)两个。   
+JS插件的样本文件默认存放在程序所在的plugin/js文件夹下，分为下载(download_handler.js.sample)、上传(upload_handler.js.sample)、同步备份(sync_handler.js.sample)插件。   
 建议拷贝一份并将后缀名更改为.js，例如：upload_handler.js，不然插件不会生效。   
 你必须具备一定的JS语言基础，然后按照里面的样例根据自己所需进行改动即可。   
 如果你有通过环境变量ALIYUNPAN_CONFIG_DIR设置配置目录，则需要将plugin文件夹拷贝到配置的目录中才可以生效。   

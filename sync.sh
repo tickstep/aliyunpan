@@ -1,0 +1,16 @@
+# 请更改成你自己电脑上aliyunpan执行文件所在的目录
+#cd /path/to/aliyunpan/folder
+
+chmod +x ./aliyunpan
+
+# 指定refresh token用于登录
+./aliyunpan login -RefreshToken=9078907....adg9087
+
+# 上传下载链接类型：1-默认 2-阿里ECS环境
+./aliyunpan config set -transfer_url_type 1
+
+# 指定配置参数并进行启动
+# 支持的模式：upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+./aliyunpan sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload"
+
+

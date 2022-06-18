@@ -66,7 +66,7 @@ func CmdBackup() cli.Command {
     4)排除~号开头的文件：-exn "^~"
     5)排除 myfile.txt 文件：-exn "^myfile.txt$"
 `,
-		Usage:     "备份文件或目录(Deprecated)",
+		Usage:     "备份文件或目录(Deprecated，请使用sync命令替代)",
 		UsageText: "backup <文件/目录路径1> <文件/目录2> <文件/目录3> ... <目标目录>",
 		Category:  "阿里云盘",
 		Before:    cmder.ReloadConfigFunc,
