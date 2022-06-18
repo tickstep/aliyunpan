@@ -93,70 +93,70 @@ docker build \
 --no-cache .
 
 rm -rf out/binary_files
-#
-#echo "push docker images"
-#docker push $docker_image_name:$version-amd64
-#docker push $docker_image_name:$version-386
-#docker push $docker_image_name:$version-arm64
-#docker push $docker_image_name:$version-armv7
-#docker push $docker_image_name:$version-armv5
-#
-#echo "create docker manifest"
-#docker manifest create $docker_image_name:$version \
-#$docker_image_name:$version-amd64 \
-#$docker_image_name:$version-386 \
-#$docker_image_name:$version-arm64 \
-#$docker_image_name:$version-armv7 \
-#$docker_image_name:$version-armv5 \
-#--amend
-#
-#
-#echo "annotate manifest for amd64 image"
-#docker manifest annotate \
-#--arch=amd64 \
-#--os=linux \
-#$docker_image_name:$version \
-#$docker_image_name:$version-amd64
-#
-#echo "annotate manifest for 386 image"
-#docker manifest annotate \
-#--arch=386 \
-#--os=linux \
-#$docker_image_name:$version \
-#$docker_image_name:$version-386
-#
-#echo "annotate manifest for arm64 image"
-#docker manifest annotate \
-#--arch=arm64 \
-#--os=linux  \
-#--variant=v8 \
-#$docker_image_name:$version \
-#$docker_image_name:$version-arm64
-#
-#echo "annotate manifest for armv7 image"
-#docker manifest annotate \
-#--arch=arm \
-#--os=linux \
-#--variant=v7 \
-#$docker_image_name:$version \
-#$docker_image_name:$version-armv7
-#
-#echo "annotate manifest for armv5 image"
-#docker manifest annotate \
-#--arch=arm \
-#--os=linux \
-#--variant=v6 \
-#$docker_image_name:$version \
-#$docker_image_name:$version-armv5
-#
-#echo "push manifest to docker hub"
-#docker manifest push $docker_image_name:$version
-#
-#echo "clear local docker image"
-#docker rmi $docker_image_name:$version-amd64
-#docker rmi $docker_image_name:$version-386
-#docker rmi $docker_image_name:$version-arm64
-#docker rmi $docker_image_name:$version-armv7
-#docker rmi $docker_image_name:$version-armv5
+
+echo "push docker images"
+docker push $docker_image_name:$version-amd64
+docker push $docker_image_name:$version-386
+docker push $docker_image_name:$version-arm64
+docker push $docker_image_name:$version-armv7
+docker push $docker_image_name:$version-armv5
+
+echo "create docker manifest"
+docker manifest create $docker_image_name:$version \
+$docker_image_name:$version-amd64 \
+$docker_image_name:$version-386 \
+$docker_image_name:$version-arm64 \
+$docker_image_name:$version-armv7 \
+$docker_image_name:$version-armv5 \
+--amend
+
+
+echo "annotate manifest for amd64 image"
+docker manifest annotate \
+--arch=amd64 \
+--os=linux \
+$docker_image_name:$version \
+$docker_image_name:$version-amd64
+
+echo "annotate manifest for 386 image"
+docker manifest annotate \
+--arch=386 \
+--os=linux \
+$docker_image_name:$version \
+$docker_image_name:$version-386
+
+echo "annotate manifest for arm64 image"
+docker manifest annotate \
+--arch=arm64 \
+--os=linux  \
+--variant=v8 \
+$docker_image_name:$version \
+$docker_image_name:$version-arm64
+
+echo "annotate manifest for armv7 image"
+docker manifest annotate \
+--arch=arm \
+--os=linux \
+--variant=v7 \
+$docker_image_name:$version \
+$docker_image_name:$version-armv7
+
+echo "annotate manifest for armv5 image"
+docker manifest annotate \
+--arch=arm \
+--os=linux \
+--variant=v6 \
+$docker_image_name:$version \
+$docker_image_name:$version-armv5
+
+echo "push manifest to docker hub"
+docker manifest push $docker_image_name:$version
+
+echo "clear local docker image"
+docker rmi $docker_image_name:$version-amd64
+docker rmi $docker_image_name:$version-386
+docker rmi $docker_image_name:$version-arm64
+docker rmi $docker_image_name:$version-armv7
+docker rmi $docker_image_name:$version-armv5
 
 echo "ALL DONE"
