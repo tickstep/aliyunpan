@@ -135,10 +135,20 @@ function syncScanPanFilePrepareCallback(context, params) {
         "syncScanPanApproved": "yes"
     };
 
-    // 禁止.txt文件下载（正则表达式方式）
-    if (params["driveFileName"].search(/.txt$/i) >= 0) {
+    // 禁止.开头文件下载
+    if (params["driveFileName"].indexOf(".") == 0) {
         result["syncScanPanApproved"] = "no";
     }
+
+    // 禁止~$开头文件下载（office暂存临时文件）
+    if (params["driveFileName"].indexOf("~$") == 0) {
+        result["syncScanPanApproved"] = "no";
+    }
+
+    // 禁止.txt文件下载（正则表达式方式）
+    // if (params["driveFileName"].search(/.txt$/i) >= 0) {
+    //     result["syncScanPanApproved"] = "no";
+    // }
 
     return result;
 }
