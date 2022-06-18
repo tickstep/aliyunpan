@@ -50,7 +50,7 @@ const (
 
 var (
 	// Version 版本号
-	Version = "v0.1.5"
+	Version = "v0.1.6"
 
 	// 命令历史文件
 	historyFilePath = filepath.Join(config.GetConfigDir(), "aliyunpan_command_history.txt")
@@ -111,7 +111,8 @@ func main() {
 	app.Copyright = "(c) 2021-2022 tickstep."
 	app.Usage = "阿里云盘客户端 for " + runtime.GOOS + "/" + runtime.GOARCH
 	app.Description = `aliyunpan 使用Go语言编写的阿里云盘命令行客户端, 为操作阿里云盘, 提供实用功能。
-   同时支持webdav文件协议，可以让阿里云盘变身为webdav协议的文件服务器，用于挂载作为Windows、Linux、Mac系统的磁盘进行使用。
+    支持webdav文件协议，可以让阿里云盘变身为webdav协议的文件服务器，用于挂载作为Windows、Linux、Mac系统的磁盘进行使用。
+    支持同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份。
 	具体功能, 参见 COMMANDS 列表
 
 	------------------------------------------------------------------------------
