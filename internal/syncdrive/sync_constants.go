@@ -10,6 +10,9 @@ const (
 	// TimeSecondsOfOneMinute 一分钟秒数
 	TimeSecondsOfOneMinute int64 = 60
 
+	// TimeSecondsOf2Minute 2分钟秒数
+	TimeSecondsOf2Minute int64 = 2 * TimeSecondsOfOneMinute
+
 	// TimeSecondsOf5Minute 5分钟秒数
 	TimeSecondsOf5Minute int64 = 5 * TimeSecondsOfOneMinute
 

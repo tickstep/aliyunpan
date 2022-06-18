@@ -502,7 +502,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 
 				// restart scan loop over again
 				folderQueue.Push(rootPanFile)
-				delayTimeCount = TimeSecondsOfOneMinute
+				delayTimeCount = TimeSecondsOf2Minute
 				continue
 			}
 			item := obj.(*aliyunpan.FileEntity)
@@ -557,7 +557,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 					logger.Verboseln("add files to pan file db error {}", er)
 				}
 			}
-			time.Sleep(2 * time.Second) // 延迟避免触发风控
+			time.Sleep(5 * time.Second) // 延迟避免触发风控
 		}
 	}
 }
