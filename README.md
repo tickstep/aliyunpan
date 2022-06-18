@@ -547,7 +547,7 @@ aliyunpan share mc share_folder/
 2. 备份云盘文件，即下载网盘文件到本地，始终保持网盘的文件有一个完整的备份在本地
 3. 双向备份，保持网盘文件和本地文件严格一致
 
-备份功能一般用于NAS等系统，进行文件备份。比如在备份照片，就可以使用这个功能定期备份照片到云盘，十分好用。   
+备份功能一般用于NAS等系统，进行文件备份。比如备份照片，就可以使用这个功能定期备份照片到云盘，十分好用。   
    
 ### 常用命令说明
 ```
@@ -675,7 +675,7 @@ docker run -d --name=aliyunpan-sync --restart=always -v "<your local dir>:/home/
 
 <your local dir>：本地目录绝对路径，例如：/tickstep/Documents/设计文档
 ALIYUNPAN_PAN_DIR：云盘目录
-ALIYUNPAN_REFRESH_TOKEN RefreshToken
+ALIYUNPAN_REFRESH_TOKEN：RefreshToken
 ALIYUNPAN_SYNC_MODE：备份模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
 ```
 
@@ -1131,6 +1131,12 @@ aliyunpan config set -transfer_url_type 2
 需要通过浏览器获取refresh_token。这里以Chrome浏览器为例，其他浏览器类似。   
 打开 [阿里云盘网页](https://www.aliyundrive.com/drive) 并进行登录，然后F12按键打开浏览器调试菜单，按照下面步骤进行
 ![](./assets/images/how-to-get-refresh-token.png)
+   
+或者直接在控制台输入以下命令获取  
+```
+JSON.parse(localStorage.getItem("token")).refresh_token
+```
+![](./assets/images/how-to-get-refresh-token-cmd.png)
 
 ## 2 如何开启Debug调试日志
 当需要定位问题，或者提交issue的时候抓取log，则需要开启debug日志。步骤如下：
