@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/tickstep/bolt"
+	"io/fs"
+	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -111,4 +114,71 @@ func TestBolt(t *testing.T) {
 		Path:          "D:\\smb\\feny\\goprojects\\dev\\file3.db",
 	})
 	time.Sleep(5 * time.Second)
+}
+
+func TestBoltUltraFiles(t *testing.T) {
+	localFileDb := NewLocalSyncDb("/Volumes/DataDisk3T/test/local.bolt")
+	localFileDb.Open()
+	defer localFileDb.Close()
+
+	count := int64(0)
+	walkFunc := func(parentDirPath string, infos []fs.FileInfo, err error) error {
+		files := LocalFileList{}
+		for _, info := range infos {
+			if strings.Index(info.Name(), ".") == 0 {
+				continue
+			}
+			count += 1
+			file := parentDirPath + "/" + info.Name()
+			fmt.Println(count, " - ", file)
+			files = append(files, newLocalFileItem(info, file))
+		}
+		localFileDb.AddFileList(files)
+		return nil
+	}
+	WalkAllFileFunc("/Volumes/Downloads", walkFunc)
+	println("\ntotal: ", count)
+}
+
+type MyWalkFunc func(parentDirPath string, infos []fs.FileInfo, err error) error
+
+func WalkAllFileFunc(dirPath string, walkFn MyWalkFunc) error {
+	info, err := os.Lstat(dirPath)
+	if err != nil {
+		infos := []os.FileInfo{}
+		infos = append(infos, info)
+		err = walkFn(dirPath, infos, err)
+	} else {
+		err = walkAllFileFunc(dirPath, info, walkFn)
+	}
+	return err
+}
+
+func walkAllFileFunc(dirPath string, info os.FileInfo, walkFn MyWalkFunc) error {
+	if !info.IsDir() {
+		infos := []os.FileInfo{}
+		infos = append(infos, info)
+		return walkFn(dirPath, infos, nil)
+	}
+
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		return walkFn(dirPath, nil, err)
+	}
+	if len(files) == 0 {
+		return nil
+	}
+	err = walkFn(dirPath, files, err)
+	if err != nil {
+		return err
+	}
+	for _, fi := range files {
+		if fi.IsDir() {
+			err = walkAllFileFunc(dirPath+"/"+fi.Name(), fi, walkFn)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
