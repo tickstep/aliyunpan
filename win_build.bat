@@ -49,5 +49,7 @@ xcopy /e assets\plugin %output%\%1\plugin
 
 mkdir %output%\%1\sync_drive
 xcopy /e assets\sync_drive %output%\%1\sync_drive
+
+xcopy /e assets\scripts %output%\%1
 endlocal
 

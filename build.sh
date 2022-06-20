@@ -75,10 +75,7 @@ Pack() {
   fi
 
   cp README.md "$output/$1"
-  cp webdav.sh "$output/$1"
-  cp webdav.bat "$output/$1"
-  cp sync.sh "$output/$1"
-  cp sync.bat "$output/$1"
+  cp -rf assets/scripts/* "$output/$1"
   cp -rf assets/plugin "$output/$1"
   cp -rf assets/sync_drive "$output/$1"
 

@@ -1,3 +1,4 @@
+#!/bin/sh
 cd /home/app
 chmod +x ./aliyunpan
 
