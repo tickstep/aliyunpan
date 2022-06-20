@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -61,7 +62,8 @@ type (
 
 		fileActionTaskManager *FileActionTaskManager
 
-		plugin plugins.Plugin
+		plugin      plugins.Plugin
+		pluginMutex *sync.Mutex
 	}
 )
 
@@ -138,6 +140,9 @@ func (t *SyncTask) Start() error {
 	if t.plugin == nil {
 		pluginManger := plugins.NewPluginManager(config.GetPluginDir())
 		t.plugin, _ = pluginManger.GetPlugin()
+	}
+	if t.pluginMutex == nil {
+		t.pluginMutex = &sync.Mutex{}
 	}
 
 	t.wg = waitgroup.NewWaitGroup(0)
@@ -265,6 +270,8 @@ func (t *SyncTask) skipLocalFile(file *LocalFileItem) bool {
 		LocalFileUpdatedAt: file.UpdatedAt,
 		DriveId:            t.DriveId,
 	}
+	t.pluginMutex.Lock()
+	defer t.pluginMutex.Unlock()
 	if result, er := t.plugin.SyncScanLocalFilePrepareCallback(plugins.GetContext(t.panUser), pluginParam); er == nil && result != nil {
 		if strings.Compare("no", result.SyncScanLocalApproved) == 0 {
 			// skip this file
@@ -441,6 +448,8 @@ func (t *SyncTask) skipPanFile(file *PanFileItem) bool {
 		DriveFileType:      file.FileType,
 		DriveFileUpdatedAt: file.UpdatedAt,
 	}
+	t.pluginMutex.Lock()
+	defer t.pluginMutex.Unlock()
 	if result, er := t.plugin.SyncScanPanFilePrepareCallback(plugins.GetContext(t.panUser), pluginParam); er == nil && result != nil {
 		if strings.Compare("no", result.SyncScanPanApproved) == 0 {
 			// skip this file
