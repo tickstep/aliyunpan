@@ -43,3 +43,4 @@ account.txt
 git_push.sh
 git_pull.sh
 docker/sync/data
+clear_docker.sh

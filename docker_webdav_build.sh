@@ -79,27 +79,27 @@ docker build \
 rm -rf out/binary_files
 
 # build armv5 docker
-echo "building armv5 docker image"
-ARCH=armv5
-ZIP_FILE_NAME=aliyunpan-$version-linux-$ARCH
-DOCKER_IMAGE_HASH=e047bc2af17934d38c5a7fa9f46d443f1de3a7675546402592ef805cfa929f9d
-unzip -d ./out ./out/$ZIP_FILE_NAME.zip
-mv ./out/$ZIP_FILE_NAME ./out/binary_files
-
-docker build \
--f ./docker/webdav/Dockerfile \
--t $docker_image_name:$version-$ARCH \
---build-arg DOCKER_IMAGE_HASH=$DOCKER_IMAGE_HASH \
---no-cache .
-
-rm -rf out/binary_files
+#echo "building armv5 docker image"
+#ARCH=armv5
+#ZIP_FILE_NAME=aliyunpan-$version-linux-$ARCH
+#DOCKER_IMAGE_HASH=e047bc2af17934d38c5a7fa9f46d443f1de3a7675546402592ef805cfa929f9d
+#unzip -d ./out ./out/$ZIP_FILE_NAME.zip
+#mv ./out/$ZIP_FILE_NAME ./out/binary_files
+#
+#docker build \
+#-f ./docker/webdav/Dockerfile \
+#-t $docker_image_name:$version-$ARCH \
+#--build-arg DOCKER_IMAGE_HASH=$DOCKER_IMAGE_HASH \
+#--no-cache .
+#
+#rm -rf out/binary_files
 
 echo "push docker images"
 docker push $docker_image_name:$version-amd64
 docker push $docker_image_name:$version-386
 docker push $docker_image_name:$version-arm64
 docker push $docker_image_name:$version-armv7
-docker push $docker_image_name:$version-armv5
+#docker push $docker_image_name:$version-armv5
 
 echo "create docker manifest"
 docker manifest create $docker_image_name:$version \
@@ -107,7 +107,6 @@ $docker_image_name:$version-amd64 \
 $docker_image_name:$version-386 \
 $docker_image_name:$version-arm64 \
 $docker_image_name:$version-armv7 \
-$docker_image_name:$version-armv5 \
 --amend
 
 
@@ -141,13 +140,13 @@ docker manifest annotate \
 $docker_image_name:$version \
 $docker_image_name:$version-armv7
 
-echo "annotate manifest for armv5 image"
-docker manifest annotate \
---arch=arm \
---os=linux \
---variant=v6 \
-$docker_image_name:$version \
-$docker_image_name:$version-armv5
+#echo "annotate manifest for armv5 image"
+#docker manifest annotate \
+#--arch=arm \
+#--os=linux \
+#--variant=v6 \
+#$docker_image_name:$version \
+#$docker_image_name:$version-armv5
 
 echo "push manifest to docker hub"
 docker manifest push $docker_image_name:$version
