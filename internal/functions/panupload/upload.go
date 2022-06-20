@@ -40,17 +40,6 @@ type (
 		useInternalUrl bool
 	}
 
-	UploadedFileMeta struct {
-		IsFolder     bool   `json:"isFolder,omitempty"` // 是否目录
-		Path         string `json:"-"`                  // 本地路径，不记录到数据库
-		SHA1         string `json:"sha1,omitempty"`     // 文件的 SHA1
-		FileId       string `json:"id,omitempty"`       //文件、目录ID
-		ParentId     string `json:"parentId,omitempty"` //父文件夹ID
-		Size         int64  `json:"length,omitempty"`   // 文件大小
-		ModTime      int64  `json:"modtime,omitempty"`  // 修改日期
-		LastSyncTime int64  `json:"synctime,omitempty"` //最后同步时间
-	}
-
 	EmptyReaderLen64 struct {
 	}
 )

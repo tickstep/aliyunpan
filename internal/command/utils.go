@@ -29,14 +29,6 @@ var (
 	panCommandVerbose = logger.New("PANCOMMAND", config.EnvVerbose)
 )
 
-const(
-	// 备份数据库桶分区标志
-	BackupMetaBucketName = "adrive"
-
-	// 备份数据文件夹目录名称，隐藏目录
-	BackupMetaDirName = ".adrive"
-)
-
 // GetFileInfoByPaths 获取指定文件路径的文件详情信息
 func GetAppFileInfoByPaths(driveId string, paths ...string) (fileInfoList []*aliyunpan.FileEntity, failedPaths []string, error error) {
 	if len(paths) <= 0 {
@@ -89,7 +81,7 @@ func RandomStr(count int) string {
 	STR_SET := "abcdefjhijklmnopqrstuvwxyz1234567890"
 	rand.Seed(time.Now().UnixNano())
 	str := strings.Builder{}
-	for i := 0; i < count; i++  {
+	for i := 0; i < count; i++ {
 		str.WriteByte(byte(STR_SET[rand.Intn(len(STR_SET))]))
 	}
 	return str.String()
@@ -100,7 +92,7 @@ func GetAllPathFolderByPath(pathStr string) []string {
 	dirs := []string{}
 	p := "/"
 	dirs = append(dirs, p)
-	for _,s := range dirNames {
+	for _, s := range dirNames {
 		p = path.Join(p, s)
 		dirs = append(dirs, p)
 	}
@@ -114,7 +106,7 @@ func EscapeStr(s string) string {
 
 // UnescapeStr 反转义字符串
 func UnescapeStr(s string) string {
-	r,_ := url.PathUnescape(s)
+	r, _ := url.PathUnescape(s)
 	return r
 }
 

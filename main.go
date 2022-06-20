@@ -420,9 +420,6 @@ func main() {
 
 		//// 拷贝文件/目录 cp
 		//command.CmdCp(),
-		//
-		//// 拷贝文件/目录到个人云/家庭云 xcp
-		//command.CmdXcp(),
 
 		// 移动文件/目录 mv
 		command.CmdMv(),
@@ -432,9 +429,6 @@ func main() {
 
 		// 分享文件/目录 share
 		command.CmdShare(),
-
-		// 备份 backup
-		command.CmdBackup(),
 
 		// 同步备份 sync
 		command.CmdSync(),
@@ -592,32 +586,32 @@ func main() {
 		},
 
 		// 调试用 debug
-		{
-			Name:        "debug",
-			Aliases:     []string{"dg"},
-			Usage:       "开发调试用",
-			Description: "",
-			Category:    "debug",
-			Before:      cmder.ReloadConfigFunc,
-			Action: func(c *cli.Context) error {
-				os.Setenv(config.EnvVerbose, "1")
-				logger.IsVerbose = true
-				fmt.Println("显示调试日志", logger.IsVerbose)
-				return nil
-			},
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "param",
-					Usage: "参数",
-				},
-				cli.BoolFlag{
-					Name:        "verbose",
-					Destination: &logger.IsVerbose,
-					EnvVar:      config.EnvVerbose,
-					Usage:       "显示调试信息",
-				},
-			},
-		},
+		//{
+		//	Name:        "debug",
+		//	Aliases:     []string{"dg"},
+		//	Usage:       "开发调试用",
+		//	Description: "",
+		//	Category:    "debug",
+		//	Before:      cmder.ReloadConfigFunc,
+		//	Action: func(c *cli.Context) error {
+		//		os.Setenv(config.EnvVerbose, "1")
+		//		logger.IsVerbose = true
+		//		fmt.Println("显示调试日志", logger.IsVerbose)
+		//		return nil
+		//	},
+		//	Flags: []cli.Flag{
+		//		cli.StringFlag{
+		//			Name:  "param",
+		//			Usage: "参数",
+		//		},
+		//		cli.BoolFlag{
+		//			Name:        "verbose",
+		//			Destination: &logger.IsVerbose,
+		//			EnvVar:      config.EnvVerbose,
+		//			Usage:       "显示调试信息",
+		//		},
+		//	},
+		//},
 	}
 
 	sort.Sort(cli.FlagsByName(app.Flags))
