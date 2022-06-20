@@ -438,6 +438,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 				err := fileSum.OpenPath()
 				if err != nil {
 					logger.Verbosef("文件不可读, 错误信息: %s, 跳过...\n", err)
+					continue
 				}
 				fileSum.Sum(localfile.CHECKSUM_SHA1) // block operation
 				localFile.Sha1Hash = fileSum.SHA1
