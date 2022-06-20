@@ -1,5 +1,8 @@
 @echo off
 
+REM 配置环境变量
+REM set ALIYUNPAN_CONFIG_DIR=d:\path\to\your\aliyunpan\config
+
 REM 指定refresh token用于登录
 aliyunpan login -RefreshToken=9078907....adg9087
 

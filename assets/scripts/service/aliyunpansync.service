@@ -1,0 +1,17 @@
+# linux service 配置文件模版
+# centos系统默认存放路径为：/lib/systemd/system/aliyunpansync.service
+# 启动服务：systemctl start aliyunpansync
+# 停止服务：systemctl stop aliyunpansync
+
+[Unit]
+Description=aliyunpansync
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/path/to/start.sh
+ExecStop=/path/to/stop.sh
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
