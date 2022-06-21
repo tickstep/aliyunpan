@@ -70,6 +70,7 @@
     + [备份配置文件说明](#备份配置文件说明)
     + [命令行启动](#命令行启动)
     + [Linux后台启动](#Linux后台启动)
+    + [Windows后台启动](#Windows后台启动)
     + [Docker运行](#Docker运行)
   * [webdav文件服务](#webdav文件服务)   
     + [常用命令说明](#常用命令说明)
@@ -536,7 +537,7 @@ aliyunpan share mc share_folder/
 
 ## 同步备份功能
 同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
-指定本地目录和对应的一个网盘目录，以备份文件。网盘目录必须和本地目录独占使用，不要用作其他他用途，不然备份可能会有问题。
+指定本地目录和对应的一个网盘目录，以备份文件。网盘目录必须和本地目录独占使用，不要用作其他用途，不然备份可能会有问题。
 
 备份功能支持以下三种模式：
 1. 备份本地文件，即上传本地文件到网盘，始终保持本地文件有一个完整的备份在网盘
@@ -660,6 +661,46 @@ $ chmod +x sync.sh
 然后启动该脚本进行后台运行
 ```
 $ nohup ./sync.sh >/dev/null 2>&1 &
+```
+
+### Windows后台启动
+需要结合 [WinSW](https://github.com/winsw/winsw) 进行后台启动，请前往官网自行下载: https://github.com/winsw/winsw   
+   
+步骤如下：   
+1. 配置好备份任务：(配置目录)\sync_drive\sync_drive_config.json
+2. 下载winsw.exe并更名为alisync.exe
+3. 新增一个alisync.xml文件，内容如下：
+```xml
+<service>
+  <id>alisync</id>
+  <name>alisync</name>
+  <description>aliyunpan-sync 后台备份服务。</description>
+  <env name="ALIYUNPAN_CONFIG_DIR" value="(更改成你PC上aliyunpan.exe工具所在目录)"/>
+  <executable>aliyunpan.exe</executable>
+  <arguments>sync start</arguments>
+  <log mode="roll"></log>
+</service>
+```
+4. 将alisync.exe和alisync.xml存放在你PC上aliyunpan.exe工具所在目录，例如：
+![](assets/images/win10-alisync-service.png)
+5. CMD命令行启动程序
+```
+# 安装服务（只需要第一次安装，后面不用再安装）
+D:\Program Files\aliyunpan>alisync install
+
+# 启动服务
+D:\Program Files\aliyunpan>alisync start
+2022-06-21 13:39:05,795 INFO  - Starting service 'alisync (alisync)'...
+2022-06-21 13:39:06,361 INFO  - Service 'alisync (alisync)' started successfully.
+
+# 查看服务状态
+D:\Program Files\aliyunpan>alisync status
+Started
+
+# 停止服务
+D:\Program Files\aliyunpan>alisync stop
+2022-06-21 13:42:32,201 INFO  - Stopping service 'alisync (alisync)'...
+2022-06-21 13:42:32,211 INFO  - Service 'alisync (alisync)' stopped successfully.
 ```
 
 ### Docker运行
