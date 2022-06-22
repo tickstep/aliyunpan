@@ -2,7 +2,7 @@ version: '3'
 
 services:
   webdav:
-    image: tickstep/aliyunpan-webdav:v0.1.0
+    image: tickstep/aliyunpan-webdav:v0.1.6
     container_name: aliyunpan-webdav
     restart: always
     ports:

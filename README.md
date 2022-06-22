@@ -731,6 +731,8 @@ services:
       - /tickstep/Documents/设计文档:/home/app/data:rw
       # （可选）可以指定JS插件sync_handler.js用于过滤文件，详见下面的插件说明
       #- ./plugin/js/sync_handler.js:/home/app/config/plugin/js/sync_handler.js
+      # （推荐）挂载sync_drive同步数据库到本地
+      #- ./sync_drive:/home/app/config/sync_drive
     environment:
       - TZ=Asia/Shanghai
       # refresh token

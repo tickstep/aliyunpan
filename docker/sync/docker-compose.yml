@@ -2,12 +2,15 @@ version: '3'
 
 services:
   sync:
-    image: tickstep/aliyunpan-sync:v0.1.5
+    image: tickstep/aliyunpan-sync:v0.1.6
     container_name: aliyunpan-sync
     restart: always
     volumes:
       - ./data:/home/app/data:rw
+      # （可选）可以指定JS插件sync_handler.js用于过滤文件，详见插件说明
       #- ./plugin/js/sync_handler.js:/home/app/config/plugin/js/sync_handler.js
+      # （推荐）挂载sync_drive同步数据库到本地，这样即使容器销毁，同步数据库还可以用于以后使用
+      #- ./sync_drive:/home/app/config/sync_drive
     environment:
       - TZ=Asia/Shanghai
       # refresh token
