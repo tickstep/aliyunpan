@@ -204,13 +204,22 @@ func NowTimeStr() string {
 	return time.Now().Format("2006-01-02 15:04:05")
 }
 
+func defaultZeroTime() time.Time {
+	value := "1971-01-01 08:00:00"
+	cz := time.FixedZone("CST", 8*3600) // 东8区
+	if t, e := time.ParseInLocation("2006-01-02 15:04:05", value, cz); e == nil {
+		return t
+	}
+	return time.Time{}
+}
+
 // ParseTimeStr 反解析时间字符串
 func ParseTimeStr(value string) time.Time {
 	cz := time.FixedZone("CST", 8*3600) // 东8区
 	if t, e := time.ParseInLocation("2006-01-02 15:04:05", value, cz); e == nil {
 		return t
 	}
-	return time.Now()
+	return defaultZeroTime()
 }
 
 // Md5Str MD5哈希计算

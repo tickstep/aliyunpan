@@ -38,6 +38,10 @@ type (
 		maxUploadRate   int64 // 限制最大上传速度
 
 		useInternalUrl bool
+
+		localFolderModifyCount int
+		panFolderModifyCount   int
+		folderModifyMutex      *sync.Mutex
 	}
 
 	localFileSet struct {
@@ -66,7 +70,47 @@ func NewFileActionTaskManager(task *SyncTask, maxDownloadRate, maxUploadRate int
 
 		maxDownloadRate: maxDownloadRate,
 		maxUploadRate:   maxUploadRate,
+
+		localFolderModifyCount: 1,
+		panFolderModifyCount:   1,
+		folderModifyMutex:      &sync.Mutex{},
 	}
+}
+
+func (f *FileActionTaskManager) AddLocalFolderModifyCount() {
+	f.folderModifyMutex.Lock()
+	defer f.folderModifyMutex.Unlock()
+	f.localFolderModifyCount += 1
+}
+
+func (f *FileActionTaskManager) MinusLocalFolderModifyCount() {
+	f.folderModifyMutex.Lock()
+	defer f.folderModifyMutex.Unlock()
+	f.localFolderModifyCount -= 1
+}
+
+func (f *FileActionTaskManager) getLocalFolderModifyCount() int {
+	f.folderModifyMutex.Lock()
+	defer f.folderModifyMutex.Unlock()
+	return f.localFolderModifyCount
+}
+
+func (f *FileActionTaskManager) AddPanFolderModifyCount() {
+	f.folderModifyMutex.Lock()
+	defer f.folderModifyMutex.Unlock()
+	f.panFolderModifyCount += 1
+}
+
+func (f *FileActionTaskManager) MinusPanFolderModifyCount() {
+	f.folderModifyMutex.Lock()
+	defer f.folderModifyMutex.Unlock()
+	f.panFolderModifyCount -= 1
+}
+
+func (f *FileActionTaskManager) getPanFolderModifyCount() int {
+	f.folderModifyMutex.Lock()
+	defer f.folderModifyMutex.Unlock()
+	return f.panFolderModifyCount
 }
 
 // Start 启动文件动作任务管理进程
@@ -145,7 +189,12 @@ func (f *FileActionTaskManager) doLocalFileDiffRoutine(ctx context.Context) {
 					continue
 				}
 			}
-			//logger.Verboseln("do file diff process")
+			// check need to do the loop or to wait
+			if f.getLocalFolderModifyCount() <= 0 {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
 			localFiles := LocalFileList{}
 			panFiles := PanFileList{}
 			var err error
@@ -153,8 +202,9 @@ func (f *FileActionTaskManager) doLocalFileDiffRoutine(ctx context.Context) {
 
 			objLocal = localFolderQueue.Pop()
 			if objLocal == nil {
-				// restart over
+				// restart over & begin goto next term
 				localFolderQueue.Push(localRootFolder)
+				f.MinusLocalFolderModifyCount()
 				time.Sleep(3 * time.Second)
 				continue
 			}
@@ -196,7 +246,11 @@ func (f *FileActionTaskManager) doPanFileDiffRoutine(ctx context.Context) {
 					continue
 				}
 			}
-			//logger.Verboseln("do file diff process")
+			if f.getPanFolderModifyCount() <= 0 {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
 			localFiles := LocalFileList{}
 			panFiles := PanFileList{}
 			var err error
@@ -206,6 +260,7 @@ func (f *FileActionTaskManager) doPanFileDiffRoutine(ctx context.Context) {
 			if objPan == nil {
 				// restart over
 				panFolderQueue.Push(panRootFolder)
+				f.MinusPanFolderModifyCount()
 				time.Sleep(3 * time.Second)
 				continue
 			}

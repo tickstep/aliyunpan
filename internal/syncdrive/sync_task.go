@@ -241,23 +241,35 @@ func newLocalFileItem(file os.FileInfo, fullPath string) *LocalFileItem {
 }
 
 // discardLocalFileDb 清理本地数据库中无效的数据项
-func (t *SyncTask) discardLocalFileDb(filePath string, startTimeUnix int64) {
+func (t *SyncTask) discardLocalFileDb(filePath string, startTimeUnix int64) bool {
 	files, e := t.localFileDb.GetFileList(filePath)
+	r := false
 	if e != nil {
-		return
+		return r
 	}
 	for _, file := range files {
 		if file.ScanTimeAt == "" || file.ScanTimeUnix() < startTimeUnix {
-			// label file discard
-			file.ScanStatus = ScanStatusDiscard
-			t.localFileDb.Update(file)
-			logger.Verboseln("label local file discard: ", utils.ObjectToJsonStr(file, false))
+			if t.Mode == DownloadOnly {
+				// delete discard local file info directly
+				t.localFileDb.Delete(file.Path)
+				logger.Verboseln("label discard local file from DB: ", utils.ObjectToJsonStr(file, false))
+			} else {
+				// label file discard
+				file.ScanStatus = ScanStatusDiscard
+				t.localFileDb.Update(file)
+				logger.Verboseln("label local file discard: ", utils.ObjectToJsonStr(file, false))
+			}
+			r = true
 		} else {
 			if file.IsFolder() {
-				t.discardLocalFileDb(file.Path, startTimeUnix)
+				b := t.discardLocalFileDb(file.Path, startTimeUnix)
+				if b {
+					r = b
+				}
 			}
 		}
 	}
+	return r
 }
 
 func (t *SyncTask) skipLocalFile(file *LocalFileItem) bool {
@@ -320,6 +332,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 	})
 	startTimeOfThisLoop := time.Now().Unix()
 	delayTimeCount := int64(0)
+	isLocalFolderModify := false
 
 	t.wg.AddDelta()
 	defer t.wg.Done()
@@ -343,7 +356,12 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 			obj := folderQueue.Pop()
 			if obj == nil {
 				// label discard file from DB
-				t.discardLocalFileDb(t.LocalFolderPath, startTimeOfThisLoop)
+				if t.discardLocalFileDb(t.LocalFolderPath, startTimeOfThisLoop) {
+					logger.Verboseln("notify local folder modify, need to do file action task")
+					t.fileActionTaskManager.AddLocalFolderModifyCount()
+					t.fileActionTaskManager.AddPanFolderModifyCount()
+					isLocalFolderModify = false
+				}
 
 				// restart scan loop over again
 				folderQueue.Push(&folderItem{
@@ -351,6 +369,11 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					path:     t.LocalFolderPath,
 				})
 				delayTimeCount = TimeSecondsOf30Seconds
+				if isLocalFolderModify {
+					logger.Verboseln("notify local folder modify, need to do file action task")
+					t.fileActionTaskManager.AddLocalFolderModifyCount()
+					isLocalFolderModify = false
+				}
 				continue
 			}
 			item := obj.(*folderItem)
@@ -380,11 +403,14 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					localFile.ScanTimeAt = utils.NowTimeStr()
 					localFileAppendList = append(localFileAppendList, localFile)
 					logger.Verboseln("add local file to db: ", utils.ObjectToJsonStr(localFile, false))
+					isLocalFolderModify = true
 				} else {
 					// update newest info into DB
-					if localFile.UpdateTimeUnix() > localFileInDb.UpdateTimeUnix() {
+					if localFile.UpdateTimeUnix() > localFileInDb.UpdateTimeUnix() || localFile.FileSize != localFileInDb.FileSize {
 						localFileInDb.Sha1Hash = ""
+						isLocalFolderModify = true
 					}
+
 					localFileInDb.UpdatedAt = localFile.UpdatedAt
 					localFileInDb.CreatedAt = localFile.CreatedAt
 					localFileInDb.FileSize = localFile.FileSize
@@ -418,23 +444,35 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 }
 
 // discardPanFileDb 清理云盘数据库中无效的数据项
-func (t *SyncTask) discardPanFileDb(filePath string, startTimeUnix int64) {
+func (t *SyncTask) discardPanFileDb(filePath string, startTimeUnix int64) bool {
 	files, e := t.panFileDb.GetFileList(filePath)
+	r := false
 	if e != nil {
-		return
+		return r
 	}
 	for _, file := range files {
 		if file.ScanTimeUnix() < startTimeUnix {
-			// label file discard
-			file.ScanStatus = ScanStatusDiscard
-			t.panFileDb.Update(file)
-			logger.Verboseln("label pan file discard: ", utils.ObjectToJsonStr(file, false))
+			if t.Mode == UploadOnly {
+				// delete discard pan file info directly
+				t.panFileDb.Delete(file.Path)
+				logger.Verboseln("delete discard pan file from DB: ", utils.ObjectToJsonStr(file, false))
+			} else {
+				// label file discard
+				file.ScanStatus = ScanStatusDiscard
+				t.panFileDb.Update(file)
+				logger.Verboseln("label pan file discard: ", utils.ObjectToJsonStr(file, false))
+			}
+			r = true
 		} else {
 			if file.IsFolder() {
-				t.discardPanFileDb(file.Path, startTimeUnix)
+				b := t.discardPanFileDb(file.Path, startTimeUnix)
+				if b {
+					r = b
+				}
 			}
 		}
 	}
+	return r
 }
 
 func (t *SyncTask) skipPanFile(file *PanFileItem) bool {
@@ -484,6 +522,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 	folderQueue.Push(rootPanFile)
 	startTimeOfThisLoop := time.Now().Unix()
 	delayTimeCount := int64(0)
+	isPanFolderModify := false
 
 	t.wg.AddDelta()
 	defer t.wg.Done()
@@ -507,11 +546,21 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 			obj := folderQueue.Pop()
 			if obj == nil {
 				// label discard file from DB
-				t.discardPanFileDb(t.PanFolderPath, startTimeOfThisLoop)
+				if t.discardPanFileDb(t.PanFolderPath, startTimeOfThisLoop) {
+					logger.Verboseln("notify pan folder modify, need to do file action task")
+					t.fileActionTaskManager.AddPanFolderModifyCount()
+					t.fileActionTaskManager.AddLocalFolderModifyCount()
+					isPanFolderModify = false
+				}
 
 				// restart scan loop over again
 				folderQueue.Push(rootPanFile)
 				delayTimeCount = TimeSecondsOf2Minute
+				if isPanFolderModify {
+					logger.Verboseln("notify pan folder modify, need to do file action task")
+					t.fileActionTaskManager.AddPanFolderModifyCount()
+					isPanFolderModify = false
+				}
 				continue
 			}
 			item := obj.(*aliyunpan.FileEntity)
@@ -540,17 +589,23 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 					panFile.ScanTimeAt = utils.NowTimeStr()
 					panFileList = append(panFileList, panFile)
 					logger.Verboseln("add pan file to db: ", utils.ObjectToJsonStr(panFile, false))
+					isPanFolderModify = true
 				} else {
 					// update newest info into DB
-					panFileInDb.DomainId = file.DomainId
-					panFileInDb.FileId = file.FileId
-					panFileInDb.FileType = file.FileType
-					panFileInDb.Category = file.Category
-					panFileInDb.Crc64Hash = file.Crc64Hash
-					panFileInDb.Sha1Hash = file.ContentHash
-					panFileInDb.FileSize = file.FileSize
-					panFileInDb.UpdatedAt = file.UpdatedAt
-					panFileInDb.CreatedAt = file.CreatedAt
+					if strings.ToLower(file.ContentHash) != strings.ToLower(panFileInDb.Sha1Hash) {
+						isPanFolderModify = true
+
+						panFileInDb.DomainId = file.DomainId
+						panFileInDb.FileId = file.FileId
+						panFileInDb.FileType = file.FileType
+						panFileInDb.Category = file.Category
+						panFileInDb.Crc64Hash = file.Crc64Hash
+						panFileInDb.Sha1Hash = file.ContentHash
+						panFileInDb.FileSize = file.FileSize
+						panFileInDb.UpdatedAt = file.UpdatedAt
+						panFileInDb.CreatedAt = file.CreatedAt
+					}
+					// update scan time
 					panFileInDb.ScanTimeAt = utils.NowTimeStr()
 					panFileInDb.ScanStatus = ScanStatusNormal
 					logger.Verboseln("update pan file to db: ", utils.ObjectToJsonStr(panFileInDb, false))
