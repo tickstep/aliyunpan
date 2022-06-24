@@ -44,6 +44,7 @@ HEALTHCHECK --start-period=5s --interval=10s --timeout=5s --retries=3 CMD /bin/s
 EXPOSE 23077
 
 # 环境变量
+ENV ALIYUNPAN_DOCKER=1
 ENV ALIYUNPAN_CONFIG_DIR=/home/app/config
 ENV ALIYUNPAN_AUTH_USER=admin
 ENV ALIYUNPAN_AUTH_PASSWORD=admin

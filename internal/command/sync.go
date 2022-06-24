@@ -260,11 +260,23 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 		fmt.Println("启动任务失败：", e)
 		return
 	}
-	c := ""
-	fmt.Print("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止：")
-	for strings.ToLower(c) != "y" {
-		fmt.Scan(&c)
+
+	_, ok := os.LookupEnv("ALIYUNPAN_DOCKER")
+	if ok {
+		// in docker container
+		// 使用休眠以节省CPU资源
+		for {
+			time.Sleep(60 * time.Second)
+		}
+	} else {
+		// in cmd mode
+		c := ""
+		fmt.Print("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止：")
+		for strings.ToLower(c) != "y" {
+			fmt.Scan(&c)
+		}
 	}
+
 	fmt.Println("正在停止同步备份任务，请稍等...")
 	syncMgr.Stop()
 }

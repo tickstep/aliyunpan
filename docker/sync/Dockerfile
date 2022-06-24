@@ -45,6 +45,7 @@ COPY ./out/binary_files/sync_drive /home/app/config/sync_drive
 HEALTHCHECK --start-period=5s --interval=10s --timeout=5s --retries=3 CMD /bin/sh /home/app/health_check.sh
 
 # 环境变量
+ENV ALIYUNPAN_DOCKER=1
 ENV ALIYUNPAN_CONFIG_DIR=/home/app/config
 
 ENV ALIYUNPAN_REFRESH_TOKEN=""
