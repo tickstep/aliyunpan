@@ -702,6 +702,8 @@ D:\Program Files\aliyunpan>alisync stop
 2022-06-21 13:42:32,201 INFO  - Stopping service 'alisync (alisync)'...
 2022-06-21 13:42:32,211 INFO  - Service 'alisync (alisync)' stopped successfully.
 ```
+效果截图如下   
+![](assets/images/win10-alisync-service-bg.png)
 
 ### Docker运行
 详情文档请参考dockerhub网址：[tickstep/aliyunpan-sync](https://hub.docker.com/r/tickstep/aliyunpan-sync)
