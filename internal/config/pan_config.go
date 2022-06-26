@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil/jsonhelper"
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/homedir"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
@@ -316,6 +317,22 @@ func GetPluginDir() string {
 // GetSyncDriveDir 获取同步备份的文件夹路径
 func GetSyncDriveDir() string {
 	return strings.TrimSuffix(GetConfigDir(), "/") + "/sync_drive"
+}
+
+// GetLogDir 获取日志文件目录路径
+func GetLogDir() string {
+	return strings.TrimSuffix(GetConfigDir(), "/") + "/logs"
+}
+
+// GetLogFilePath 获取日志文件路径
+func GetLogFilePath() string {
+	dirPath := GetLogDir()
+	if b, e := utils.PathExists(dirPath); e == nil {
+		if !b {
+			os.MkdirAll(dirPath, 0755)
+		}
+	}
+	return dirPath + "/" + "aliyunpan_verbose.log"
 }
 
 func (c *PanConfig) ActiveUser() *PanUser {
