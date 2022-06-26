@@ -50,7 +50,7 @@ const (
 
 var (
 	// Version 版本号
-	Version = "v0.1.6"
+	Version = "v0.1.7"
 
 	// 命令历史文件
 	historyFilePath = filepath.Join(config.GetConfigDir(), "aliyunpan_command_history.txt")
