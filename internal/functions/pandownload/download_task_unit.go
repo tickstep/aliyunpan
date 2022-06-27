@@ -405,6 +405,41 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	fmt.Print("\n")
 	fmt.Printf("[%s] ----\n%s\n", dtu.taskInfo.Id(), dtu.fileInfo.String())
 
+	// 调用插件
+	ft := "file"
+	if dtu.fileInfo.IsFolder() {
+		ft = "folder"
+	}
+	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+	plugin, _ := pluginManger.GetPlugin()
+	localFilePath := strings.TrimPrefix(dtu.SavePath, dtu.OriginSaveRootPath)
+	localFilePath = strings.TrimPrefix(strings.TrimPrefix(localFilePath, "\\"), "/")
+	pluginParam := &plugins.DownloadFilePrepareParams{
+		DriveId:            dtu.fileInfo.DriveId,
+		DriveFilePath:      dtu.fileInfo.Path,
+		DriveFileName:      dtu.fileInfo.FileName,
+		DriveFileSize:      dtu.fileInfo.FileSize,
+		DriveFileType:      ft,
+		DriveFileSha1:      dtu.fileInfo.ContentHash,
+		DriveFileUpdatedAt: dtu.fileInfo.UpdatedAt,
+		LocalFilePath:      localFilePath,
+	}
+	if downloadFilePrepareResult, er := plugin.DownloadFilePrepareCallback(plugins.GetContext(config.Config.ActiveUser()), pluginParam); er == nil && downloadFilePrepareResult != nil {
+		if strings.Compare("yes", downloadFilePrepareResult.DownloadApproved) != 0 {
+			// skip download this file
+			fmt.Printf("插件取消了该文件下载: %s\n", dtu.fileInfo.Path)
+			result.Succeed = false
+			result.Cancel = true
+			return
+		}
+		if downloadFilePrepareResult.LocalFilePath != "" {
+			targetSaveRelativePath := strings.TrimPrefix(downloadFilePrepareResult.LocalFilePath, "/")
+			targetSaveRelativePath = strings.TrimPrefix(targetSaveRelativePath, "\\")
+			dtu.SavePath = path.Clean(dtu.OriginSaveRootPath + string(os.PathSeparator) + targetSaveRelativePath)
+			fmt.Printf("插件修改文件下载保存路径为: %s\n", dtu.SavePath)
+		}
+	}
+
 	// 如果是一个目录, 将子文件和子目录加入队列
 	if dtu.fileInfo.IsFolder() {
 		_, err := os.Stat(dtu.SavePath)
@@ -469,37 +504,6 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		// 本下载任务执行成功
 		result.Succeed = true
 		return
-	}
-
-	// 调用插件
-	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
-	plugin, _ := pluginManger.GetPlugin()
-	localFilePath := strings.TrimPrefix(dtu.SavePath, dtu.OriginSaveRootPath)
-	localFilePath = strings.TrimPrefix(strings.TrimPrefix(localFilePath, "\\"), "/")
-	pluginParam := &plugins.DownloadFilePrepareParams{
-		DriveId:            dtu.fileInfo.DriveId,
-		DriveFilePath:      dtu.fileInfo.Path,
-		DriveFileName:      dtu.fileInfo.FileName,
-		DriveFileSize:      dtu.fileInfo.FileSize,
-		DriveFileType:      "file",
-		DriveFileSha1:      dtu.fileInfo.ContentHash,
-		DriveFileUpdatedAt: dtu.fileInfo.UpdatedAt,
-		LocalFilePath:      localFilePath,
-	}
-	if downloadFilePrepareResult, er := plugin.DownloadFilePrepareCallback(plugins.GetContext(config.Config.ActiveUser()), pluginParam); er == nil && downloadFilePrepareResult != nil {
-		if strings.Compare("yes", downloadFilePrepareResult.DownloadApproved) != 0 {
-			// skip download this file
-			fmt.Printf("插件取消了该文件下载: %s\n", dtu.fileInfo.Path)
-			result.Succeed = false
-			result.Cancel = true
-			return
-		}
-		if downloadFilePrepareResult.LocalFilePath != "" {
-			targetSaveRelativePath := strings.TrimPrefix(downloadFilePrepareResult.LocalFilePath, "/")
-			targetSaveRelativePath = strings.TrimPrefix(targetSaveRelativePath, "\\")
-			dtu.SavePath = path.Clean(dtu.OriginSaveRootPath + string(os.PathSeparator) + targetSaveRelativePath)
-			fmt.Printf("插件修改文件下载保存路径为: %s\n", dtu.SavePath)
-		}
 	}
 
 	fmt.Printf("[%s] 准备下载: %s\n", dtu.taskInfo.Id(), dtu.FilePanPath)
