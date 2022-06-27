@@ -340,7 +340,8 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 				return filepath.SkipDir
 			}
 
-			if fi.Mode()&os.ModeSymlink != 0 { // 读取 symbol link
+			// 读取 symbol link
+			if fi.Mode()&os.ModeSymlink != 0 {
 				err = WalkAllFile(file+string(os.PathSeparator), walkFunc)
 				return err
 			}
@@ -351,33 +352,38 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			if os.PathSeparator == '\\' {
 				subSavePath = cmdutil.ConvertToUnixPathSeparator(subSavePath)
 			}
-
 			subSavePath = path.Clean(savePath + aliyunpan.PathSeparator + subSavePath)
 
 			// 插件回调
-			if !fi.IsDir() { // 针对文件上传前进行回调
-				pluginParam := &plugins.UploadFilePrepareParams{
-					LocalFilePath:      file,
-					LocalFileName:      fi.Name(),
-					LocalFileSize:      fi.Size(),
-					LocalFileType:      "file",
-					LocalFileUpdatedAt: fi.ModTime().Format("2006-01-02 15:04:05"),
-					DriveId:            activeUser.ActiveDriveId,
-					DriveFilePath:      strings.TrimPrefix(strings.TrimPrefix(subSavePath, savePath), "/"),
+			ft := "file"
+			if fi.IsDir() {
+				ft = "folder"
+			}
+			pluginParam := &plugins.UploadFilePrepareParams{
+				LocalFilePath:      file,
+				LocalFileName:      fi.Name(),
+				LocalFileSize:      fi.Size(),
+				LocalFileType:      ft,
+				LocalFileUpdatedAt: fi.ModTime().Format("2006-01-02 15:04:05"),
+				DriveId:            activeUser.ActiveDriveId,
+				DriveFilePath:      strings.TrimPrefix(strings.TrimPrefix(subSavePath, savePath), "/"),
+			}
+			if uploadFilePrepareResult, er := plugin.UploadFilePrepareCallback(plugins.GetContext(activeUser), pluginParam); er == nil && uploadFilePrepareResult != nil {
+				if strings.Compare("yes", uploadFilePrepareResult.UploadApproved) != 0 {
+					// skip upload this file
+					fmt.Printf("插件禁止该文件上传: %s\n", file)
+					return filepath.SkipDir
 				}
-				if uploadFilePrepareResult, er := plugin.UploadFilePrepareCallback(plugins.GetContext(activeUser), pluginParam); er == nil && uploadFilePrepareResult != nil {
-					if strings.Compare("yes", uploadFilePrepareResult.UploadApproved) != 0 {
-						// skip upload this file
-						fmt.Printf("插件禁止该文件上传: %s\n", file)
-						return filepath.SkipDir
-					}
-					if uploadFilePrepareResult.DriveFilePath != "" {
-						targetSavePanRelativePath := strings.TrimPrefix(uploadFilePrepareResult.DriveFilePath, "/")
-						subSavePath = path.Clean(savePath + aliyunpan.PathSeparator + targetSavePanRelativePath)
-						fmt.Printf("插件修改文件网盘保存路径为: %s\n", subSavePath)
-					}
+				if uploadFilePrepareResult.DriveFilePath != "" {
+					targetSavePanRelativePath := strings.TrimPrefix(uploadFilePrepareResult.DriveFilePath, "/")
+					subSavePath = path.Clean(savePath + aliyunpan.PathSeparator + targetSavePanRelativePath)
+					fmt.Printf("插件修改文件网盘保存路径为: %s\n", subSavePath)
 				}
+			}
 
+			// 创建对应的文件上传任务
+			// 文件夹自身无需独立上传，上传里面的文件会创建对应的文件夹
+			if !fi.IsDir() {
 				taskinfo := executor.Append(&panupload.UploadTaskUnit{
 					LocalFileChecksum: localfile.NewLocalFileEntity(file),
 					SavePath:          subSavePath,
@@ -399,7 +405,9 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			return nil
 		}
 		if err := WalkAllFile(curPath, walkFunc); err != nil {
-			fmt.Printf("警告: 遍历错误: %s\n", err)
+			if err != filepath.SkipDir {
+				fmt.Printf("警告: 遍历错误: %s\n", err)
+			}
 		}
 	}
 
