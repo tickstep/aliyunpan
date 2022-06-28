@@ -20,7 +20,6 @@ import (
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/requester/rio/speeds"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -115,7 +114,7 @@ func CmdUpload() cli.Command {
 		Usage:     "上传文件/目录",
 		UsageText: cmder.App().Name + " upload <本地文件/目录的路径1> <文件/目录2> <文件/目录3> ... <目标目录>",
 		Description: `
-	上传指定的文件夹或者文件，上传的文件将会保存到 <目标目录>.
+	上传指定的文件夹或者文件，上传的文件将会保存到 <目标目录>。支持软链接文件，包括Linux(ln)和Windows(mklink)创建的符号链接文件。
 
   示例:
     1. 将本地的 C:\Users\Administrator\Desktop\1.mp4 上传到网盘 /视频 目录
@@ -311,7 +310,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 
 	// 遍历指定的文件并创建上传任务
 	for _, curPath := range localPaths {
-		var walkFunc filepath.WalkFunc
+		var walkFunc localfile.MyWalkFunc
 		curPath = filepath.Clean(curPath)
 		localPathDir := filepath.Dir(curPath)
 
@@ -326,27 +325,22 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			localPathDir = ""
 		}
 
-		walkFunc = func(file string, fi os.FileInfo, err error) error {
+		walkFunc = func(file localfile.SymlinkFile, fi os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
 			if os.PathSeparator == '\\' {
-				file = cmdutil.ConvertToWindowsPathSeparator(file)
+				file.LogicPath = cmdutil.ConvertToWindowsPathSeparator(file.LogicPath)
+				file.RealPath = cmdutil.ConvertToWindowsPathSeparator(file.RealPath)
 			}
 
 			// 是否排除上传
-			if isExcludeFile(file, opt) {
-				fmt.Printf("排除文件: %s\n", file)
+			if isExcludeFile(file.LogicPath, opt) {
+				fmt.Printf("排除文件: %s\n", file.LogicPath)
 				return filepath.SkipDir
 			}
 
-			// 读取 symbol link
-			if fi.Mode()&os.ModeSymlink != 0 {
-				err = WalkAllFile(file+string(os.PathSeparator), walkFunc)
-				return err
-			}
-
-			subSavePath := strings.TrimPrefix(file, localPathDir)
+			subSavePath := strings.TrimPrefix(file.LogicPath, localPathDir)
 
 			// 针对 windows 的目录处理
 			if os.PathSeparator == '\\' {
@@ -360,7 +354,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 				ft = "folder"
 			}
 			pluginParam := &plugins.UploadFilePrepareParams{
-				LocalFilePath:      file,
+				LocalFilePath:      file.LogicPath,
 				LocalFileName:      fi.Name(),
 				LocalFileSize:      fi.Size(),
 				LocalFileType:      ft,
@@ -371,7 +365,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			if uploadFilePrepareResult, er := plugin.UploadFilePrepareCallback(plugins.GetContext(activeUser), pluginParam); er == nil && uploadFilePrepareResult != nil {
 				if strings.Compare("yes", uploadFilePrepareResult.UploadApproved) != 0 {
 					// skip upload this file
-					fmt.Printf("插件禁止该文件上传: %s\n", file)
+					fmt.Printf("插件禁止该文件上传: %s\n", file.LogicPath)
 					return filepath.SkipDir
 				}
 				if uploadFilePrepareResult.DriveFilePath != "" {
@@ -385,7 +379,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			// 文件夹自身无需独立上传，上传里面的文件会创建对应的文件夹
 			if !fi.IsDir() {
 				taskinfo := executor.Append(&panupload.UploadTaskUnit{
-					LocalFileChecksum: localfile.NewLocalFileEntity(file),
+					LocalFileChecksum: localfile.NewLocalSymlinkFileEntity(file),
 					SavePath:          subSavePath,
 					DriveId:           opt.DriveId,
 					PanClient:         activeUser.PanClient(),
@@ -404,7 +398,9 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			}
 			return nil
 		}
-		if err := WalkAllFile(curPath, walkFunc); err != nil {
+
+		file := localfile.NewSymlinkFile(curPath)
+		if err = localfile.WalkAllFile(file, walkFunc); err != nil {
 			if err != filepath.SkipDir {
 				fmt.Printf("警告: 遍历错误: %s\n", err)
 			}
@@ -429,7 +425,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			tb := cmdtable.NewTable(os.Stdout)
 			for e := failed.Shift(); e != nil; e = failed.Shift() {
 				item := e.(*taskframework.TaskInfoItem)
-				tb.Append([]string{item.Info.Id(), item.Unit.(*panupload.UploadTaskUnit).LocalFileChecksum.Path})
+				tb.Append([]string{item.Info.Id(), item.Unit.(*panupload.UploadTaskUnit).LocalFileChecksum.Path.LogicPath})
 			}
 			tb.Render()
 		}
@@ -451,44 +447,6 @@ func isExcludeFile(filePath string, opt *UploadOptions) bool {
 		}
 	}
 	return false
-}
-
-func WalkAllFile(dirPath string, walkFn filepath.WalkFunc) error {
-	info, err := os.Lstat(dirPath)
-	if err != nil {
-		err = walkFn(dirPath, nil, err)
-	} else {
-		err = walkAllFile(dirPath, info, walkFn)
-	}
-	return err
-}
-
-func walkAllFile(dirPath string, info os.FileInfo, walkFn filepath.WalkFunc) error {
-	if !info.IsDir() {
-		return walkFn(dirPath, info, nil)
-	}
-
-	files, err1 := ioutil.ReadDir(dirPath)
-	if err1 != nil {
-		return walkFn(dirPath, nil, err1)
-	}
-	for _, fi := range files {
-		subFilePath := dirPath + "/" + fi.Name()
-		err := walkFn(subFilePath, fi, err1)
-		if err != nil && err != filepath.SkipDir {
-			return err
-		}
-		if fi.IsDir() {
-			if err == filepath.SkipDir {
-				continue
-			}
-			err := walkAllFile(subFilePath, fi, walkFn)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // RunRapidUpload 秒传

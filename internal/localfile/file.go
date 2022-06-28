@@ -43,11 +43,11 @@ func (lfm *LocalFileMeta) EqualLengthSHA1(m *LocalFileMeta) bool {
 
 // CompleteAbsPath 补齐绝对路径
 func (lfm *LocalFileMeta) CompleteAbsPath() {
-	if filepath.IsAbs(lfm.Path) {
+	if filepath.IsAbs(lfm.Path.LogicPath) {
 		return
 	}
 
-	absPath, err := filepath.Abs(lfm.Path)
+	absPath, err := filepath.Abs(lfm.Path.LogicPath)
 	if err != nil {
 		return
 	}
@@ -55,7 +55,7 @@ func (lfm *LocalFileMeta) CompleteAbsPath() {
 	if os.PathSeparator == '\\' {
 		absPath = strings.ReplaceAll(absPath, "\\", "/")
 	}
-	lfm.Path = absPath
+	lfm.Path.LogicPath = absPath
 }
 
 // GetFileSum 获取文件的大小, md5, crc32

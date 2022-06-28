@@ -375,7 +375,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 
 		// 计算proof code
 		proofCode := ""
-		localFileEntity, _ := os.Open(localFile.Path)
+		localFileEntity, _ := os.Open(localFile.Path.RealPath)
 		localFileInfo, _ := localFileEntity.Stat()
 		proofCode = aliyunpan.CalcProofCode(f.panClient.GetAccessToken(), rio.NewFileReaderAtLen64(localFileEntity), localFileInfo.Size())
 

@@ -111,7 +111,7 @@ func (ud *UploadingDatabase) UpdateUploading(meta *localfile.LocalFileMeta, stat
 		if uploading.LocalFileMeta == nil {
 			continue
 		}
-		if uploading.LocalFileMeta.EqualLengthMD5(meta) || uploading.LocalFileMeta.Path == meta.Path {
+		if uploading.LocalFileMeta.EqualLengthMD5(meta) || uploading.LocalFileMeta.Path.LogicPath == meta.Path.LogicPath {
 			ud.UploadingList[k].State = state
 			return
 		}
@@ -161,7 +161,7 @@ func (ud *UploadingDatabase) Search(meta *localfile.LocalFileMeta) *uploader.Ins
 		if uploading.LocalFileMeta.EqualLengthSHA1(meta) {
 			return uploading.State
 		}
-		if uploading.LocalFileMeta.Path == meta.Path {
+		if uploading.LocalFileMeta.Path.LogicPath == meta.Path.LogicPath {
 			// 移除旧的信息
 			// 目前只是比较了文件大小
 			if meta.Length != uploading.LocalFileMeta.Length {
@@ -190,7 +190,7 @@ func (ud *UploadingDatabase) clearModTimeChange() {
 			continue
 		}
 
-		info, err := os.Stat(uploading.LocalFileMeta.Path)
+		info, err := os.Stat(uploading.LocalFileMeta.Path.RealPath)
 		if err != nil {
 			ud.deleteIndex(i)
 			i--

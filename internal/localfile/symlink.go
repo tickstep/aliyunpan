@@ -1,6 +1,7 @@
 package localfile
 
 import (
+	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -15,6 +16,12 @@ type SymlinkFile struct {
 	LogicPath string `json:"logicPath"`
 	// RealPath 真正的文件路径，即文件的本体
 	RealPath string `json:"realPath"`
+}
+
+func (s *SymlinkFile) String() string {
+	sb := &strings.Builder{}
+	fmt.Fprintf(sb, "{\"logicPath\":%s, \"realPath\": %s}", s.LogicPath, s.RealPath)
+	return sb.String()
 }
 
 func NewSymlinkFile(filePath string) SymlinkFile {

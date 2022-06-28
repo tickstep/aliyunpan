@@ -252,9 +252,9 @@ func (utu *UploadTaskUnit) pluginCallback(result string) {
 	}
 	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
 	plugin, _ := pluginManger.GetPlugin()
-	_, fileName := filepath.Split(utu.LocalFileChecksum.Path)
+	_, fileName := filepath.Split(utu.LocalFileChecksum.Path.LogicPath)
 	pluginParam := &plugins.UploadFileFinishParams{
-		LocalFilePath:      utu.LocalFileChecksum.Path,
+		LocalFilePath:      utu.LocalFileChecksum.Path.LogicPath,
 		LocalFileName:      fileName,
 		LocalFileSize:      utu.LocalFileChecksum.LocalFileMeta.Length,
 		LocalFileType:      "file",
@@ -292,7 +292,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	timeStart := time.Now()
 	result = &taskframework.TaskUnitRunResult{}
 
-	fmt.Printf("[%s] %s 准备上传: %s => %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path, utu.SavePath)
+	fmt.Printf("[%s] %s 准备上传: %s => %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path.LogicPath, utu.SavePath)
 
 	defer func() {
 		var msg string
@@ -365,7 +365,7 @@ StepUploadPrepareUpload:
 	checkNameMode = "auto_rename"
 	if !utu.NoRapidUpload {
 		// 计算文件SHA1
-		fmt.Printf("[%s] %s 正在计算文件SHA1: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path)
+		fmt.Printf("[%s] %s 正在计算文件SHA1: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path.LogicPath)
 		utu.LocalFileChecksum.Sum(localfile.CHECKSUM_SHA1)
 		sha1Str = utu.LocalFileChecksum.SHA1
 		if utu.LocalFileChecksum.Length == 0 {
@@ -373,7 +373,7 @@ StepUploadPrepareUpload:
 		}
 
 		// proof code
-		localFile, _ = os.Open(utu.LocalFileChecksum.Path)
+		localFile, _ = os.Open(utu.LocalFileChecksum.Path.RealPath)
 		localFileInfo, _ = localFile.Stat()
 		proofCode = aliyunpan.CalcProofCode(utu.PanClient.GetAccessToken(), rio.NewFileReaderAtLen64(localFile), localFileInfo.Size())
 		localFile.Close()

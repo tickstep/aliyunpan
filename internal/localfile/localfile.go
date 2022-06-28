@@ -46,12 +46,12 @@ const (
 type (
 	// LocalFileMeta 本地文件元信息
 	LocalFileMeta struct {
-		Path    string `json:"path,omitempty"`   // 本地路径
-		Length  int64  `json:"length,omitempty"` // 文件大小
-		MD5     string `json:"md5,omitempty"`    // 文件的 md5
-		CRC32   uint32 `json:"crc32,omitempty"`  // 文件的 crc32
-		SHA1     string `json:"sha1,omitempty"`    // 文件的 sha1
-		ModTime int64  `json:"modtime"`          // 修改日期
+		Path    SymlinkFile `json:"path,omitempty"`   // 本地路径
+		Length  int64       `json:"length,omitempty"` // 文件大小
+		MD5     string      `json:"md5,omitempty"`    // 文件的 md5
+		CRC32   uint32      `json:"crc32,omitempty"`  // 文件的 crc32
+		SHA1    string      `json:"sha1,omitempty"`   // 文件的 sha1
+		ModTime int64       `json:"modtime"`          // 修改日期
 
 		// 网盘上传参数
 		UploadOpEntity *aliyunpan.CreateFileUploadResult `json:"uploadOpEntity"`
@@ -69,14 +69,18 @@ type (
 	}
 )
 
-func NewLocalFileEntity(localPath string) *LocalFileEntity {
-	return NewLocalFileEntityWithBufSize(localPath, DefaultBufSize)
+func NewLocalSymlinkFileEntity(file SymlinkFile) *LocalFileEntity {
+	return NewLocalFileEntityWithBufSize(file, DefaultBufSize)
 }
 
-func NewLocalFileEntityWithBufSize(localPath string, bufSize int) *LocalFileEntity {
+func NewLocalFileEntity(localPath string) *LocalFileEntity {
+	return NewLocalFileEntityWithBufSize(NewSymlinkFile(localPath), DefaultBufSize)
+}
+
+func NewLocalFileEntityWithBufSize(file SymlinkFile, bufSize int) *LocalFileEntity {
 	return &LocalFileEntity{
 		LocalFileMeta: LocalFileMeta{
-			Path: localPath,
+			Path: file,
 		},
 		bufSize: bufSize,
 	}
@@ -89,7 +93,7 @@ func (lfc *LocalFileEntity) OpenPath() error {
 	}
 
 	var err error
-	lfc.file, err = os.Open(lfc.Path)
+	lfc.file, err = os.Open(lfc.Path.RealPath)
 	if err != nil {
 		return err
 	}
