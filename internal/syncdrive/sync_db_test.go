@@ -312,3 +312,14 @@ func TestSyncDbAdd(t *testing.T) {
 	//	StatusUpdateTime: "",
 	//})
 }
+
+func TestSyncDbClear(t *testing.T) {
+	b := NewSyncFileDb("D:\\smb\\feny\\goprojects\\dev\\sync.bolt")
+	b.Open()
+	defer b.Close()
+
+	files, _ := b.GetFileList(SyncFileStatusSuccess)
+	for _, file := range files {
+		b.Delete(file.Id())
+	}
+}
