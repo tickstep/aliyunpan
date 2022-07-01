@@ -22,7 +22,7 @@ func TestMyWalkFile(t *testing.T) {
 	}
 
 	//curPath := "D:\\smb\\feny\\goprojects\\dev\\lks"
-	curPath := "D:\\smb\\feny\\goprojects\\dev\\NS游戏备份"
+	curPath := "/Volumes/Downloads/dev/lks"
 	file := NewSymlinkFile(curPath)
 	if err := WalkAllFile(file, walkFunc); err != nil {
 		if err != filepath.SkipDir {
@@ -30,4 +30,14 @@ func TestMyWalkFile(t *testing.T) {
 		}
 	}
 	fmt.Println("count: ", count)
+}
+
+func TestRetrieveRealPath(t *testing.T) {
+	curPath := "/Volumes/Downloads/dev/lks/test"
+	file := NewSymlinkFile(curPath)
+	sf, _, e := RetrieveRealPath(file)
+	if e != nil {
+		fmt.Println(e)
+	}
+	fmt.Println(sf)
 }

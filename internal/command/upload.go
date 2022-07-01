@@ -114,7 +114,7 @@ func CmdUpload() cli.Command {
 		Usage:     "上传文件/目录",
 		UsageText: cmder.App().Name + " upload <本地文件/目录的路径1> <文件/目录2> <文件/目录3> ... <目标目录>",
 		Description: `
-	上传指定的文件夹或者文件，上传的文件将会保存到 <目标目录>。支持软链接文件，包括Linux(ln)和Windows(mklink)创建的符号链接文件。
+	上传指定的文件夹或者文件，上传的文件将会保存到 <目标目录>。支持软链接文件，包括Linux/macOS(ln命令)和Windows(mklink命令)创建的符号链接文件。
 
   示例:
     1. 将本地的 C:\Users\Administrator\Desktop\1.mp4 上传到网盘 /视频 目录

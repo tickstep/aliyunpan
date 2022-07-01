@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// SymlinkFile 软链接文件，Linux的ln，Windows的mklink命令创建的文件链接。对于非软链接文件而言，真实的路径和逻辑路径是一样的。
+// SymlinkFile 软链接文件，Linux/macOS的ln，Windows的mklink命令创建的文件链接。对于非软链接文件而言，真实的路径和逻辑路径是一样的。
 type SymlinkFile struct {
 	// LogicPath 逻辑路径
 	LogicPath string `json:"logicPath"`
