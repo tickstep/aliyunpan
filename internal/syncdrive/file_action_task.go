@@ -62,12 +62,16 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			if f.syncItem.UploadEntity != nil && f.syncItem.UploadEntity.FileId != "" {
 				if file, er := f.panClient.FileInfoById(f.syncItem.DriveId, f.syncItem.UploadEntity.FileId); er == nil {
 					file.Path = f.syncItem.getPanFileFullPath()
-					f.panFileDb.Add(NewPanFileItem(file))
+					fItem := NewPanFileItem(file)
+					fItem.ScanTimeAt = utils.NowTimeStr()
+					f.panFileDb.Add(fItem)
 				}
 			} else {
 				if file, er := f.panClient.FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
 					file.Path = f.syncItem.getPanFileFullPath()
-					f.panFileDb.Add(NewPanFileItem(file))
+					fItem := NewPanFileItem(file)
+					fItem.ScanTimeAt = utils.NowTimeStr()
+					f.panFileDb.Add(fItem)
 				}
 			}
 		}
@@ -108,6 +112,8 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 					FileExtension: path.Ext(file.Name()),
 					Sha1Hash:      f.syncItem.PanFile.Sha1Hash,
 					Path:          f.syncItem.getLocalFileFullPath(),
+					ScanTimeAt:    utils.NowTimeStr(),
+					ScanStatus:    ScanStatusNormal,
 				})
 			}
 		}
@@ -369,7 +375,9 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			// save into DB
 			if panDirFile, e := f.panClient.FileInfoById(f.syncItem.DriveId, panDirFileId); e == nil {
 				panDirFile.Path = panDirPath
-				f.panFileDb.Add(NewPanFileItem(panDirFile))
+				fItem := NewPanFileItem(panDirFile)
+				fItem.ScanTimeAt = utils.NowTimeStr()
+				f.panFileDb.Add(fItem)
 			}
 		}
 
