@@ -638,8 +638,8 @@ func (f *FileActionTaskManager) addToSyncDb(fileTask *FileActionTask) {
 			return
 		}
 		if itemInDb.Status == SyncFileStatusSuccess {
-			if (time.Now().Unix() - itemInDb.StatusUpdateTimeUnix()) < TimeSecondsOf5Minute {
-				// 少于5分钟，不同步，减少同步频次
+			if (time.Now().Unix() - itemInDb.StatusUpdateTimeUnix()) < TimeSecondsOfOneMinute {
+				// 少于1分钟，不同步，减少同步频次
 				return
 			}
 		}
