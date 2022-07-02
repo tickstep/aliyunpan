@@ -26,6 +26,9 @@ func (s *SymlinkFile) String() string {
 
 func NewSymlinkFile(filePath string) SymlinkFile {
 	p := path.Clean(strings.ReplaceAll(filePath, "\\", "/"))
+	if p == "." {
+		p = ""
+	}
 	return SymlinkFile{
 		LogicPath: p,
 		RealPath:  p,
@@ -49,7 +52,56 @@ func RetrieveRealPath(file SymlinkFile) (SymlinkFile, os.FileInfo, error) {
 	return file, info, err
 }
 
-// WalkAllFile 遍历本地文件，支持软链接文件(Linux & Windows)
+// RetrieveRealPathFromLogicPath 遍历路径获取逻辑路径真正的文件路径。如果逻辑路径不完全存在，则返回已经存在的那部分路径
+//
+// logicFilePath - 目标逻辑路径
+// 由于目标逻辑路径期间有可能会经过多次符号逻辑文件，同时有部分逻辑路径可能是不存在的，所以需要按照逻辑文件起始开始进行遍历，直至完成逻辑文件路径的所有遍历，
+// 或者直到不存在的逻辑文件部分，然后返回。
+//
+// 例如逻辑文件路径：/Volumes/Downloads/dev/sync_drive_config.json。
+//
+// 如果/Volumes/Downloads存在而后面部分不存在，则最终结果返回/Volumes/Downloads对应的文件信息，同时返回error
+func RetrieveRealPathFromLogicPath(logicFilePath string) (SymlinkFile, os.FileInfo, error) {
+	logicFilePath = strings.ReplaceAll(logicFilePath, "\\", "/")
+	logicFilePath = path.Clean(logicFilePath)
+	if logicFilePath == "." {
+		logicFilePath = ""
+	}
+	if logicFilePath == "/" {
+		return RetrieveRealPath(NewSymlinkFile(logicFilePath))
+	}
+	pathParts := strings.Split(logicFilePath, "/")
+	exitedSymlinkFile := NewSymlinkFile("")
+	var exitedFileInfo os.FileInfo
+
+	sf := NewSymlinkFile("")
+	var fi os.FileInfo
+	var err error
+	for _, p := range pathParts {
+		if p == "" {
+			continue
+		}
+		if strings.Contains(p, ":") {
+			// windows volume label, e.g: C:/ D:/
+			sf.LogicPath += p
+			sf.RealPath += p
+			exitedSymlinkFile = sf
+			continue
+		}
+		sf.LogicPath += "/" + p
+		sf.RealPath += "/" + p
+		sf, fi, err = RetrieveRealPath(sf)
+		if err != nil {
+			// may be permission deny or not existed
+			return exitedSymlinkFile, exitedFileInfo, err
+		}
+		exitedSymlinkFile = sf
+		exitedFileInfo = fi
+	}
+	return exitedSymlinkFile, exitedFileInfo, nil
+}
+
+// WalkAllFile 遍历本地文件，支持软链接（符号逻辑）文件(Linux & Windows & macOS)
 func WalkAllFile(file SymlinkFile, walkFn MyWalkFunc) error {
 	file.LogicPath = path.Clean(strings.ReplaceAll(file.LogicPath, "\\", "/"))
 	file.RealPath = path.Clean(strings.ReplaceAll(file.RealPath, "\\", "/"))

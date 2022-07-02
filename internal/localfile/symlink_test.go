@@ -41,3 +41,12 @@ func TestRetrieveRealPath(t *testing.T) {
 	}
 	fmt.Println(sf)
 }
+
+func TestRetrieveRealPathFromLogicPath(t *testing.T) {
+	curPath := "/Volumes/Downloads/dev/lks/test/未命名文件夹cmd/sync_drive_config.json"
+	sf, _, e := RetrieveRealPathFromLogicPath(curPath)
+	if e != nil {
+		fmt.Println(e)
+	}
+	fmt.Println(sf)
+}
