@@ -567,7 +567,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 			files, err1 := t.panClient.FileListGetAll(&aliyunpan.FileListParam{
 				DriveId:      t.DriveId,
 				ParentFileId: item.FileId,
-			})
+			}, 1500) // 延迟时间避免触发风控
 			if err1 != nil {
 				// retry next term
 				folderQueue.Push(item)

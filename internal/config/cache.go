@@ -35,10 +35,10 @@ func (pu *PanUser) CacheFilesDirectoriesList(pathStr string) (fdl aliyunpan.File
 			return nil
 		}
 		fileListParam := &aliyunpan.FileListParam{
-			DriveId: pu.ActiveDriveId,
+			DriveId:      pu.ActiveDriveId,
 			ParentFileId: fi.FileId,
 		}
-		fdl, apiError = pu.panClient.FileListGetAll(fileListParam)
+		fdl, apiError = pu.panClient.FileListGetAll(fileListParam, 100)
 		if apiError != nil {
 			return nil
 		}

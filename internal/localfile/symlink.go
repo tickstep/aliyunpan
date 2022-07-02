@@ -82,6 +82,9 @@ func walkAllFile(file SymlinkFile, info os.FileInfo, walkFn MyWalkFunc) error {
 		if err != nil && err != filepath.SkipDir {
 			return err
 		}
+		if fi == nil {
+			continue
+		}
 		if fi.IsDir() {
 			if err == filepath.SkipDir {
 				continue

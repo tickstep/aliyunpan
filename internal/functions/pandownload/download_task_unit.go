@@ -451,7 +451,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		fileList, apierr := dtu.PanClient.FileListGetAll(&aliyunpan.FileListParam{
 			DriveId:      dtu.DriveId,
 			ParentFileId: dtu.fileInfo.FileId,
-		})
+		}, 1000)
 		if apierr != nil {
 			// retry one more time
 			time.Sleep(3 * time.Second)
@@ -459,7 +459,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			fileList, apierr = dtu.PanClient.FileListGetAll(&aliyunpan.FileListParam{
 				DriveId:      dtu.DriveId,
 				ParentFileId: dtu.fileInfo.FileId,
-			})
+			}, 1000)
 			if apierr != nil {
 				logger.Verbosef("[%s] get download file list for %s error: %s\n",
 					dtu.taskInfo.Id(), dtu.FilePanPath, apierr)

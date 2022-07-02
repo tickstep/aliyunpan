@@ -327,7 +327,9 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 
 		walkFunc = func(file localfile.SymlinkFile, fi os.FileInfo, err error) error {
 			if err != nil {
-				return err
+				// skip this error file and continue recurse
+				logger.Verboseln("upload process file: ", file, " error: ", err)
+				return nil
 			}
 			if os.PathSeparator == '\\' {
 				file.LogicPath = cmdutil.ConvertToWindowsPathSeparator(file.LogicPath)

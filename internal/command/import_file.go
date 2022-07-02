@@ -32,7 +32,7 @@ import (
 
 type (
 	dirFileListData struct {
-		Dir *aliyunpan.MkdirResult
+		Dir      *aliyunpan.MkdirResult
 		FileList aliyunpan.FileList
 	}
 )
@@ -99,7 +99,7 @@ func CmdImport() cli.Command {
 }
 
 func RunImportFiles(driveId string, overwrite bool, panSavePath, localFilePath string) {
-	lfi,_ := os.Stat(localFilePath)
+	lfi, _ := os.Stat(localFilePath)
 	if lfi != nil {
 		if lfi.IsDir() {
 			fmt.Println("请指定导入文件")
@@ -125,7 +125,7 @@ func RunImportFiles(driveId string, overwrite bool, panSavePath, localFilePath s
 	}
 	defer importFile.Close()
 
-	fileData,err := ioutil.ReadAll(importFile)
+	fileData, err := ioutil.ReadAll(importFile)
 	if err != nil {
 		fmt.Println("读取文件出错")
 		return
@@ -138,9 +138,9 @@ func RunImportFiles(driveId string, overwrite bool, panSavePath, localFilePath s
 	fileText = strings.TrimSpace(fileText)
 	fileLines := strings.Split(fileText, "\n")
 	importFileItems := []RapidUploadItem{}
-	for _,line := range fileLines {
+	for _, line := range fileLines {
 		line = strings.TrimSpace(line)
-		if item,e := newRapidUploadItem(line); e != nil {
+		if item, e := newRapidUploadItem(line); e != nil {
 			fmt.Println(e)
 			continue
 		} else {
@@ -159,7 +159,7 @@ func RunImportFiles(driveId string, overwrite bool, panSavePath, localFilePath s
 	fmt.Println("正在导入...")
 	successImportFiles := []RapidUploadItem{}
 	failedImportFiles := []RapidUploadItem{}
-	for _,item := range importFileItems {
+	for _, item := range importFileItems {
 		fmt.Printf("正在处理导入: %s\n", item.FilePath)
 		result, abort := processOneImport(driveId, overwrite, dirMap, item)
 		if abort {
@@ -175,7 +175,7 @@ func RunImportFiles(driveId string, overwrite bool, panSavePath, localFilePath s
 	}
 	if len(failedImportFiles) > 0 {
 		fmt.Println("\n以下文件导入失败")
-		for _,f := range failedImportFiles {
+		for _, f := range failedImportFiles {
 			fmt.Printf("%s %s\n", f.FileSha1, f.FilePath)
 		}
 		fmt.Println("")
@@ -185,13 +185,13 @@ func RunImportFiles(driveId string, overwrite bool, panSavePath, localFilePath s
 
 func processOneImport(driveId string, isOverwrite bool, dirMap map[string]*dirFileListData, item RapidUploadItem) (result, abort bool) {
 	panClient := config.Config.ActiveUser().PanClient()
-	panDir,fileName := path.Split(item.FilePath)
+	panDir, fileName := path.Split(item.FilePath)
 	dataItem := dirMap[path.Dir(panDir)]
 	if isOverwrite {
 		// 标记覆盖旧同名文件
 		// 检查同名文件是否存在
 		var efi *aliyunpan.FileEntity = nil
-		for _,fileItem := range dataItem.FileList {
+		for _, fileItem := range dataItem.FileList {
 			if !fileItem.IsFolder() && fileItem.FileName == fileName {
 				efi = fileItem
 				break
@@ -201,8 +201,8 @@ func processOneImport(driveId string, isOverwrite bool, dirMap map[string]*dirFi
 			// existed, delete it
 			fdr, err := panClient.FileDelete([]*aliyunpan.FileBatchActionParam{
 				{
-					DriveId:driveId,
-					FileId:efi.FileId,
+					DriveId: driveId,
+					FileId:  efi.FileId,
 				},
 			})
 			if err != nil || fdr == nil || !fdr[0].Success {
@@ -239,7 +239,7 @@ func processOneImport(driveId string, isOverwrite bool, dirMap map[string]*dirFi
 func prepareMkdir(driveId string, importFileItems []RapidUploadItem) map[string]*dirFileListData {
 	panClient := config.Config.ActiveUser().PanClient()
 	resultMap := map[string]*dirFileListData{}
-	for _,item := range importFileItems {
+	for _, item := range importFileItems {
 		var apierr *apierror.ApiError
 		var rs *aliyunpan.MkdirResult
 		panDir := path.Dir(item.FilePath)
@@ -263,7 +263,7 @@ func prepareMkdir(driveId string, importFileItems []RapidUploadItem) map[string]
 		param := &aliyunpan.FileListParam{}
 		param.DriveId = driveId
 		param.ParentFileId = rs.FileId
-		allFileInfo, err1 := panClient.FileListGetAll(param)
+		allFileInfo, err1 := panClient.FileListGetAll(param, 0)
 		if err1 != nil {
 			logger.Verboseln("获取文件信息出错")
 			continue

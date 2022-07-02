@@ -155,7 +155,7 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions,
 	fileListParam.OrderBy = orderBy
 	fileListParam.OrderDirection = orderDirection
 	if targetPathInfo.IsFolder() {
-		fileResult, err := activeUser.PanClient().FileListGetAll(fileListParam)
+		fileResult, err := activeUser.PanClient().FileListGetAll(fileListParam, 0)
 		if err != nil {
 			fmt.Println(err)
 			return
