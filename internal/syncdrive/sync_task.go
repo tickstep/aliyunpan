@@ -360,7 +360,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					logger.Verboseln("notify local folder modify, need to do file action task")
 					t.fileActionTaskManager.AddLocalFolderModifyCount()
 					t.fileActionTaskManager.AddPanFolderModifyCount()
-					isLocalFolderModify = false
+					isLocalFolderModify = false // 重置标记
 				}
 
 				// restart scan loop over again
@@ -372,13 +372,13 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 				if isLocalFolderModify {
 					logger.Verboseln("notify local folder modify, need to do file action task")
 					t.fileActionTaskManager.AddLocalFolderModifyCount()
-					isLocalFolderModify = false
+					isLocalFolderModify = false // 重置标记
 				}
 				continue
 			}
 			item := obj.(*folderItem)
-			files, err := ioutil.ReadDir(item.path)
-			if err != nil {
+			files, err1 := ioutil.ReadDir(item.path)
+			if err1 != nil {
 				continue
 			}
 			if len(files) == 0 {
@@ -564,12 +564,11 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 				continue
 			}
 			item := obj.(*aliyunpan.FileEntity)
-			// TODO: check to decide to sync file info or to await
-			files, err := t.panClient.FileListGetAll(&aliyunpan.FileListParam{
+			files, err1 := t.panClient.FileListGetAll(&aliyunpan.FileListParam{
 				DriveId:      t.DriveId,
 				ParentFileId: item.FileId,
 			})
-			if err != nil {
+			if err1 != nil {
 				// retry next term
 				folderQueue.Push(item)
 				time.Sleep(10 * time.Second)
