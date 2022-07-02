@@ -168,10 +168,12 @@ const (
 	SyncFileStatusIllegal     SyncFileStatus = "illegal"
 	SyncFileStatusNotExisted  SyncFileStatus = "notExisted"
 
-	SyncFileActionDownload    SyncFileAction = "download"
-	SyncFileActionUpload      SyncFileAction = "upload"
-	SyncFileActionDeleteLocal SyncFileAction = "delete_local"
-	SyncFileActionDeletePan   SyncFileAction = "delete_pan"
+	SyncFileActionDownload          SyncFileAction = "download"
+	SyncFileActionUpload            SyncFileAction = "upload"
+	SyncFileActionDeleteLocal       SyncFileAction = "delete_local"
+	SyncFileActionDeletePan         SyncFileAction = "delete_pan"
+	SyncFileActionCreateLocalFolder SyncFileAction = "create_local_folder"
+	SyncFileActionCreatePanFolder   SyncFileAction = "create_pan_folder"
 
 	// ScanStatusNormal 正常
 	ScanStatusNormal ScanStatus = "normal"
@@ -308,9 +310,9 @@ func (p PanFileList) FindFileByPath(filePath string) *PanFileItem {
 
 func (item *SyncFileItem) Id() string {
 	sb := &strings.Builder{}
-	if item.Action == SyncFileActionDownload || item.Action == SyncFileActionDeleteLocal {
+	if item.Action == SyncFileActionDownload || item.Action == SyncFileActionDeleteLocal || item.Action == SyncFileActionCreateLocalFolder {
 		fmt.Fprintf(sb, "%s%s", string(item.Action), item.PanFile.Id())
-	} else if item.Action == SyncFileActionUpload || item.Action == SyncFileActionDeletePan {
+	} else if item.Action == SyncFileActionUpload || item.Action == SyncFileActionDeletePan || item.Action == SyncFileActionCreatePanFolder {
 		fmt.Fprintf(sb, "%s%s", string(item.Action), item.LocalFile.Id())
 	}
 	return utils.Md5Str(sb.String())

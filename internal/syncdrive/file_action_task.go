@@ -36,7 +36,8 @@ type (
 		maxDownloadRate int64 // 限制最大下载速度
 		maxUploadRate   int64 // 限制最大上传速度
 
-		panFolderCreateMutex *sync.Mutex
+		localFolderCreateMutex *sync.Mutex
+		panFolderCreateMutex   *sync.Mutex
 	}
 )
 
@@ -141,6 +142,42 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 		}
 	}
 
+	if f.syncItem.Action == SyncFileActionCreateLocalFolder {
+		if e := f.createLocalFolder(ctx); e != nil {
+			// TODO: retry
+			return e
+		} else {
+			if file, er := os.Stat(f.syncItem.getLocalFileFullPath()); er == nil {
+				f.localFileDb.Add(&LocalFileItem{
+					FileName:      file.Name(),
+					FileSize:      file.Size(),
+					FileType:      "folder",
+					CreatedAt:     file.ModTime().Format("2006-01-02 15:04:05"),
+					UpdatedAt:     file.ModTime().Format("2006-01-02 15:04:05"),
+					FileExtension: "",
+					Sha1Hash:      f.syncItem.PanFile.Sha1Hash,
+					Path:          f.syncItem.getLocalFileFullPath(),
+					ScanTimeAt:    utils.NowTimeStr(),
+					ScanStatus:    ScanStatusNormal,
+				})
+			}
+		}
+	}
+
+	if f.syncItem.Action == SyncFileActionCreatePanFolder {
+		if e := f.createPanFolder(ctx); e != nil {
+			// TODO: retry
+			return e
+		} else {
+			if file, er := f.panClient.FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
+				file.Path = f.syncItem.getPanFileFullPath()
+				fItem := NewPanFileItem(file)
+				fItem.ScanTimeAt = utils.NowTimeStr()
+				f.panFileDb.Add(fItem)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -184,7 +221,9 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	}
 	localDir := path.Dir(f.syncItem.getLocalFileFullPath())
 	if b, e := utils.PathExists(localDir); e == nil && !b {
+		f.localFolderCreateMutex.Lock()
 		os.MkdirAll(localDir, 0755)
+		f.localFolderCreateMutex.Unlock()
 		time.Sleep(200 * time.Millisecond)
 	}
 	writer, file, err := downloader.NewDownloaderWriterByFilename(f.syncItem.getLocalFileDownloadingFullPath(), os.O_CREATE|os.O_WRONLY, 0666)
@@ -587,4 +626,55 @@ func (f *FileActionTask) deletePanFile(ctx context.Context) error {
 	f.syncItem.StatusUpdateTime = utils.NowTimeStr()
 	f.syncFileDb.Update(f.syncItem)
 	return err
+}
+
+func (f *FileActionTask) createLocalFolder(ctx context.Context) error {
+	localFilePath := f.syncItem.getLocalFileFullPath()
+	if b, e := utils.PathExists(localFilePath); e == nil && b {
+		// 本地文件夹已经存在
+		f.syncItem.Status = SyncFileStatusSuccess
+		f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+		f.syncFileDb.Update(f.syncItem)
+		return nil
+	}
+
+	// 创建
+	var er error
+	if b, e := utils.PathExists(localFilePath); e == nil && !b {
+		f.localFolderCreateMutex.Lock()
+		er = os.MkdirAll(localFilePath, 0755)
+		f.localFolderCreateMutex.Unlock()
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	if er == nil {
+		f.syncItem.Status = SyncFileStatusSuccess
+	} else {
+		f.syncItem.Status = SyncFileStatusFailed
+	}
+
+	f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+	f.syncFileDb.Update(f.syncItem)
+	return er
+}
+
+func (f *FileActionTask) createPanFolder(ctx context.Context) error {
+	panDirPath := f.syncItem.getPanFileFullPath()
+	// 创建文件夹
+	logger.Verbosef("创建云盘文件夹: %s\n", panDirPath)
+	f.panFolderCreateMutex.Lock()
+	_, apierr1 := f.panClient.Mkdir(f.syncItem.DriveId, "root", panDirPath)
+	f.panFolderCreateMutex.Unlock()
+	if apierr1 == nil {
+		logger.Verbosef("创建云盘文件夹成功: %s\n", panDirPath)
+		f.syncItem.Status = SyncFileStatusSuccess
+		f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+		f.syncFileDb.Update(f.syncItem)
+		return nil
+	} else {
+		f.syncItem.Status = SyncFileStatusFailed
+		f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+		f.syncFileDb.Update(f.syncItem)
+		return apierr1
+	}
 }

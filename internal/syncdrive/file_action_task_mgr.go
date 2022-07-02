@@ -20,6 +20,7 @@ type (
 
 	FileActionTaskManager struct {
 		mutex             *sync.Mutex
+		localCreateMutex  *sync.Mutex
 		folderCreateMutex *sync.Mutex
 
 		task       *SyncTask
@@ -58,6 +59,7 @@ type (
 func NewFileActionTaskManager(task *SyncTask, maxDownloadRate, maxUploadRate int64) *FileActionTaskManager {
 	return &FileActionTaskManager{
 		mutex:             &sync.Mutex{},
+		localCreateMutex:  &sync.Mutex{},
 		folderCreateMutex: &sync.Mutex{},
 		task:              task,
 
@@ -332,26 +334,32 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 		for _, file := range panFilesNeedToDownload {
 			if file.ScanStatus == ScanStatusNormal { // 下载文件
 				if f.task.Mode == DownloadOnly || f.task.Mode == SyncTwoWay {
+					syncItem := &SyncFileItem{
+						Action:            "",
+						Status:            SyncFileStatusCreate,
+						LocalFile:         nil,
+						PanFile:           file,
+						StatusUpdateTime:  "",
+						PanFolderPath:     f.task.PanFolderPath,
+						LocalFolderPath:   f.task.LocalFolderPath,
+						DriveId:           f.task.DriveId,
+						DownloadBlockSize: f.fileDownloadBlockSize,
+						UploadBlockSize:   f.fileUploadBlockSize,
+						UseInternalUrl:    f.useInternalUrl,
+					}
+
 					if file.IsFolder() {
 						if panFolderQueue != nil {
 							panFolderQueue.PushUnique(file)
 						}
-						continue
+						// 创建本地文件夹，这样就可以同步空文件夹
+						syncItem.Action = SyncFileActionCreateLocalFolder
+					} else {
+						syncItem.Action = SyncFileActionDownload
 					}
+
 					fileActionTask := &FileActionTask{
-						syncItem: &SyncFileItem{
-							Action:            SyncFileActionDownload,
-							Status:            SyncFileStatusCreate,
-							LocalFile:         nil,
-							PanFile:           file,
-							StatusUpdateTime:  "",
-							PanFolderPath:     f.task.PanFolderPath,
-							LocalFolderPath:   f.task.LocalFolderPath,
-							DriveId:           f.task.DriveId,
-							DownloadBlockSize: f.fileDownloadBlockSize,
-							UploadBlockSize:   f.fileUploadBlockSize,
-							UseInternalUrl:    f.useInternalUrl,
-						},
+						syncItem: syncItem,
 					}
 					f.addToSyncDb(fileActionTask)
 				}
@@ -386,26 +394,31 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 		for _, file := range localFilesNeedToUpload {
 			if file.ScanStatus == ScanStatusNormal { // 上传文件到云盘
 				if f.task.Mode == UploadOnly || f.task.Mode == SyncTwoWay {
+					syncItem := &SyncFileItem{
+						Action:            "",
+						Status:            SyncFileStatusCreate,
+						LocalFile:         file,
+						PanFile:           nil,
+						StatusUpdateTime:  "",
+						PanFolderPath:     f.task.PanFolderPath,
+						LocalFolderPath:   f.task.LocalFolderPath,
+						DriveId:           f.task.DriveId,
+						DownloadBlockSize: f.fileDownloadBlockSize,
+						UploadBlockSize:   f.fileUploadBlockSize,
+						UseInternalUrl:    f.useInternalUrl,
+					}
 					if file.IsFolder() {
 						if localFolderQueue != nil {
 							localFolderQueue.PushUnique(file)
 						}
-						continue
+						// 创建云盘文件夹，这样就可以同步空文件夹
+						syncItem.Action = SyncFileActionCreatePanFolder
+					} else {
+						syncItem.Action = SyncFileActionUpload
 					}
+
 					fileActionTask := &FileActionTask{
-						syncItem: &SyncFileItem{
-							Action:            SyncFileActionUpload,
-							Status:            SyncFileStatusCreate,
-							LocalFile:         file,
-							PanFile:           nil,
-							StatusUpdateTime:  "",
-							PanFolderPath:     f.task.PanFolderPath,
-							LocalFolderPath:   f.task.LocalFolderPath,
-							DriveId:           f.task.DriveId,
-							DownloadBlockSize: f.fileDownloadBlockSize,
-							UploadBlockSize:   f.fileUploadBlockSize,
-							UseInternalUrl:    f.useInternalUrl,
-						},
+						syncItem: syncItem,
 					}
 					f.addToSyncDb(fileActionTask)
 				}
@@ -665,14 +678,15 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 			for _, file := range files {
 				if !f.fileInProcessQueue.Contains(file) {
 					return &FileActionTask{
-						localFileDb:          f.task.localFileDb,
-						panFileDb:            f.task.panFileDb,
-						syncFileDb:           f.task.syncFileDb,
-						panClient:            f.task.panClient,
-						syncItem:             file,
-						maxDownloadRate:      f.maxDownloadRate,
-						maxUploadRate:        f.maxUploadRate,
-						panFolderCreateMutex: f.folderCreateMutex,
+						localFileDb:            f.task.localFileDb,
+						panFileDb:              f.task.panFileDb,
+						syncFileDb:             f.task.syncFileDb,
+						panClient:              f.task.panClient,
+						syncItem:               file,
+						maxDownloadRate:        f.maxDownloadRate,
+						maxUploadRate:          f.maxUploadRate,
+						localFolderCreateMutex: f.localCreateMutex,
+						panFolderCreateMutex:   f.folderCreateMutex,
 					}
 				}
 			}
@@ -682,14 +696,15 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 			for _, file := range files {
 				if !f.fileInProcessQueue.Contains(file) {
 					return &FileActionTask{
-						localFileDb:          f.task.localFileDb,
-						panFileDb:            f.task.panFileDb,
-						syncFileDb:           f.task.syncFileDb,
-						panClient:            f.task.panClient,
-						syncItem:             file,
-						maxDownloadRate:      f.maxDownloadRate,
-						maxUploadRate:        f.maxUploadRate,
-						panFolderCreateMutex: f.folderCreateMutex,
+						localFileDb:            f.task.localFileDb,
+						panFileDb:              f.task.panFileDb,
+						syncFileDb:             f.task.syncFileDb,
+						panClient:              f.task.panClient,
+						syncItem:               file,
+						maxDownloadRate:        f.maxDownloadRate,
+						maxUploadRate:          f.maxUploadRate,
+						localFolderCreateMutex: f.localCreateMutex,
+						panFolderCreateMutex:   f.folderCreateMutex,
 					}
 				}
 			}
@@ -701,14 +716,15 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 			for _, file := range files {
 				if file.Action == act && !f.fileInProcessQueue.Contains(file) {
 					return &FileActionTask{
-						localFileDb:          f.task.localFileDb,
-						panFileDb:            f.task.panFileDb,
-						syncFileDb:           f.task.syncFileDb,
-						panClient:            f.task.panClient,
-						syncItem:             file,
-						maxDownloadRate:      f.maxDownloadRate,
-						maxUploadRate:        f.maxUploadRate,
-						panFolderCreateMutex: f.folderCreateMutex,
+						localFileDb:            f.task.localFileDb,
+						panFileDb:              f.task.panFileDb,
+						syncFileDb:             f.task.syncFileDb,
+						panClient:              f.task.panClient,
+						syncItem:               file,
+						maxDownloadRate:        f.maxDownloadRate,
+						maxUploadRate:          f.maxUploadRate,
+						localFolderCreateMutex: f.localCreateMutex,
+						panFolderCreateMutex:   f.folderCreateMutex,
 					}
 				}
 			}
@@ -729,8 +745,8 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 
 	downloadWaitGroup := waitgroup.NewWaitGroup(f.fileDownloadParallel)
 	uploadWaitGroup := waitgroup.NewWaitGroup(f.fileUploadParallel)
-	deleteLocalWaitGroup := waitgroup.NewWaitGroup(1)
-	deletePanWaitGroup := waitgroup.NewWaitGroup(1)
+	localFileWaitGroup := waitgroup.NewWaitGroup(1)
+	panFileWaitGroup := waitgroup.NewWaitGroup(1)
 
 	for {
 		select {
@@ -791,8 +807,8 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 			deleteLocalItem := f.getFromSyncDb(SyncFileActionDeleteLocal)
 			if deleteLocalItem != nil {
 				actionIsEmptyOfThisTerm = false
-				if deleteLocalWaitGroup.Parallel() < 1 {
-					deleteLocalWaitGroup.AddDelta()
+				if localFileWaitGroup.Parallel() < 1 {
+					localFileWaitGroup.AddDelta()
 					f.fileInProcessQueue.PushUnique(deleteLocalItem.syncItem)
 					go func() {
 						if e := deleteLocalItem.DoAction(ctx); e == nil {
@@ -802,7 +818,7 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 							// retry?
 							f.fileInProcessQueue.Remove(deleteLocalItem.syncItem)
 						}
-						deleteLocalWaitGroup.Done()
+						localFileWaitGroup.Done()
 					}()
 				}
 			}
@@ -811,8 +827,8 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 			deletePanItem := f.getFromSyncDb(SyncFileActionDeletePan)
 			if deletePanItem != nil {
 				actionIsEmptyOfThisTerm = false
-				if deletePanWaitGroup.Parallel() < 1 {
-					deletePanWaitGroup.AddDelta()
+				if panFileWaitGroup.Parallel() < 1 {
+					panFileWaitGroup.AddDelta()
 					f.fileInProcessQueue.PushUnique(deletePanItem.syncItem)
 					go func() {
 						if e := deletePanItem.DoAction(ctx); e == nil {
@@ -822,7 +838,47 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 							// retry?
 							f.fileInProcessQueue.Remove(deletePanItem.syncItem)
 						}
-						deletePanWaitGroup.Done()
+						panFileWaitGroup.Done()
+					}()
+				}
+			}
+
+			// create local folder
+			createLocalFolderItem := f.getFromSyncDb(SyncFileActionCreateLocalFolder)
+			if createLocalFolderItem != nil {
+				actionIsEmptyOfThisTerm = false
+				if localFileWaitGroup.Parallel() < 1 {
+					localFileWaitGroup.AddDelta()
+					f.fileInProcessQueue.PushUnique(createLocalFolderItem.syncItem)
+					go func() {
+						if e := createLocalFolderItem.DoAction(ctx); e == nil {
+							// success
+							f.fileInProcessQueue.Remove(createLocalFolderItem.syncItem)
+						} else {
+							// retry?
+							f.fileInProcessQueue.Remove(createLocalFolderItem.syncItem)
+						}
+						localFileWaitGroup.Done()
+					}()
+				}
+			}
+
+			// create pan folder
+			createPanFolderItem := f.getFromSyncDb(SyncFileActionCreatePanFolder)
+			if createPanFolderItem != nil {
+				actionIsEmptyOfThisTerm = false
+				if panFileWaitGroup.Parallel() < 1 {
+					panFileWaitGroup.AddDelta()
+					f.fileInProcessQueue.PushUnique(createPanFolderItem.syncItem)
+					go func() {
+						if e := createPanFolderItem.DoAction(ctx); e == nil {
+							// success
+							f.fileInProcessQueue.Remove(createPanFolderItem.syncItem)
+						} else {
+							// retry?
+							f.fileInProcessQueue.Remove(createPanFolderItem.syncItem)
+						}
+						panFileWaitGroup.Done()
 					}()
 				}
 			}
