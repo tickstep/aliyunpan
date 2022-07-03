@@ -50,3 +50,14 @@ func TestRetrieveRealPathFromLogicPath(t *testing.T) {
 	}
 	fmt.Println(sf)
 }
+
+func TestRetrieveRealPathFromLogicSuffixPath(t *testing.T) {
+	rootPath := NewSymlinkFile("/Volumes/Downloads/dev/测试同步盘/new_lks")
+	rootPath, _, _ = RetrieveRealPath(rootPath)
+	suffixPath := "test/未命名文件夹cmd/sync_drive_config.json"
+	sf, _, e := RetrieveRealPathFromLogicSuffixPath(rootPath, suffixPath)
+	if e != nil {
+		fmt.Println(e)
+	}
+	fmt.Println(sf)
+}

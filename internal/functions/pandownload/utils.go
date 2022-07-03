@@ -15,6 +15,7 @@ package pandownload
 
 import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan/internal/localfile"
 	"os"
 )
 
@@ -26,7 +27,8 @@ func CheckFileValid(filePath string, fileInfo *aliyunpan.FileEntity) error {
 	return nil
 }
 
-// FileExist 检查文件是否存在,
+// FileExist 检查文件是否存在
+//
 // 只有当文件存在, 文件大小不为0或断点续传文件不存在时, 才判断为存在
 func FileExist(path string) bool {
 	if info, err := os.Stat(path); err == nil {
@@ -38,5 +40,25 @@ func FileExist(path string) bool {
 		}
 	}
 
+	return false
+}
+
+// SymlinkFileExist 检查文件是否存在
+//
+// 逻辑和 FileExist 一致，增加符号链接文件的支持
+func SymlinkFileExist(fullPath, rootPath string) bool {
+	originSaveRootSymlinkFile := localfile.NewSymlinkFile(rootPath)
+	suffixPath := localfile.GetSuffixPath(fullPath, rootPath)
+	savePathSymlinkFile, savePathFileInfo, err := localfile.RetrieveRealPathFromLogicSuffixPath(originSaveRootSymlinkFile, suffixPath)
+	if err != nil {
+		return false
+	} else {
+		if savePathFileInfo.Size() == 0 {
+			return false
+		}
+		if _, err = os.Stat(savePathSymlinkFile.RealPath + DownloadSuffix); err != nil {
+			return true
+		}
+	}
 	return false
 }

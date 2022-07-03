@@ -25,10 +25,7 @@ func (s *SymlinkFile) String() string {
 }
 
 func NewSymlinkFile(filePath string) SymlinkFile {
-	p := path.Clean(strings.ReplaceAll(filePath, "\\", "/"))
-	if p == "." {
-		p = ""
-	}
+	p := CleanPath(filePath)
 	return SymlinkFile{
 		LogicPath: p,
 		RealPath:  p,
@@ -36,6 +33,26 @@ func NewSymlinkFile(filePath string) SymlinkFile {
 }
 
 type MyWalkFunc func(path SymlinkFile, info fs.FileInfo, err error) error
+
+// CleanPath 规范化文件路径，分隔符全部转换成Unix文件分隔符"/"。同时清除后缀无用的"/"路径
+func CleanPath(p string) string {
+	if p == "" || p == "/" {
+		return p
+	}
+
+	p = path.Clean(strings.ReplaceAll(p, "\\", "/"))
+	if p == "." {
+		p = ""
+	}
+	return p
+}
+
+// GetSuffixPath 获取相对路径。即fullFilePath相对rootFilePath的相对路径
+func GetSuffixPath(fullFilePath, rootFilePath string) string {
+	rootFilePath = CleanPath(rootFilePath)
+	fullFilePath = CleanPath(fullFilePath)
+	return strings.TrimPrefix(strings.TrimPrefix(fullFilePath, rootFilePath), "/")
+}
 
 // RetrieveRealPath 递归调用找到软链接文件的真实文件对应的路径信息
 func RetrieveRealPath(file SymlinkFile) (SymlinkFile, os.FileInfo, error) {
@@ -62,11 +79,7 @@ func RetrieveRealPath(file SymlinkFile) (SymlinkFile, os.FileInfo, error) {
 //
 // 如果/Volumes/Downloads存在而后面部分不存在，则最终结果返回/Volumes/Downloads对应的文件信息，同时返回error
 func RetrieveRealPathFromLogicPath(logicFilePath string) (SymlinkFile, os.FileInfo, error) {
-	logicFilePath = strings.ReplaceAll(logicFilePath, "\\", "/")
-	logicFilePath = path.Clean(logicFilePath)
-	if logicFilePath == "." {
-		logicFilePath = ""
-	}
+	logicFilePath = CleanPath(logicFilePath)
 	if logicFilePath == "/" {
 		return RetrieveRealPath(NewSymlinkFile(logicFilePath))
 	}
@@ -86,6 +99,45 @@ func RetrieveRealPathFromLogicPath(logicFilePath string) (SymlinkFile, os.FileIn
 			sf.LogicPath += p
 			sf.RealPath += p
 			exitedSymlinkFile = sf
+			continue
+		}
+		sf.LogicPath += "/" + p
+		sf.RealPath += "/" + p
+		sf, fi, err = RetrieveRealPath(sf)
+		if err != nil {
+			// may be permission deny or not existed
+			return exitedSymlinkFile, exitedFileInfo, err
+		}
+		exitedSymlinkFile = sf
+		exitedFileInfo = fi
+	}
+	return exitedSymlinkFile, exitedFileInfo, nil
+}
+
+// RetrieveRealPathFromLogicSuffixPath 通过指定根目录和后缀逻辑路径，获取文件对应的真实路径信息
+//
+// 整体功能和 RetrieveRealPathFromLogicPath 一致，将逻辑路径分成根路径和后缀路径两部分，并且根路径必须存在。
+func RetrieveRealPathFromLogicSuffixPath(rootFile SymlinkFile, logicSuffixPath string) (SymlinkFile, os.FileInfo, error) {
+	if rootFile.LogicPath == "" || rootFile.RealPath == "" {
+		return rootFile, nil, fmt.Errorf("root file path error")
+	}
+	rootFile.LogicPath = CleanPath(rootFile.LogicPath)
+	rootFile.RealPath = CleanPath(rootFile.RealPath)
+	rootFileInfo, e := os.Lstat(rootFile.RealPath)
+	if e != nil {
+		return rootFile, nil, e
+	}
+
+	logicSuffixPath = CleanPath(logicSuffixPath)
+	pathParts := strings.Split(logicSuffixPath, "/")
+	exitedSymlinkFile := rootFile
+	exitedFileInfo := rootFileInfo
+
+	sf := rootFile
+	var fi os.FileInfo
+	var err error
+	for _, p := range pathParts {
+		if p == "" {
 			continue
 		}
 		sf.LogicPath += "/" + p
