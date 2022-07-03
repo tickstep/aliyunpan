@@ -70,8 +70,8 @@ func CmdDownload() cli.Command {
 		Usage:     "下载文件/目录",
 		UsageText: cmder.App().Name + " download <文件/目录路径1> <文件/目录2> <文件/目录3> ...",
 		Description: `
-	下载的文件默认保存到, 程序所在目录的 download/ 目录.
-	通过 aliyunpan config set -savedir <savedir>, 自定义保存的目录.
+	下载的文件默认保存到, 程序所在目录的 download/ 目录。支持软链接文件，包括Linux/macOS(ln命令)和Windows(mklink命令)创建的符号链接文件。
+	通过 aliyunpan config set -savedir <savedir>, 自定义保存的目录。
 	支持多个文件或目录下载.
 	自动跳过下载重名的文件!
 
