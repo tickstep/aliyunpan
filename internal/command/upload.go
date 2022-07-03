@@ -378,7 +378,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			}
 
 			// 创建对应的文件上传任务
-			// 文件夹自身无需独立上传，上传里面的文件会创建对应的文件夹
+			// 上传里面的文件会创建对应的缺失文件夹
 			if !fi.IsDir() {
 				taskinfo := executor.Append(&panupload.UploadTaskUnit{
 					LocalFileChecksum: localfile.NewLocalSymlinkFileEntity(file),
@@ -396,7 +396,23 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 					UseInternalUrl:    opt.UseInternalUrl,
 					GlobalSpeedsStat:  globalSpeedsStat,
 				}, opt.MaxRetry)
-				fmt.Printf("[%s] 加入上传队列: %s\n", taskinfo.Id(), file)
+				fmt.Printf("[%s] 加入上传队列: %s\n", taskinfo.Id(), file.LogicPath)
+			} else {
+				// 创建文件夹
+				// 这样空文件夹也可以正确上传
+				saveFilePath := subSavePath
+				if saveFilePath != "/" {
+					fmt.Printf("%s 正在检测和创建云盘文件夹: %s\n", utils.NowTimeStr(), saveFilePath)
+					_, apierr1 := activeUser.PanClient().FileInfoByPath(opt.DriveId, saveFilePath)
+					time.Sleep(1 * time.Second)
+					if apierr1 != nil && apierr1.Code == apierror.ApiCodeFileNotFoundCode {
+						logger.Verbosef("%s 创建云盘文件夹: %s\n", utils.NowTimeStr(), saveFilePath)
+						rs, apierr := activeUser.PanClient().Mkdir(opt.DriveId, "root", saveFilePath)
+						if apierr != nil || rs.FileId == "" {
+							fmt.Printf("%s 创建云盘文件夹失败: %s\n", utils.NowTimeStr(), saveFilePath)
+						}
+					}
+				}
 			}
 			return nil
 		}
