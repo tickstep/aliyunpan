@@ -45,8 +45,8 @@ type (
 		MaxRetry             int
 		NoCheck              bool
 		ShowProgress         bool
-		DriveId             string
-		UseInternalUrl bool // 是否使用内置链接
+		DriveId              string
+		UseInternalUrl       bool // 是否使用内置链接
 	}
 
 	// LocateDownloadOption 获取下载链接可选参数
@@ -120,7 +120,7 @@ func CmdDownload() cli.Command {
 				MaxRetry:             c.Int("retry"),
 				NoCheck:              c.Bool("nocheck"),
 				ShowProgress:         !c.Bool("np"),
-				DriveId:             parseDriveId(c),
+				DriveId:              parseDriveId(c),
 			}
 
 			RunDownload(c.Args(), do)
@@ -213,8 +213,8 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		BlockSize:                  MaxDownloadRangeSize,
 		MaxRate:                    config.Config.MaxDownloadRate,
 		InstanceStateStorageFormat: downloader.InstanceStateStorageFormatJSON,
-		ShowProgress: options.ShowProgress,
-		UseInternalUrl: config.Config.TransferUrlType == 2,
+		ShowProgress:               options.ShowProgress,
+		UseInternalUrl:             config.Config.TransferUrlType == 2,
 	}
 	if cfg.CacheSize == 0 {
 		cfg.CacheSize = int(DownloadCacheSize)
@@ -229,6 +229,23 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	}
 	if options.Parallel > config.MaxFileDownloadParallelNum {
 		options.Parallel = config.MaxFileDownloadParallelNum
+	}
+
+	// 保存文件的本地根文件夹
+	originSaveRootPath := ""
+	if options.SaveTo != "" {
+		originSaveRootPath = options.SaveTo
+	} else {
+		// 使用默认的保存路径
+		originSaveRootPath = GetActiveUser().GetSavePath("")
+	}
+	fi, err1 := os.Stat(originSaveRootPath)
+	if err1 != nil && !os.IsExist(err1) {
+		os.MkdirAll(originSaveRootPath, 0777) // 首先在本地创建目录
+	} else {
+		if !fi.IsDir() {
+			fmt.Println("本地保存路径不是文件夹，请删除或者创建对应的文件夹：", originSaveRootPath)
+		}
 	}
 
 	paths, err := matchPathByShellPattern(options.DriveId, paths...)

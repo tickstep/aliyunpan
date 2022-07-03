@@ -22,6 +22,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/functions"
+	"github.com/tickstep/aliyunpan/internal/localfile"
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
@@ -95,32 +96,60 @@ func (dtu *DownloadTaskUnit) verboseInfof(format string, a ...interface{}) {
 	}
 }
 
-// download 执行下载
+// download 执行下载文件（非目录）
 func (dtu *DownloadTaskUnit) download() (err error) {
 	var (
 		writer downloader.Writer
 		file   *os.File
 	)
 
-	dtu.Cfg.InstanceStatePath = dtu.SavePath + DownloadSuffix
-
 	// 创建下载的目录
 	// 获取SavePath所在的目录
 	dir := filepath.Dir(dtu.SavePath)
-	fileInfo, err := os.Stat(dir)
-	if err != nil {
+	//fileInfo, err := os.Stat(dir)
+	//if err != nil {
+	//	// 目录不存在, 创建
+	//	err = os.MkdirAll(dir, 0777)
+	//	if err != nil {
+	//		return err
+	//	}
+	//} else if !fileInfo.IsDir() {
+	//	// SavePath所在的目录不是目录
+	//	return fmt.Errorf("%s, path %s: not a directory", StrDownloadInitError, dir)
+	//}
+	// 支持本地符号链接文件，整体逻辑和上面注释代码一致
+	savePathSymlinkFile := localfile.SymlinkFile{
+		LogicPath: dtu.SavePath,
+		RealPath:  "",
+	}
+	originSaveRootSymlinkFile := localfile.NewSymlinkFile(dtu.OriginSaveRootPath)
+	suffixPath := localfile.GetSuffixPath(dir, dtu.OriginSaveRootPath)
+	saveDirPathSymlinkFile, saveDirPathFileInfo, err := localfile.RetrieveRealPathFromLogicSuffixPath(originSaveRootSymlinkFile, suffixPath)
+	if err != nil && !os.IsExist(err) {
+		realSavePath := saveDirPathSymlinkFile.RealPath
+		suffixPath = localfile.GetSuffixPath(dtu.SavePath, saveDirPathSymlinkFile.LogicPath) // 获取后缀不存在的路径
+		if suffixPath != "" {
+			realSavePath = filepath.Join(realSavePath, suffixPath) // 拼接
+		}
 		// 目录不存在, 创建
-		err = os.MkdirAll(dir, 0777)
+		err = os.MkdirAll(realSavePath, 0777)
 		if err != nil {
 			return err
 		}
-	} else if !fileInfo.IsDir() {
+		savePathSymlinkFile.RealPath = realSavePath + "/" + filepath.Base(localfile.CleanPath(dtu.SavePath))
+	} else if !saveDirPathFileInfo.IsDir() {
 		// SavePath所在的目录不是目录
-		return fmt.Errorf("%s, path %s: not a directory", StrDownloadInitError, dir)
+		return fmt.Errorf("%s, path %s: not a directory", StrDownloadInitError, saveDirPathSymlinkFile.RealPath)
+	} else {
+		savePathSymlinkFile.RealPath = filepath.Join(saveDirPathSymlinkFile.RealPath, filepath.Base(localfile.CleanPath(dtu.SavePath)))
 	}
+	savePathSymlinkFile, _, _ = localfile.RetrieveRealPath(savePathSymlinkFile)
+
+	// 下载配置文件存储路径
+	dtu.Cfg.InstanceStatePath = savePathSymlinkFile.RealPath + DownloadSuffix
 
 	// 打开文件
-	writer, file, err = downloader.NewDownloaderWriterByFilename(dtu.SavePath, os.O_CREATE|os.O_WRONLY, 0666)
+	writer, file, err = downloader.NewDownloaderWriterByFilename(savePathSymlinkFile.RealPath, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return fmt.Errorf("%s, %s", StrDownloadInitError, err)
 	}
@@ -442,9 +471,21 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 
 	// 如果是一个目录, 将子文件和子目录加入队列
 	if dtu.fileInfo.IsFolder() {
-		_, err := os.Stat(dtu.SavePath)
+		//_, err := os.Stat(dtu.SavePath)
+		//if err != nil && !os.IsExist(err) {
+		//	os.MkdirAll(dtu.SavePath, 0777) // 首先在本地创建目录, 保证空目录也能被保存
+		//}
+		// 支持本地符号逻辑文件，整体逻辑等效上面的注释代码
+		originSaveRootSymlinkFile := localfile.NewSymlinkFile(dtu.OriginSaveRootPath)
+		suffixPath := localfile.GetSuffixPath(dtu.SavePath, dtu.OriginSaveRootPath)
+		savePathSymlinkFile, _, err := localfile.RetrieveRealPathFromLogicSuffixPath(originSaveRootSymlinkFile, suffixPath)
 		if err != nil && !os.IsExist(err) {
-			os.MkdirAll(dtu.SavePath, 0777) // 首先在本地创建目录, 保证空目录也能被保存
+			realSavePath := savePathSymlinkFile.RealPath
+			suffixPath = localfile.GetSuffixPath(dtu.SavePath, savePathSymlinkFile.LogicPath) // 获取后缀不存在的路径
+			if suffixPath != "" {
+				realSavePath = filepath.Join(realSavePath, suffixPath)
+			}
+			os.MkdirAll(realSavePath, 0777) // 首先在本地创建目录, 保证空目录也能被保存
 		}
 
 		// 获取该目录下的文件列表
@@ -508,7 +549,13 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 
 	fmt.Printf("[%s] 准备下载: %s\n", dtu.taskInfo.Id(), dtu.FilePanPath)
 
-	if !dtu.IsOverwrite && FileExist(dtu.SavePath) {
+	//if !dtu.IsOverwrite && FileExist(dtu.SavePath) {
+	//	fmt.Printf("[%s] 文件已经存在: %s, 跳过...\n", dtu.taskInfo.Id(), dtu.SavePath)
+	//	result.Succeed = true // 执行成功
+	//	return
+	//}
+	// 支持符号文件，逻辑和注释代码一致
+	if !dtu.IsOverwrite && SymlinkFileExist(dtu.SavePath, dtu.OriginSaveRootPath) {
 		fmt.Printf("[%s] 文件已经存在: %s, 跳过...\n", dtu.taskInfo.Id(), dtu.SavePath)
 		result.Succeed = true // 执行成功
 		return
