@@ -402,14 +402,14 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 				// 这样空文件夹也可以正确上传
 				saveFilePath := subSavePath
 				if saveFilePath != "/" {
-					fmt.Printf("%s 正在检测和创建云盘文件夹: %s\n", utils.NowTimeStr(), saveFilePath)
+					fmt.Printf("正在检测和创建云盘文件夹: %s\n", saveFilePath)
 					_, apierr1 := activeUser.PanClient().FileInfoByPath(opt.DriveId, saveFilePath)
 					time.Sleep(1 * time.Second)
 					if apierr1 != nil && apierr1.Code == apierror.ApiCodeFileNotFoundCode {
 						logger.Verbosef("%s 创建云盘文件夹: %s\n", utils.NowTimeStr(), saveFilePath)
 						rs, apierr := activeUser.PanClient().Mkdir(opt.DriveId, "root", saveFilePath)
 						if apierr != nil || rs.FileId == "" {
-							fmt.Printf("%s 创建云盘文件夹失败: %s\n", utils.NowTimeStr(), saveFilePath)
+							fmt.Printf("创建云盘文件夹失败: %s\n", saveFilePath)
 						}
 					}
 				}
