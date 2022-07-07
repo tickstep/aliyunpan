@@ -111,9 +111,12 @@ func main() {
 	app.Copyright = "(c) 2021-2022 tickstep."
 	app.Usage = "阿里云盘客户端 for " + runtime.GOOS + "/" + runtime.GOARCH
 	app.Description = `aliyunpan 使用Go语言编写的阿里云盘命令行客户端, 为操作阿里云盘, 提供实用功能。
-    支持webdav文件协议，可以让阿里云盘变身为webdav协议的文件服务器，用于挂载作为Windows、Linux、Mac系统的磁盘进行使用。
-    支持同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份。
-	具体功能, 参见 COMMANDS 列表
+	支持webdav文件协议，可以让阿里云盘变身为webdav协议的文件服务器，用于挂载作为Windows、Linux、Mac系统的磁盘进行使用。
+	支持同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份。
+	具体功能, 参见 COMMANDS 列表。
+
+	支持设置环境变量 ALIYUNPAN_CONFIG_DIR 更改配置文件存储路径：
+	export ALIYUNPAN_CONFIG_DIR=/etc/aliyunpan/config
 
 	------------------------------------------------------------------------------
 	前往 https://github.com/tickstep/aliyunpan 以获取更多帮助信息!
