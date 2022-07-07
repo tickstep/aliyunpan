@@ -245,6 +245,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	} else {
 		if !fi.IsDir() {
 			fmt.Println("本地保存路径不是文件夹，请删除或者创建对应的文件夹：", originSaveRootPath)
+			return
 		}
 	}
 
