@@ -232,6 +232,8 @@ func CmdRapidUpload() cli.Command {
 // RunUpload 执行文件上传
 func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	activeUser := GetActiveUser()
+	activeUser.PanClient().EnableCache()
+
 	// pan token expired checker
 	go func() {
 		for {
