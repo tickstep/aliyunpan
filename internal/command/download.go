@@ -183,6 +183,9 @@ func downloadPrintFormat(load int) string {
 // RunDownload 执行下载网盘内文件
 func RunDownload(paths []string, options *DownloadOptions) {
 	activeUser := GetActiveUser()
+	activeUser.PanClient().EnableCache()
+	activeUser.PanClient().ClearCache()
+	defer activeUser.PanClient().DisableCache()
 	// pan token expired checker
 	go func() {
 		for {

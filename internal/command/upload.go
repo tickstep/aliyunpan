@@ -233,7 +233,8 @@ func CmdRapidUpload() cli.Command {
 func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	activeUser := GetActiveUser()
 	activeUser.PanClient().EnableCache()
-
+	activeUser.PanClient().ClearCache()
+	defer activeUser.PanClient().DisableCache()
 	// pan token expired checker
 	go func() {
 		for {

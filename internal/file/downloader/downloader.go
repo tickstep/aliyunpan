@@ -403,7 +403,7 @@ func (der *Downloader) Execute() error {
 			continue
 		}
 
-		logger.Verbosef("work id: %d, download url: %s\n", k, durl)
+		logger.Verbosef("work id: %d, download url: %v\n", k, durl)
 		client := requester.NewHTTPClient()
 		client.SetKeepAlive(true)
 		client.SetTimeout(10 * time.Minute)
