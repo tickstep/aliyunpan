@@ -145,7 +145,7 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 					// make path absolute
 					if !utils.IsAbsPath(localDir) {
 						pwd, _ := os.Getwd()
-						localDir = pwd + "/" + path.Clean(localDir)
+						localDir = path.Join(pwd, path.Clean(localDir))
 					}
 					panDir = activeUser.PathJoin(activeUser.ActiveDriveId, panDir)
 					if localDir != "" && panDir != "" {
