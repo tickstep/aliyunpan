@@ -26,6 +26,9 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
+	"path"
+	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -230,4 +233,19 @@ func Md5Str(text string) string {
 	sb := &strings.Builder{}
 	fmt.Fprintf(sb, "%x", re)
 	return strings.ToLower(sb.String())
+}
+
+// IsAbsPath 是否是绝对路径
+func IsAbsPath(filePath string) bool {
+	if runtime.GOOS == "windows" {
+		// 是否是windows路径
+		matched, _ := regexp.MatchString("^([a-zA-Z]:)", filePath)
+		if matched {
+			// windows volume label
+			return true
+		}
+		return false
+	} else {
+		return path.IsAbs(filePath)
+	}
 }

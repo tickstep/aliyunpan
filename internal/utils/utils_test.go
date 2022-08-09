@@ -31,3 +31,11 @@ func TestMd5Str(t *testing.T) {
 func TestParseTimeStr(t *testing.T) {
 	fmt.Println(ParseTimeStr(""))
 }
+
+func TestIsAbsPath_ReturnTrue(t *testing.T) {
+	fmt.Println(IsAbsPath("D:\\my\\folder\\test"))
+}
+
+func TestIsAbsPath_ReturnFalse(t *testing.T) {
+	fmt.Println(IsAbsPath("my\\folder\\test"))
+}

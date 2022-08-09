@@ -36,7 +36,7 @@ func CmdSync() cli.Command {
 		UsageText: cmder.App().Name + " sync",
 		Description: `
     备份功能。支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
-    指定本地目录和对应的一个网盘目录，以备份文件。网盘目录必须和本地目录独占使用，不要用作其他他用途，不然备份可能会有问题。
+    指定本地目录和对应的一个网盘目录，以备份文件。网盘目录必须和本地目录独占使用，不要用作其他用途，不然备份可能会有问题。
 
 	备份功能支持以下三种模式：
 	1. upload 
@@ -107,6 +107,8 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 						fmt.Println("未登录账号")
 						return nil
 					}
+					activeUser := GetActiveUser()
+
 					dp := c.Int("dp")
 					if dp == 0 {
 						dp = config.Config.MaxDownloadParallel
@@ -140,7 +142,21 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 					localDir := c.String("ldir")
 					panDir := c.String("pdir")
 					mode := c.String("mode")
+					// make path absolute
+					if !utils.IsAbsPath(localDir) {
+						pwd, _ := os.Getwd()
+						localDir = pwd + "/" + path.Clean(localDir)
+					}
+					panDir = activeUser.PathJoin(activeUser.ActiveDriveId, panDir)
 					if localDir != "" && panDir != "" {
+						if !utils.IsAbsPath(localDir) {
+							fmt.Println("本地目录请指定绝对路径")
+							return nil
+						}
+						if !path.IsAbs(panDir) {
+							fmt.Println("网盘目录请指定绝对路径")
+							return nil
+						}
 						//if b, e := utils.PathExists(localDir); e == nil {
 						//	if !b {
 						//		fmt.Println("本地文件夹不存在：", localDir)
