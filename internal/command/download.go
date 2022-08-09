@@ -28,6 +28,7 @@ import (
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"github.com/urfave/cli"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -105,7 +106,9 @@ func CmdDownload() cli.Command {
 				saveTo string
 			)
 			if c.Bool("save") {
-				saveTo = "."
+				// 使用当前工作目录
+				pwd, _ := os.Getwd()
+				saveTo = path.Clean(pwd)
 			} else if c.String("saveto") != "" {
 				saveTo = filepath.Clean(c.String("saveto"))
 			}
@@ -299,7 +302,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		// 设置储存的路径
 		if options.SaveTo != "" {
 			unit.OriginSaveRootPath = options.SaveTo
-			unit.SavePath = filepath.Join(options.SaveTo, filepath.Base(paths[k]))
+			unit.SavePath = filepath.Join(options.SaveTo, paths[k])
 		} else {
 			// 使用默认的保存路径
 			unit.OriginSaveRootPath = GetActiveUser().GetSavePath("")
