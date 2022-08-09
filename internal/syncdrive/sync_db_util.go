@@ -13,7 +13,7 @@ func FormatFilePath(filePath string) string {
 	}
 
 	// 是否是windows路径
-	matched, _ := regexp.MatchString("^[a-zA-Z]:*", filePath)
+	matched, _ := regexp.MatchString("^([a-zA-Z]:)", filePath)
 	if matched {
 		// 去掉卷标签，例如：D:
 		filePath = string([]rune(filePath)[2:])
