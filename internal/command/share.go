@@ -14,6 +14,7 @@
 package command
 
 import (
+	"encoding/csv"
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
@@ -23,6 +24,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"os"
+	"path"
 	"strconv"
 	"time"
 )
@@ -145,6 +147,41 @@ func CmdShare() cli.Command {
 					}
 					RunShareCancel(c.Args())
 					return nil
+				},
+			},
+			{
+				Name:      "export",
+				Usage:     "导出分享记录保存到文件",
+				UsageText: cmder.App().Name + " share export <csv file path>",
+				Description: `
+导出分享记录，并保存到指定的文件。目前支持csv格式
+  
+示例:
+    导出所有有效的分享并保存成文件
+	aliyunpan share export "d:\myfoler\share_list.csv"
+
+    导出所有的分享并保存成文件
+	aliyunpan share export -option 2 "d:\myfoler\share_list.csv"
+`,
+				Action: func(c *cli.Context) error {
+					if c.NArg() < 1 {
+						cli.ShowCommandHelp(c, c.Command.Name)
+						return nil
+					}
+					opt := c.String("option")
+					if opt == "" {
+						opt = "1"
+					}
+					filePath := c.Args()[0]
+					RunShareExport(opt, filePath)
+					return nil
+				},
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "option",
+						Usage: "导出选项，1-有效分享 2-全部分享",
+						Value: "1",
+					},
 				},
 			},
 			//			{
@@ -297,6 +334,74 @@ func RunShareCancel(shareIdList []string) {
 	} else {
 		fmt.Printf("取消分享操作失败\n")
 	}
+}
+
+func RunShareExport(option, saveFilePath string) {
+	activeUser := GetActiveUser()
+	records, err := activeUser.PanClient().ShareLinkList(activeUser.UserId)
+	if err != nil {
+		fmt.Printf("获取分享列表失败: %s\n", err)
+		return
+	}
+
+	columns := [][]string{{"序号", "分享ID", "分享链接", "提取码", "文件名", "过期时间", "状态"}}
+	now := time.Now()
+	idx := 1
+	for _, record := range records {
+		et := "永久有效"
+		if len(record.Expiration) > 0 {
+			et = record.Expiration
+		}
+		status := "有效"
+		if record.FirstFile == nil {
+			status = "已删除"
+			if option == "1" {
+				continue
+			}
+		} else {
+			cz := time.FixedZone("CST", 8*3600)
+			if len(record.Expiration) > 0 {
+				expiredTime, _ := time.ParseInLocation("2006-01-02 15:04:05", record.Expiration, cz)
+				if expiredTime.Unix() < now.Unix() {
+					status = "已过期"
+				}
+			}
+		}
+
+		if option == "1" {
+			if status == "已过期" || status == "已删除" {
+				continue
+			}
+		}
+		line := []string{strconv.Itoa(idx), record.ShareId, record.ShareUrl, record.SharePwd, record.ShareName, et, status}
+		idx += 1
+		columns = append(columns, line)
+	}
+
+	// save to file
+	if ExportCsv(saveFilePath, columns) {
+		fmt.Println("分享导出成功：", saveFilePath)
+	}
+}
+
+func ExportCsv(savePath string, data [][]string) bool {
+	folder := path.Dir(savePath)
+	if _, err := os.Stat(folder); err != nil {
+		if !os.IsExist(err) {
+			os.MkdirAll(folder, os.ModePerm)
+		}
+	}
+	fp, err := os.Create(savePath) // 创建文件句柄
+	if err != nil {
+		fmt.Println("创建文件["+savePath+"]失败,%v", err)
+		return false
+	}
+	defer fp.Close()
+	fp.WriteString("\xEF\xBB\xBF") // 写入UTF-8 BOM
+	w := csv.NewWriter(fp)         //创建一个新的写入文件流
+	w.WriteAll(data)
+	w.Flush()
+	return true
 }
 
 // 创建秒传链接
