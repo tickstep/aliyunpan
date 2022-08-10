@@ -606,9 +606,10 @@ func (f *FileActionTask) deletePanFile(ctx context.Context) error {
 				f.syncItem.StatusUpdateTime = utils.NowTimeStr()
 				f.syncFileDb.Update(f.syncItem)
 				return nil
+			} else {
+				// error
+				return er
 			}
-		} else {
-			return er
 		}
 		panFileId = fi.FileId
 	}
