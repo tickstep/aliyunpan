@@ -105,6 +105,9 @@ func CmdLogout() cli.Command {
 				confirm    string
 				activeUser = config.Config.ActiveUser()
 			)
+			if activeUser == nil {
+				return nil
+			}
 
 			if !c.Bool("y") {
 				fmt.Printf("确认退出当前帐号: %s ? (y/n) > ", activeUser.Nickname)
