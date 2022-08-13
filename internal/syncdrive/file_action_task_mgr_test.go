@@ -31,15 +31,19 @@ func TestFileActionMgrStart(t *testing.T) {
 
 		syncDbFolderPath: "D:\\smb\\feny\\goprojects\\dev\\sync_drive",
 		panClient:        panClient,
-
-		fileDownloadParallel:  2,
-		fileUploadParallel:    2,
-		fileDownloadBlockSize: int64(256 * 1024),
-		fileUploadBlockSize:   aliyunpan.DefaultChunkSize,
+		syncOption: SyncOption{
+			FileDownloadParallel:  2,
+			FileUploadParallel:    2,
+			FileDownloadBlockSize: int64(256 * 1024),
+			FileUploadBlockSize:   aliyunpan.DefaultChunkSize,
+			UseInternalUrl:        false,
+			MaxDownloadRate:       0,
+			MaxUploadRate:         0,
+		},
 	}
 	task.setupDb()
 
-	ft := NewFileActionTaskManager(task, 0, 0)
+	ft := NewFileActionTaskManager(task)
 	ft.Start()
 
 	//go func() {

@@ -51,14 +51,7 @@ type (
 		panUser   *config.PanUser
 		panClient *aliyunpan.PanClient
 
-		fileDownloadParallel  int
-		fileUploadParallel    int
-		fileDownloadBlockSize int64
-		fileUploadBlockSize   int64
-		useInternalUrl        bool
-
-		maxDownloadRate int64 // 限制最大下载速度
-		maxUploadRate   int64 // 限制最大上传速度
+		syncOption SyncOption
 
 		fileActionTaskManager *FileActionTaskManager
 
@@ -134,7 +127,7 @@ func (t *SyncTask) Start() error {
 	}
 
 	if t.fileActionTaskManager == nil {
-		t.fileActionTaskManager = NewFileActionTaskManager(t, t.maxDownloadRate, t.maxUploadRate)
+		t.fileActionTaskManager = NewFileActionTaskManager(t)
 	}
 
 	if t.plugin == nil {

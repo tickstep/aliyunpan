@@ -13,19 +13,22 @@ import (
 )
 
 type (
+	// SyncOption 同步选项
+	SyncOption struct {
+		FileDownloadParallel  int   // 文件下载并发数
+		FileUploadParallel    int   // 文件上传并发数
+		FileDownloadBlockSize int64 // 文件下载分片大小
+		FileUploadBlockSize   int64 // 文件上传分片大小
+		UseInternalUrl        bool  // 是否使用阿里ECS内部链接
+
+		MaxDownloadRate int64 // 限制最大下载速度
+		MaxUploadRate   int64 // 限制最大上传速度
+	}
+
 	// SyncTaskManager 同步任务管理器
 	SyncTaskManager struct {
-		syncDriveConfig *SyncDriveConfig
-
-		fileDownloadParallel  int
-		fileUploadParallel    int
-		fileDownloadBlockSize int64
-		fileUploadBlockSize   int64
-		useInternalUrl        bool
-
-		maxDownloadRate int64 // 限制最大下载速度
-		maxUploadRate   int64 // 限制最大上传速度
-
+		syncDriveConfig      *SyncDriveConfig
+		syncOption           SyncOption
 		PanUser              *config.PanUser
 		DriveId              string
 		PanClient            *aliyunpan.PanClient
@@ -47,22 +50,13 @@ var (
 )
 
 func NewSyncTaskManager(user *config.PanUser, driveId string, panClient *aliyunpan.PanClient, syncConfigFolderPath string,
-	fileDownloadParallel, fileUploadParallel int, fileDownloadBlockSize, fileUploadBlockSize int64, useInternalUrl bool,
-	maxDownloadRate, maxUploadRate int64) *SyncTaskManager {
+	option SyncOption) *SyncTaskManager {
 	return &SyncTaskManager{
 		PanUser:              user,
 		DriveId:              driveId,
 		PanClient:            panClient,
 		SyncConfigFolderPath: syncConfigFolderPath,
-
-		fileDownloadParallel:  fileDownloadParallel,
-		fileUploadParallel:    fileUploadParallel,
-		fileDownloadBlockSize: fileDownloadBlockSize,
-		fileUploadBlockSize:   fileUploadBlockSize,
-		useInternalUrl:        useInternalUrl,
-
-		maxDownloadRate: maxDownloadRate,
-		maxUploadRate:   maxUploadRate,
+		syncOption:           option,
 	}
 }
 
@@ -141,13 +135,7 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
 		task.DriveId = m.DriveId
 		task.syncDbFolderPath = m.SyncConfigFolderPath
 		task.panClient = m.PanClient
-		task.fileUploadParallel = m.fileUploadParallel
-		task.fileDownloadParallel = m.fileDownloadParallel
-		task.fileUploadBlockSize = m.fileUploadBlockSize
-		task.fileDownloadBlockSize = m.fileDownloadBlockSize
-		task.useInternalUrl = m.useInternalUrl
-		task.maxDownloadRate = m.maxDownloadRate
-		task.maxUploadRate = m.maxUploadRate
+		task.syncOption = m.syncOption
 		if e := task.Start(); e != nil {
 			logger.Verboseln(e)
 			fmt.Println("start sync task error: {}", task.Id)

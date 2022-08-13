@@ -28,17 +28,8 @@ type (
 		ctx        context.Context
 		cancelFunc context.CancelFunc
 
-		fileInProcessQueue   *collection.Queue
-		fileDownloadParallel int
-		fileUploadParallel   int
-
-		fileDownloadBlockSize int64
-		fileUploadBlockSize   int64
-
-		maxDownloadRate int64 // 限制最大下载速度
-		maxUploadRate   int64 // 限制最大上传速度
-
-		useInternalUrl bool
+		fileInProcessQueue *collection.Queue
+		syncOption         SyncOption
 
 		localFolderModifyCount int // 本地文件扫描变更记录次数，作为后续文件对比进程的参考以节省CPU资源
 		panFolderModifyCount   int // 云盘文件扫描变更记录次数，作为后续文件对比进程的参考以节省CPU资源
@@ -56,23 +47,15 @@ type (
 	}
 )
 
-func NewFileActionTaskManager(task *SyncTask, maxDownloadRate, maxUploadRate int64) *FileActionTaskManager {
+func NewFileActionTaskManager(task *SyncTask) *FileActionTaskManager {
 	return &FileActionTaskManager{
 		mutex:             &sync.Mutex{},
 		localCreateMutex:  &sync.Mutex{},
 		folderCreateMutex: &sync.Mutex{},
 		task:              task,
 
-		fileInProcessQueue:   collection.NewFifoQueue(),
-		fileDownloadParallel: task.fileDownloadParallel,
-		fileUploadParallel:   task.fileUploadParallel,
-
-		fileDownloadBlockSize: task.fileDownloadBlockSize,
-		fileUploadBlockSize:   task.fileUploadBlockSize,
-		useInternalUrl:        task.useInternalUrl,
-
-		maxDownloadRate: maxDownloadRate,
-		maxUploadRate:   maxUploadRate,
+		fileInProcessQueue: collection.NewFifoQueue(),
+		syncOption:         task.syncOption,
 
 		localFolderModifyCount: 1,
 		panFolderModifyCount:   1,
@@ -343,9 +326,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						PanFolderPath:     f.task.PanFolderPath,
 						LocalFolderPath:   f.task.LocalFolderPath,
 						DriveId:           f.task.DriveId,
-						DownloadBlockSize: f.fileDownloadBlockSize,
-						UploadBlockSize:   f.fileUploadBlockSize,
-						UseInternalUrl:    f.useInternalUrl,
+						DownloadBlockSize: f.syncOption.FileDownloadBlockSize,
+						UploadBlockSize:   f.syncOption.FileUploadBlockSize,
+						UseInternalUrl:    f.syncOption.UseInternalUrl,
 					}
 
 					if file.IsFolder() {
@@ -375,9 +358,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 							PanFolderPath:     f.task.PanFolderPath,
 							LocalFolderPath:   f.task.LocalFolderPath,
 							DriveId:           f.task.DriveId,
-							DownloadBlockSize: f.fileDownloadBlockSize,
-							UploadBlockSize:   f.fileUploadBlockSize,
-							UseInternalUrl:    f.useInternalUrl,
+							DownloadBlockSize: f.syncOption.FileDownloadBlockSize,
+							UploadBlockSize:   f.syncOption.FileUploadBlockSize,
+							UseInternalUrl:    f.syncOption.UseInternalUrl,
 						},
 					}
 					f.addToSyncDb(fileActionTask)
@@ -403,9 +386,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						PanFolderPath:     f.task.PanFolderPath,
 						LocalFolderPath:   f.task.LocalFolderPath,
 						DriveId:           f.task.DriveId,
-						DownloadBlockSize: f.fileDownloadBlockSize,
-						UploadBlockSize:   f.fileUploadBlockSize,
-						UseInternalUrl:    f.useInternalUrl,
+						DownloadBlockSize: f.syncOption.FileDownloadBlockSize,
+						UploadBlockSize:   f.syncOption.FileUploadBlockSize,
+						UseInternalUrl:    f.syncOption.UseInternalUrl,
 					}
 					if file.IsFolder() {
 						if localFolderQueue != nil {
@@ -434,9 +417,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 							PanFolderPath:     f.task.PanFolderPath,
 							LocalFolderPath:   f.task.LocalFolderPath,
 							DriveId:           f.task.DriveId,
-							DownloadBlockSize: f.fileDownloadBlockSize,
-							UploadBlockSize:   f.fileUploadBlockSize,
-							UseInternalUrl:    f.useInternalUrl,
+							DownloadBlockSize: f.syncOption.FileDownloadBlockSize,
+							UploadBlockSize:   f.syncOption.FileUploadBlockSize,
+							UseInternalUrl:    f.syncOption.UseInternalUrl,
 						},
 					}
 					f.addToSyncDb(fileActionTask)
@@ -475,9 +458,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						PanFolderPath:     f.task.PanFolderPath,
 						LocalFolderPath:   f.task.LocalFolderPath,
 						DriveId:           f.task.DriveId,
-						DownloadBlockSize: f.fileDownloadBlockSize,
-						UploadBlockSize:   f.fileUploadBlockSize,
-						UseInternalUrl:    f.useInternalUrl,
+						DownloadBlockSize: f.syncOption.FileDownloadBlockSize,
+						UploadBlockSize:   f.syncOption.FileUploadBlockSize,
+						UseInternalUrl:    f.syncOption.UseInternalUrl,
 					},
 				}
 				f.addToSyncDb(deletePanFile)
@@ -500,9 +483,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						PanFolderPath:     f.task.PanFolderPath,
 						LocalFolderPath:   f.task.LocalFolderPath,
 						DriveId:           f.task.DriveId,
-						DownloadBlockSize: f.fileDownloadBlockSize,
-						UploadBlockSize:   f.fileUploadBlockSize,
-						UseInternalUrl:    f.useInternalUrl,
+						DownloadBlockSize: f.syncOption.FileDownloadBlockSize,
+						UploadBlockSize:   f.syncOption.FileUploadBlockSize,
+						UseInternalUrl:    f.syncOption.UseInternalUrl,
 					},
 				}
 				f.addToSyncDb(deletePanFile)
@@ -565,9 +548,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 					PanFolderPath:     f.task.PanFolderPath,
 					LocalFolderPath:   f.task.LocalFolderPath,
 					DriveId:           f.task.DriveId,
-					DownloadBlockSize: f.fileDownloadBlockSize,
-					UploadBlockSize:   f.fileUploadBlockSize,
-					UseInternalUrl:    f.useInternalUrl,
+					DownloadBlockSize: f.syncOption.FileDownloadBlockSize,
+					UploadBlockSize:   f.syncOption.FileUploadBlockSize,
+					UseInternalUrl:    f.syncOption.UseInternalUrl,
 				},
 			}
 			f.addToSyncDb(uploadLocalFile)
@@ -582,9 +565,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 					PanFolderPath:     f.task.PanFolderPath,
 					LocalFolderPath:   f.task.LocalFolderPath,
 					DriveId:           f.task.DriveId,
-					DownloadBlockSize: f.fileDownloadBlockSize,
-					UploadBlockSize:   f.fileUploadBlockSize,
-					UseInternalUrl:    f.useInternalUrl,
+					DownloadBlockSize: f.syncOption.FileDownloadBlockSize,
+					UploadBlockSize:   f.syncOption.FileUploadBlockSize,
+					UseInternalUrl:    f.syncOption.UseInternalUrl,
 				},
 			}
 			f.addToSyncDb(downloadPanFile)
@@ -600,9 +583,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						PanFolderPath:     f.task.PanFolderPath,
 						LocalFolderPath:   f.task.LocalFolderPath,
 						DriveId:           f.task.DriveId,
-						DownloadBlockSize: f.fileDownloadBlockSize,
-						UploadBlockSize:   f.fileUploadBlockSize,
-						UseInternalUrl:    f.useInternalUrl,
+						DownloadBlockSize: f.syncOption.FileDownloadBlockSize,
+						UploadBlockSize:   f.syncOption.FileUploadBlockSize,
+						UseInternalUrl:    f.syncOption.UseInternalUrl,
 					},
 				}
 				f.addToSyncDb(uploadLocalFile)
@@ -617,9 +600,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 						PanFolderPath:     f.task.PanFolderPath,
 						LocalFolderPath:   f.task.LocalFolderPath,
 						DriveId:           f.task.DriveId,
-						DownloadBlockSize: f.fileDownloadBlockSize,
-						UploadBlockSize:   f.fileUploadBlockSize,
-						UseInternalUrl:    f.useInternalUrl,
+						DownloadBlockSize: f.syncOption.FileDownloadBlockSize,
+						UploadBlockSize:   f.syncOption.FileUploadBlockSize,
+						UseInternalUrl:    f.syncOption.UseInternalUrl,
 					},
 				}
 				f.addToSyncDb(downloadPanFile)
@@ -683,8 +666,8 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						syncFileDb:             f.task.syncFileDb,
 						panClient:              f.task.panClient,
 						syncItem:               file,
-						maxDownloadRate:        f.maxDownloadRate,
-						maxUploadRate:          f.maxUploadRate,
+						maxDownloadRate:        f.syncOption.MaxDownloadRate,
+						maxUploadRate:          f.syncOption.MaxUploadRate,
 						localFolderCreateMutex: f.localCreateMutex,
 						panFolderCreateMutex:   f.folderCreateMutex,
 					}
@@ -701,8 +684,8 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						syncFileDb:             f.task.syncFileDb,
 						panClient:              f.task.panClient,
 						syncItem:               file,
-						maxDownloadRate:        f.maxDownloadRate,
-						maxUploadRate:          f.maxUploadRate,
+						maxDownloadRate:        f.syncOption.MaxDownloadRate,
+						maxUploadRate:          f.syncOption.MaxUploadRate,
 						localFolderCreateMutex: f.localCreateMutex,
 						panFolderCreateMutex:   f.folderCreateMutex,
 					}
@@ -721,8 +704,8 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						syncFileDb:             f.task.syncFileDb,
 						panClient:              f.task.panClient,
 						syncItem:               file,
-						maxDownloadRate:        f.maxDownloadRate,
-						maxUploadRate:          f.maxUploadRate,
+						maxDownloadRate:        f.syncOption.MaxDownloadRate,
+						maxUploadRate:          f.syncOption.MaxUploadRate,
 						localFolderCreateMutex: f.localCreateMutex,
 						panFolderCreateMutex:   f.folderCreateMutex,
 					}
@@ -743,8 +726,8 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 	f.wg.AddDelta()
 	defer f.wg.Done()
 
-	downloadWaitGroup := waitgroup.NewWaitGroup(f.fileDownloadParallel)
-	uploadWaitGroup := waitgroup.NewWaitGroup(f.fileUploadParallel)
+	downloadWaitGroup := waitgroup.NewWaitGroup(f.syncOption.FileDownloadParallel)
+	uploadWaitGroup := waitgroup.NewWaitGroup(f.syncOption.FileUploadParallel)
 	localFileWaitGroup := waitgroup.NewWaitGroup(1)
 	panFileWaitGroup := waitgroup.NewWaitGroup(1)
 
@@ -767,7 +750,7 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 			uploadItem := f.getFromSyncDb(SyncFileActionUpload)
 			if uploadItem != nil {
 				actionIsEmptyOfThisTerm = false
-				if uploadWaitGroup.Parallel() < f.fileUploadParallel {
+				if uploadWaitGroup.Parallel() < f.syncOption.FileUploadParallel {
 					uploadWaitGroup.AddDelta()
 					f.fileInProcessQueue.PushUnique(uploadItem.syncItem)
 					go func() {
@@ -787,7 +770,7 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 			downloadItem := f.getFromSyncDb(SyncFileActionDownload)
 			if downloadItem != nil {
 				actionIsEmptyOfThisTerm = false
-				if downloadWaitGroup.Parallel() < f.fileDownloadParallel {
+				if downloadWaitGroup.Parallel() < f.syncOption.FileDownloadParallel {
 					downloadWaitGroup.AddDelta()
 					f.fileInProcessQueue.PushUnique(downloadItem.syncItem)
 					go func() {

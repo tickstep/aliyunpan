@@ -232,6 +232,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	maxUploadRate := config.Config.MaxUploadRate
 	activeUser := GetActiveUser()
 	panClient := activeUser.PanClient()
+	panClient.DisableCache()
 
 	// pan token expired checker
 	go func() {
@@ -262,9 +263,16 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	if useInternalUrl {
 		typeUrlStr = "阿里ECS内部链接"
 	}
-	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath,
-		fileDownloadParallel, fileUploadParallel, downloadBlockSize, uploadBlockSize, useInternalUrl,
-		maxDownloadRate, maxUploadRate)
+	option := syncdrive.SyncOption{
+		FileDownloadParallel:  fileDownloadParallel,
+		FileUploadParallel:    fileUploadParallel,
+		FileDownloadBlockSize: downloadBlockSize,
+		FileUploadBlockSize:   uploadBlockSize,
+		UseInternalUrl:        useInternalUrl,
+		MaxDownloadRate:       maxDownloadRate,
+		MaxUploadRate:         maxUploadRate,
+	}
+	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath, option)
 	syncConfigFile := syncMgr.ConfigFilePath()
 	if tasks != nil {
 		syncConfigFile = "(使用命令行配置)"
