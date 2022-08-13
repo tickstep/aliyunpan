@@ -25,3 +25,7 @@ const (
 	// TimeSecondsOf60Minute 60分钟秒数
 	TimeSecondsOf60Minute int64 = 60 * TimeSecondsOfOneMinute
 )
+
+var (
+	LogPrompt = false
+)

@@ -94,8 +94,8 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "download"
 
 	4. 使用命令行配置启动同步备份服务，将云盘目录 /sync_drive/我的文档 和本地目录 D:\tickstep\Documents\设计文档 的文件进行双向同步
-       同时配置同步优先选项为本地文件优先
-	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "sync" -pri "local"
+       同时配置同步优先选项为本地文件优先，并显示同步过程的日志
+	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "sync" -pri "local" -log true
 
 	5. 使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份到云盘目录 /sync_drive/我的文档
        同时配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
@@ -114,6 +114,12 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 						return nil
 					}
 					activeUser := GetActiveUser()
+
+					if c.String("log") == "true" {
+						syncdrive.LogPrompt = true
+					} else {
+						syncdrive.LogPrompt = false
+					}
 
 					dp := c.Int("dp")
 					if dp == 0 {
@@ -242,6 +248,11 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 						Usage: "upload block size，上传分片大小，单位KB。推荐值：1024 ~ 10240",
 						Value: 10240,
 					},
+					cli.StringFlag{
+						Name:  "log",
+						Usage: "是否显示文件备份过程日志，true-显示，false-不显示",
+						Value: "false",
+					},
 				},
 			},
 		},
@@ -319,7 +330,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	} else {
 		// in cmd mode
 		c := ""
-		fmt.Print("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止：")
+		fmt.Println("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止。")
 		for strings.ToLower(c) != "y" {
 			fmt.Scan(&c)
 		}

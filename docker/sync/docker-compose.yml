@@ -31,5 +31,6 @@ services:
       - ALIYUNPAN_SYNC_MODE=upload
       # 优先级，只对双向同步备份模式有效。选项支持三种: time-时间优先，local-本地优先，pan-网盘优先
       - ALIYUNPAN_SYNC_PRIORITY=time
-
+      # 是否显示文件备份过程日志，true-显示，false-不显示
+      - ALIYUNPAN_SYNC_LOG=true
 

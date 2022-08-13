@@ -41,6 +41,12 @@ type (
 	}
 )
 
+func (f *FileActionTask) prompt(msg string) {
+	if LogPrompt {
+		fmt.Println("[" + utils.NowTimeStr() + "] " + msg)
+	}
+}
+
 func (f *FileActionTask) HashCode() string {
 	postfix := ""
 	if f.syncItem.Action == SyncFileActionDownload {
@@ -54,6 +60,7 @@ func (f *FileActionTask) HashCode() string {
 func (f *FileActionTask) DoAction(ctx context.Context) error {
 	logger.Verboseln("file action task：", utils.ObjectToJsonStr(f.syncItem, false))
 	if f.syncItem.Action == SyncFileActionUpload {
+		f.prompt("上传文件：" + f.syncItem.getLocalFileFullPath())
 		if e := f.uploadFile(ctx); e != nil {
 			// TODO: retry / cleanup downloading file
 			return e
@@ -79,6 +86,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 	}
 
 	if f.syncItem.Action == SyncFileActionDownload {
+		f.prompt("下载文件：" + f.syncItem.getPanFileFullPath())
 		if e := f.downloadFile(ctx); e != nil {
 			// TODO: retry / cleanup downloading file
 			return e
@@ -121,6 +129,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 	}
 
 	if f.syncItem.Action == SyncFileActionDeleteLocal {
+		f.prompt("删除本地文件：" + f.syncItem.getLocalFileFullPath())
 		if e := f.deleteLocalFile(ctx); e != nil {
 			// TODO: retry
 			return e
@@ -132,6 +141,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 	}
 
 	if f.syncItem.Action == SyncFileActionDeletePan {
+		f.prompt("删除云盘文件：" + f.syncItem.getPanFileFullPath())
 		if e := f.deletePanFile(ctx); e != nil {
 			// TODO: retry
 			return e
@@ -143,6 +153,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 	}
 
 	if f.syncItem.Action == SyncFileActionCreateLocalFolder {
+		f.prompt("创建本地文件夹：" + f.syncItem.getLocalFileFullPath())
 		if e := f.createLocalFolder(ctx); e != nil {
 			// TODO: retry
 			return e
@@ -165,6 +176,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 	}
 
 	if f.syncItem.Action == SyncFileActionCreatePanFolder {
+		f.prompt("创建云盘文件夹：" + f.syncItem.getPanFileFullPath())
 		if e := f.createPanFolder(ctx); e != nil {
 			// TODO: retry
 			return e
