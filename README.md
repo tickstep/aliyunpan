@@ -168,7 +168,7 @@ aliyunpan:/ tickstep$ download IMG_0106.JPG
 文件路径: /IMG_0106.JPG
 
 [1] 准备下载: /IMG_0106.JPG
-[1] 将会下载到路径: /root/Downloads/4d001d48564f43b3bc5662874f04bbe6/IMG_0106.JPG
+[1] 将会下载到路径: /root/Downloads/4d001d48564f43b..62874f04bbe6/IMG_0106.JPG
 [1] 下载开始
 [1] ↓ 704.00KB/1.48MB 0B/s(1.69MB/s) in 1.88s, left - ............
 [1] 下载完成, 保存位置: /root/Downloads/4d001d48564f43b..62874f04bbe6/IMG_0106.JPG
