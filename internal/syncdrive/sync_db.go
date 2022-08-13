@@ -11,6 +11,9 @@ import (
 )
 
 type (
+	// SyncPriorityOption 同步优先级选项
+	SyncPriorityOption string
+
 	// ScanStatus 扫描状态
 	ScanStatus string
 
@@ -179,6 +182,13 @@ const (
 	ScanStatusNormal ScanStatus = "normal"
 	// ScanStatusDiscard 已过期，已删除
 	ScanStatusDiscard ScanStatus = "discard"
+
+	// SyncPriorityTimestampFirst 最新时间优先
+	SyncPriorityTimestampFirst = "time_first"
+	// SyncPriorityLocalFirst 本地文件优先
+	SyncPriorityLocalFirst = "local_first"
+	// SyncPriorityPanFirst 网盘文件优先
+	SyncPriorityPanFirst = "pan_first"
 )
 
 var (

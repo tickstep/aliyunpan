@@ -23,6 +23,9 @@ type (
 
 		MaxDownloadRate int64 // 限制最大下载速度
 		MaxUploadRate   int64 // 限制最大上传速度
+
+		// 优先级选项
+		SyncPriority SyncPriorityOption
 	}
 
 	// SyncTaskManager 同步任务管理器

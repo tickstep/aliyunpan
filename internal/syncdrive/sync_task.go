@@ -84,6 +84,17 @@ func (t *SyncTask) String() string {
 		mode = "备份云盘文件（只下载）"
 	}
 	builder.WriteString("同步模式: " + mode + "\n")
+	if t.Mode == SyncTwoWay {
+		priority := "时间优先"
+		if t.syncOption.SyncPriority == SyncPriorityLocalFirst {
+			priority = "本地文件优先"
+		} else if t.syncOption.SyncPriority == SyncPriorityPanFirst {
+			priority = "网盘文件优先"
+		} else {
+			priority = "时间优先"
+		}
+		builder.WriteString("优先选项: " + priority + "\n")
+	}
 	builder.WriteString("本地目录: " + t.LocalFolderPath + "\n")
 	builder.WriteString("云盘目录: " + t.PanFolderPath + "\n")
 	return builder.String()

@@ -91,14 +91,18 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 	3. 使用命令行配置启动同步备份服务，将云盘目录 /sync_drive/我的文档 中的文件备份下载到本地目录 D:\tickstep\Documents\设计文档
 	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "download"
 
-	4. 使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份到云盘目录 /sync_drive/我的文档
+	4. 使用命令行配置启动同步备份服务，将云盘目录 /sync_drive/我的文档 和本地目录 D:\tickstep\Documents\设计文档 的文件进行双向同步
+       同时配置同步优先选项为本地文件优先
+	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "sync" -pri "local"
+
+	5. 使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份到云盘目录 /sync_drive/我的文档
        同时配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
 	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "upload" -dp 2 -up 1 -dbs 256 -ubs 1024
     
-	5. 使用配置文件启动同步备份服务，使用配置文件可以支持同时启动多个备份任务。配置文件必须存在，否则启动失败。
+	6. 使用配置文件启动同步备份服务，使用配置文件可以支持同时启动多个备份任务。配置文件必须存在，否则启动失败。
 	aliyunpan sync start
 
-	6. 使用配置文件启动同步备份服务，并配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
+	7. 使用配置文件启动同步备份服务，并配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
 	aliyunpan sync start -dp 2 -up 1 -dbs 256 -ubs 1024
 
 `,
@@ -182,8 +186,17 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 						task.Name = path.Base(task.LocalFolderPath)
 						task.Id = utils.Md5Str(task.LocalFolderPath)
 					}
+					opt := c.String("pri")
+					var syncOpt syncdrive.SyncPriorityOption = syncdrive.SyncPriorityTimestampFirst
+					if opt == "local" {
+						syncOpt = syncdrive.SyncPriorityLocalFirst
+					} else if opt == "pan" {
+						syncOpt = syncdrive.SyncPriorityPanFirst
+					} else {
+						syncOpt = syncdrive.SyncPriorityTimestampFirst
+					}
 
-					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize)
+					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt)
 					return nil
 				},
 				Flags: []cli.Flag{
@@ -199,6 +212,11 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 						Name:  "mode",
 						Usage: "备份模式, 支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)",
 						Value: "upload",
+					},
+					cli.StringFlag{
+						Name:  "pri",
+						Usage: "优先级priority，只对双向同步备份模式有效。当网盘和本地存在同名文件，优先使用哪个，选项支持三种: time-时间优先，local-本地优先，pan-网盘优先",
+						Value: "time",
 					},
 					cli.IntFlag{
 						Name:  "dp",
@@ -226,7 +244,8 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 	}
 }
 
-func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64) {
+func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64,
+	flag syncdrive.SyncPriorityOption) {
 	useInternalUrl := config.Config.TransferUrlType == 2
 	maxDownloadRate := config.Config.MaxDownloadRate
 	maxUploadRate := config.Config.MaxUploadRate
@@ -271,6 +290,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 		UseInternalUrl:        useInternalUrl,
 		MaxDownloadRate:       maxDownloadRate,
 		MaxUploadRate:         maxUploadRate,
+		SyncPriority:          flag,
 	}
 	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath, option)
 	syncConfigFile := syncMgr.ConfigFilePath()
