@@ -95,6 +95,12 @@ cli交互模式下, 光标所在行的前缀应为 `aliyunpan >`, 如果登录�
 ## 基本使用
 本程序支持阿里云盘大多数命令操作，这里只介绍基本的使用，更多更详细的命令请查看手册：[命令手册](docs/manual.md)。
 
+### 指定配置文件存储路径(可选)
+设置环境变量`ALIYUNPAN_CONFIG_DIR`并指定一个存在的目录，例如linux下面可以这样指定
+```shell
+export ALIYUNPAN_CONFIG_DIR=/home/tickstep/tools/aliyunpan/config
+```
+
 ### 启动程序
 直接启动进入交互命令行
 ```shell
