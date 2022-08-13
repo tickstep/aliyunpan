@@ -175,7 +175,7 @@ aliyunpan:/ tickstep$ download IMG_0106.JPG
 [1] 检验文件有效性成功: /root/Downloads/4d001d48564f43b..62874f04bbe6/IMG_0106.JPG
 
 下载结束, 时间: 4秒, 数据总量: 1.48MB
-aliyunpan:/ 小妖粉粉$ 
+aliyunpan:/ tickstep$ 
 ```
 下载支持两种链接类型：1-默认类型 2-阿里ECS环境类型   
 在普通网络下，下载速度可以达到10MB/s，在阿里ECS（必须是"经典网络"类型的机器）环境下，下载速度单文件可以轻松达到20MB/s，多文件可以达到100MB/s   
