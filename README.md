@@ -203,6 +203,29 @@ aliyunpan:/ tickstep$ upload /Users/tickstep/Downloads/apt.zip /tmp
 在阿里ECS（必须是"经典网络"类型的机器）环境下，上传速度单文件可以轻松达到30MB/s，多文件可以达到100MB/s   
 ![](./assets/images/upload_file_speed_screenshot.gif)
 
+### 同步备份文件
+同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
+使用以下命令运行即可，该命令是阻塞的不会退出。
+
+例如：将本地目录 `/tickstep/Documents/设计文档` 中的文件备份上传到云盘目录 `/备份盘/我的文档`
+```shell
+aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload"
+
+启动同步备份进程
+备份配置文件：(使用命令行配置)
+链接类型：默认链接
+下载并发：2
+上传并发：2
+下载分片大小：1.00MB
+上传分片大小：10.00MB
+
+启动同步任务
+任务: 设计文档(de3d6b69a607497b73624bcca0845f19)
+同步模式: 备份本地文件（只上传）
+本地目录: /tickstep/Documents/设计文档
+云盘目录: /备份盘/我的文档
+```
+
 ## 如何获取RefreshToken
 需要通过浏览器获取refresh_token。这里以Chrome浏览器为例，其他浏览器类似。   
 打开 [阿里云盘网页](https://www.aliyundrive.com/drive) 并进行登录，然后F12按键打开浏览器调试菜单，按照下面步骤进行
