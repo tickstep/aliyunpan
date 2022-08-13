@@ -43,6 +43,7 @@ else (
 )
 
 copy README.md %output%\%1
+copy docs\manual.md %output%\%1
 
 mkdir %output%\%1\plugin
 xcopy /e assets\plugin %output%\%1\plugin

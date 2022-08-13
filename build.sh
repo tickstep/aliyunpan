@@ -75,6 +75,7 @@ Pack() {
   fi
 
   cp README.md "$output/$1"
+  cp docs/manual.md "$output/$1"
   cp -rf assets/scripts/* "$output/$1"
   cp -rf assets/plugin "$output/$1"
   cp -rf assets/sync_drive "$output/$1"
