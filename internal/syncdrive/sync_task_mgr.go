@@ -139,6 +139,12 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
 		task.syncDbFolderPath = m.SyncConfigFolderPath
 		task.panClient = m.PanClient
 		task.syncOption = m.syncOption
+		if task.Priority != "" {
+			task.syncOption.SyncPriority = task.Priority
+		} else {
+			task.Priority = SyncPriorityTimestampFirst
+			task.syncOption.SyncPriority = SyncPriorityTimestampFirst
+		}
 		if e := task.Start(); e != nil {
 			logger.Verboseln(e)
 			fmt.Println("start sync task error: {}", task.Id)

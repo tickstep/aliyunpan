@@ -184,11 +184,11 @@ const (
 	ScanStatusDiscard ScanStatus = "discard"
 
 	// SyncPriorityTimestampFirst 最新时间优先
-	SyncPriorityTimestampFirst = "time_first"
+	SyncPriorityTimestampFirst = "time"
 	// SyncPriorityLocalFirst 本地文件优先
-	SyncPriorityLocalFirst = "local_first"
+	SyncPriorityLocalFirst = "local"
 	// SyncPriorityPanFirst 网盘文件优先
-	SyncPriorityPanFirst = "pan_first"
+	SyncPriorityPanFirst = "pan"
 )
 
 var (

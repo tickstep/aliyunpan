@@ -36,6 +36,8 @@ type (
 		PanFolderPath string `json:"panFolderPath"`
 		// Mode 同步模式
 		Mode SyncMode `json:"mode"`
+		// Priority 优先级选项
+		Priority SyncPriorityOption `json:"priority"`
 		// LastSyncTime 上一次同步时间
 		LastSyncTime string `json:"lastSyncTime"`
 

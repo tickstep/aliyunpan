@@ -573,18 +573,16 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 			f.addToSyncDb(downloadPanFile)
 		} else if f.task.Mode == SyncTwoWay {
 			actFlag := "unknown"
-			if f.syncOption.SyncPriority == SyncPriorityTimestampFirst { // 时间优先
+			if f.syncOption.SyncPriority == SyncPriorityLocalFirst { // 本地文件优先
+				actFlag = "upload"
+			} else if f.syncOption.SyncPriority == SyncPriorityPanFirst { // 网盘文件优先
+				actFlag = "download"
+			} else {
 				if localFile.UpdateTimeUnix() > panFile.UpdateTimeUnix() { // upload file
 					actFlag = "upload"
 				} else if localFile.UpdateTimeUnix() < panFile.UpdateTimeUnix() { // download file
 					actFlag = "download"
 				}
-			} else if f.syncOption.SyncPriority == SyncPriorityLocalFirst { // 本地文件优先
-				actFlag = "upload"
-			} else if f.syncOption.SyncPriority == SyncPriorityPanFirst { // 网盘文件优先
-				actFlag = "download"
-			} else {
-				// unsupported, do nothing
 			}
 
 			if actFlag == "upload" { // upload file

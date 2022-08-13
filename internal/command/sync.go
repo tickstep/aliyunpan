@@ -71,7 +71,8 @@ func CmdSync() cli.Command {
    "name": "设计文档备份",
    "localFolderPath": "D:/tickstep/Documents/设计文档",
    "panFolderPath": "/sync_drive/我的文档",
-   "mode": "upload"
+   "mode": "upload",
+   "priority": "time"
   }
  ]
 }
@@ -80,6 +81,7 @@ name - 任务名称
 localFolderPath - 本地目录
 panFolderPath - 网盘目录
 mode - 模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+priority - 优先级，只对双向同步备份模式有效。选项支持三种: time-时间优先，local-本地优先，pan-网盘优先
     
 	例子:
 	1. 查看帮助
@@ -142,17 +144,27 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 						uploadBlockSize = aliyunpan.DefaultChunkSize
 					}
 
+					opt := c.String("pri")
+					var syncOpt syncdrive.SyncPriorityOption = syncdrive.SyncPriorityTimestampFirst
+					if opt == "local" {
+						syncOpt = syncdrive.SyncPriorityLocalFirst
+					} else if opt == "pan" {
+						syncOpt = syncdrive.SyncPriorityPanFirst
+					} else {
+						syncOpt = syncdrive.SyncPriorityTimestampFirst
+					}
+
 					var task *syncdrive.SyncTask
 					localDir := c.String("ldir")
 					panDir := c.String("pdir")
 					mode := c.String("mode")
-					// make path absolute
-					if !utils.IsAbsPath(localDir) {
-						pwd, _ := os.Getwd()
-						localDir = path.Join(pwd, path.Clean(localDir))
-					}
-					panDir = activeUser.PathJoin(activeUser.ActiveDriveId, panDir)
 					if localDir != "" && panDir != "" {
+						// make path absolute
+						if !utils.IsAbsPath(localDir) {
+							pwd, _ := os.Getwd()
+							localDir = path.Join(pwd, path.Clean(localDir))
+						}
+						panDir = activeUser.PathJoin(activeUser.ActiveDriveId, panDir)
 						if !utils.IsAbsPath(localDir) {
 							fmt.Println("本地目录请指定绝对路径")
 							return nil
@@ -185,15 +197,7 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 						}
 						task.Name = path.Base(task.LocalFolderPath)
 						task.Id = utils.Md5Str(task.LocalFolderPath)
-					}
-					opt := c.String("pri")
-					var syncOpt syncdrive.SyncPriorityOption = syncdrive.SyncPriorityTimestampFirst
-					if opt == "local" {
-						syncOpt = syncdrive.SyncPriorityLocalFirst
-					} else if opt == "pan" {
-						syncOpt = syncdrive.SyncPriorityPanFirst
-					} else {
-						syncOpt = syncdrive.SyncPriorityTimestampFirst
+						task.Priority = syncOpt
 					}
 
 					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt)
