@@ -231,8 +231,8 @@ aliyunpan ll /我的文档
 ## 下载文件/目录
 下载支持两种链接类型：1-默认类型 2-阿里ECS环境类型   
 在普通网络下，下载速度可以达到10MB/s，在阿里ECS（必须是"经典网络"类型的机器）环境下，下载速度单文件可以轻松达到20MB/s，多文件可以达到100MB/s   
-![](./assets/images/download_file_ecs_speed_screenshot.gif)
-![](./assets/images/download_file_speed_screenshot.gif)
+![](../assets/images/download_file_ecs_speed_screenshot.gif)
+![](../assets/images/download_file_speed_screenshot.gif)
 
 ```
 aliyunpan download <网盘文件或目录的路径1> <文件或目录2> <文件或目录3> ...
