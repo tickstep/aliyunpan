@@ -23,7 +23,7 @@
 7. iOS arm64适用iPhone手机，并且必须是越狱的手机才能正常运行
 
 # 如何安装
-## 直接下载
+## 直接下载安装
 可以直接在本仓库 [发布页](https://github.com/tickstep/aliyunpan/releases) 下载，解压后使用。
 
 ## apt安装
