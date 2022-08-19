@@ -12,6 +12,11 @@ Type=forking
 ExecStart=/path/to/start.sh
 ExecStop=/path/to/stop.sh
 PrivateTmp=true
+Restart=always
+StandardInput=tty
+StandardOutput=tty
+StandardError=null
+TTYPath=/dev/tty12
 
 [Install]
 WantedBy=multi-user.target
