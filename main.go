@@ -173,7 +173,7 @@ func main() {
 				acceptCompleteFileCommands = []string{
 					"cd", "cp", "xcp", "download", "ls", "mkdir", "mv", "pwd", "rename", "rm", "share", "upload", "login", "loglist", "logout",
 					"clear", "quit", "exit", "quota", "who", "sign", "update", "who", "su", "config",
-					"drive", "export", "import", "sync",
+					"drive", "export", "import", "sync", "tree",
 				}
 				closed = strings.LastIndex(line, " ") == len(line)-1
 			)
@@ -415,6 +415,9 @@ func main() {
 
 		// 列出目录 ls
 		command.CmdLs(),
+
+		// 显示树形目录 tree
+		command.CmdTree(),
 
 		// 创建目录 mkdir
 		command.CmdMkdir(),
