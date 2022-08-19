@@ -518,6 +518,10 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 				err := fileSum.OpenPath()
 				if err != nil {
 					logger.Verbosef("文件不可读, 错误信息: %s, 跳过...\n", err)
+					if localFile.ScanStatus == ScanStatusDiscard {
+						// 文件已被删除，直接删除无用记录
+						f.task.localFileDb.Delete(localFile.Path)
+					}
 					continue
 				}
 				fileSum.Sum(localfile.CHECKSUM_SHA1) // block operation

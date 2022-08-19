@@ -3,6 +3,7 @@ package syncdrive
 import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"sync"
 	"testing"
 	"time"
 )
@@ -36,4 +37,12 @@ func TestSyncTask(t *testing.T) {
 	//}()
 	time.Sleep(60 * time.Second)
 	task.Stop()
+}
+
+func TestSyncLocker(t *testing.T) {
+	locker := &sync.Mutex{}
+	locker.Lock()
+	fmt.Println("lock")
+	//locker.Unlock()
+	defer locker.Unlock()
 }

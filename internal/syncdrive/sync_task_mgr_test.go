@@ -24,12 +24,7 @@ func TestStart(t *testing.T) {
 		user.FileDriveId,
 		panClient,
 		"D:\\smb\\feny\\goprojects\\dev\\sync_drive",
-		1,
-		1,
-		int64(256*1024),
-		aliyunpan.DefaultChunkSize,
-		false,
-		0, 0,
+		SyncOption{},
 	)
 
 	manager.Start(nil)
