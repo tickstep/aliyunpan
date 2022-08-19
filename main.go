@@ -146,6 +146,7 @@ func main() {
 
 		os.Setenv(config.EnvVerbose, c.String("verbose"))
 		isCli = true
+		config.IsAppInCliMode = true
 		logger.Verbosef("提示: 你已经开启VERBOSE调试日志\n\n")
 
 		var (

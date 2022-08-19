@@ -65,6 +65,9 @@ var (
 	Config = NewConfig(configFilePath)
 
 	AppVersion string
+
+	// IsAppInCliMode 是否在交互模式
+	IsAppInCliMode = false
 )
 
 type UpdateCheckInfo struct {

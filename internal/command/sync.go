@@ -324,15 +324,24 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	if ok {
 		// in docker container
 		// 使用休眠以节省CPU资源
+		fmt.Println("本命令不会退出，程序正在以Docker的方式运行。如需退出请借助Docker提供的方式。")
 		for {
 			time.Sleep(60 * time.Second)
 		}
 	} else {
-		// in cmd mode
-		c := ""
-		fmt.Println("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止。")
-		for strings.ToLower(c) != "y" {
-			fmt.Scan(&c)
+		if config.IsAppInCliMode {
+			// in cmd mode
+			c := ""
+			fmt.Println("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止。")
+			for strings.ToLower(c) != "y" {
+				fmt.Scan(&c)
+			}
+		} else {
+			fmt.Println("本命令不会退出，程序正在以非交互的方式运行。如需退出请借助运行环境提供的方式。")
+			logger.Verboseln("App not in CLI mode, not need to listen to input stream")
+			for {
+				time.Sleep(60 * time.Second)
+			}
 		}
 	}
 
