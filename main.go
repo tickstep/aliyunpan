@@ -110,7 +110,7 @@ func main() {
 	app.Author = "tickstep/aliyunpan: https://github.com/tickstep/aliyunpan"
 	app.Copyright = "(c) 2021-2022 tickstep."
 	app.Usage = "阿里云盘客户端 for " + runtime.GOOS + "/" + runtime.GOARCH
-	app.Description = `aliyunpan 使用Go语言编写的阿里云盘命令行客户端, 为操作阿里云盘, 提供实用功能。
+	app.Description = `aliyunpan 是一款阿里云盘命令行客户端工具, 为操作阿里云盘, 提供实用功能。
 	支持webdav文件协议，可以让阿里云盘变身为webdav协议的文件服务器，用于挂载作为Windows、Linux、Mac系统的磁盘进行使用。
 	支持同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份。
 	具体功能, 参见 COMMANDS 列表。
@@ -172,7 +172,7 @@ func main() {
 				acceptCompleteFileCommands = []string{
 					"cd", "cp", "xcp", "download", "ls", "mkdir", "mv", "pwd", "rename", "rm", "share", "upload", "login", "loglist", "logout",
 					"clear", "quit", "exit", "quota", "who", "sign", "update", "who", "su", "config",
-					"drive", "export", "import", "backup",
+					"drive", "export", "import", "sync",
 				}
 				closed = strings.LastIndex(line, " ") == len(line)-1
 			)
