@@ -85,8 +85,8 @@ func CmdSu() cli.Command {
 					return nil
 				}
 
-				if n, err := strconv.Atoi(index); err == nil && n >= 0 && n < numLogins {
-					uid = config.Config.UserList[n].UserId
+				if n, err1 := strconv.Atoi(index); err1 == nil && (n-1) >= 0 && (n-1) < numLogins {
+					uid = config.Config.UserList[n-1].UserId
 				} else {
 					fmt.Printf("切换用户失败, 请检查 # 值是否正确\n")
 					return nil

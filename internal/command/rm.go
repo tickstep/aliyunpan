@@ -87,8 +87,8 @@ func RunRemove(driveId string, paths ...string) {
 		}
 		fe.Path = absolutePath
 		delFileInfos = append(delFileInfos, &aliyunpan.FileBatchActionParam{
-			DriveId:driveId,
-			FileId:fe.FileId,
+			DriveId: driveId,
+			FileId:  fe.FileId,
 		})
 		fileId2FileEntity[fe.FileId] = fe
 		cacheCleanDirs = append(cacheCleanDirs, path.Dir(fe.Path))
@@ -98,7 +98,7 @@ func RunRemove(driveId string, paths ...string) {
 	successDelFileEntity := []*aliyunpan.FileEntity{}
 	fdr, err := activeUser.PanClient().FileDelete(delFileInfos)
 	if fdr != nil {
-		for _,item := range fdr {
+		for _, item := range fdr {
 			if !item.Success {
 				failedRmPaths = append(failedRmPaths, fileId2FileEntity[item.FileId].Path)
 			} else {
@@ -111,7 +111,7 @@ func RunRemove(driveId string, paths ...string) {
 		tb := cmdtable.NewTable(os.Stdout)
 		tb.SetHeader([]string{"#", "文件/目录"})
 		for k := range successDelFileEntity {
-			tb.Append([]string{strconv.Itoa(k), successDelFileEntity[k].Path})
+			tb.Append([]string{strconv.Itoa(k + 1), successDelFileEntity[k].Path})
 		}
 		tb.Render()
 	}

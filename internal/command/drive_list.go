@@ -49,10 +49,10 @@ func CmdDrive() cli.Command {
 	}
 }
 
-func RunSwitchDriveList(targetDriveId string)  {
+func RunSwitchDriveList(targetDriveId string) {
 	currentDriveId := config.Config.ActiveUser().ActiveDriveId
 	var activeDriveInfo *config.DriveInfo = nil
-	driveList,renderStr := getDriveOptionList()
+	driveList, renderStr := getDriveOptionList()
 
 	if driveList == nil || len(driveList) == 0 {
 		fmt.Println("切换网盘失败")
@@ -71,15 +71,15 @@ func RunSwitchDriveList(targetDriveId string)  {
 			return
 		}
 
-		if n, err := strconv.Atoi(index); err == nil && n >= 0 && n < len(driveList) {
-			activeDriveInfo = driveList[n]
+		if n, err1 := strconv.Atoi(index); err1 == nil && (n-1) >= 0 && (n-1) < len(driveList) {
+			activeDriveInfo = driveList[n-1]
 		} else {
 			fmt.Printf("切换网盘失败, 请检查 # 值是否正确\n")
 			return
 		}
 	} else {
 		// 直接切换
-		for _,driveInfo := range driveList {
+		for _, driveInfo := range driveList {
 			if driveInfo.DriveId == targetDriveId {
 				activeDriveInfo = driveInfo
 				break
@@ -121,7 +121,7 @@ func getDriveOptionList() (config.DriveInfoList, string) {
 	tb.SetHeader([]string{"#", "drive_id", "网盘名称"})
 
 	for k, info := range driveList {
-		tb.Append([]string{strconv.Itoa(k), info.DriveId, info.DriveName})
+		tb.Append([]string{strconv.Itoa(k + 1), info.DriveId, info.DriveName})
 	}
 	tb.Render()
 	return driveList, builder.String()

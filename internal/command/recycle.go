@@ -150,7 +150,7 @@ func RunRecycleList(driveId string) {
 			fn = fn + "/"
 			fs = "-"
 		}
-		tb.Append([]string{strconv.Itoa(k), file.FileId, fn, fs, file.CreatedAt, file.UpdatedAt})
+		tb.Append([]string{strconv.Itoa(k + 1), file.FileId, fn, fs, file.CreatedAt, file.UpdatedAt})
 	}
 
 	tb.Render()
@@ -161,7 +161,7 @@ func RunRecycleRestore(driveId string, fidStrList ...string) {
 	panClient := GetActivePanClient()
 	restoreFileList := []*aliyunpan.FileBatchActionParam{}
 
-	for _,fid := range fidStrList {
+	for _, fid := range fidStrList {
 		restoreFileList = append(restoreFileList, &aliyunpan.FileBatchActionParam{
 			DriveId: driveId,
 			FileId:  fid,
@@ -190,7 +190,7 @@ func RunRecycleDelete(driveId string, fidStrList ...string) {
 	panClient := GetActivePanClient()
 	deleteFileList := []*aliyunpan.FileBatchActionParam{}
 
-	for _,fid := range fidStrList {
+	for _, fid := range fidStrList {
 		deleteFileList = append(deleteFileList, &aliyunpan.FileBatchActionParam{
 			DriveId: driveId,
 			FileId:  fid,
@@ -234,7 +234,7 @@ func RunRecycleClear(driveId string) {
 
 		// delete
 		deleteFileList := []*aliyunpan.FileBatchActionParam{}
-		for _,f := range fdl {
+		for _, f := range fdl {
 			deleteFileList = append(deleteFileList, &aliyunpan.FileBatchActionParam{
 				DriveId: driveId,
 				FileId:  f.FileId,

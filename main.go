@@ -504,7 +504,7 @@ func main() {
 						if line == "" {
 							continue
 						}
-						tb.Append([]string{strconv.Itoa(idx), line})
+						tb.Append([]string{strconv.Itoa(idx + 1), line})
 						idx++
 					}
 					tb.Render()

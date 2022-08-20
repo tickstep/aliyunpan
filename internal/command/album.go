@@ -240,7 +240,7 @@ func RunAlbumList() {
 	tb.SetHeader([]string{"#", "ALBUM_ID", "名称", "文件数量", "创建日期", "修改日期"})
 	tb.SetColumnAlignment([]int{tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_DEFAULT})
 	for k, record := range records {
-		tb.Append([]string{strconv.Itoa(k), record.AlbumId, record.Name, strconv.Itoa(record.FileCount),
+		tb.Append([]string{strconv.Itoa(k + 1), record.AlbumId, record.Name, strconv.Itoa(record.FileCount),
 			record.CreatedAtStr(), record.UpdatedAtStr()})
 	}
 	tb.Render()

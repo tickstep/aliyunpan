@@ -306,7 +306,7 @@ func RunShareList() {
 				}
 			}
 		}
-		tb.Append([]string{strconv.Itoa(k), record.ShareId, record.ShareUrl, record.SharePwd,
+		tb.Append([]string{strconv.Itoa(k + 1), record.ShareId, record.ShareUrl, record.SharePwd,
 			record.ShareName,
 			//record.FileIdList[0],
 			et,

@@ -186,15 +186,15 @@ func renderTable(op int, isTotal bool, path string, files aliyunpan.FileList) {
 		tb.SetColumnAlignment([]int{tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_RIGHT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
 		for k, file := range files {
 			if file.IsFolder() {
-				tb.Append([]string{strconv.Itoa(k), file.FileId, "-", "-", "-", file.CreatedAt, file.UpdatedAt, file.FileName + aliyunpan.PathSeparator})
+				tb.Append([]string{strconv.Itoa(k + 1), file.FileId, "-", "-", "-", file.CreatedAt, file.UpdatedAt, file.FileName + aliyunpan.PathSeparator})
 				continue
 			}
 
 			switch op {
 			case opLs:
-				tb.Append([]string{strconv.Itoa(k), file.FileId, converter.ConvertFileSize(file.FileSize, 2), file.ContentHash, strconv.FormatInt(file.FileSize, 10), file.CreatedAt, file.UpdatedAt, file.FileName})
+				tb.Append([]string{strconv.Itoa(k + 1), file.FileId, converter.ConvertFileSize(file.FileSize, 2), file.ContentHash, strconv.FormatInt(file.FileSize, 10), file.CreatedAt, file.UpdatedAt, file.FileName})
 			case opSearch:
-				tb.Append([]string{strconv.Itoa(k), file.FileId, converter.ConvertFileSize(file.FileSize, 2), file.ContentHash, strconv.FormatInt(file.FileSize, 10), file.CreatedAt, file.UpdatedAt, file.Path})
+				tb.Append([]string{strconv.Itoa(k + 1), file.FileId, converter.ConvertFileSize(file.FileSize, 2), file.ContentHash, strconv.FormatInt(file.FileSize, 10), file.CreatedAt, file.UpdatedAt, file.Path})
 			}
 		}
 		fN, dN = files.Count()
@@ -204,15 +204,15 @@ func renderTable(op int, isTotal bool, path string, files aliyunpan.FileList) {
 		tb.SetColumnAlignment([]int{tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_RIGHT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT})
 		for k, file := range files {
 			if file.IsFolder() {
-				tb.Append([]string{strconv.Itoa(k), "-", file.UpdatedAt, file.FileName + aliyunpan.PathSeparator})
+				tb.Append([]string{strconv.Itoa(k + 1), "-", file.UpdatedAt, file.FileName + aliyunpan.PathSeparator})
 				continue
 			}
 
 			switch op {
 			case opLs:
-				tb.Append([]string{strconv.Itoa(k), converter.ConvertFileSize(file.FileSize, 2), file.UpdatedAt, file.FileName})
+				tb.Append([]string{strconv.Itoa(k + 1), converter.ConvertFileSize(file.FileSize, 2), file.UpdatedAt, file.FileName})
 			case opSearch:
-				tb.Append([]string{strconv.Itoa(k), converter.ConvertFileSize(file.FileSize, 2), file.UpdatedAt, file.Path})
+				tb.Append([]string{strconv.Itoa(k + 1), converter.ConvertFileSize(file.FileSize, 2), file.UpdatedAt, file.Path})
 			}
 		}
 		fN, dN = files.Count()

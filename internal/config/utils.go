@@ -34,7 +34,7 @@ func (pl *PanUserList) String() string {
 	tb.SetHeader([]string{"#", "uid", "用户名", "昵称"})
 
 	for k, userInfo := range *pl {
-		tb.Append([]string{strconv.Itoa(k), userInfo.UserId, userInfo.AccountName, userInfo.Nickname})
+		tb.Append([]string{strconv.Itoa(k + 1), userInfo.UserId, userInfo.AccountName, userInfo.Nickname})
 	}
 
 	tb.Render()
@@ -95,7 +95,7 @@ func DecryptString(text string) string {
 	if text == "" {
 		return ""
 	}
-	d, _  := hex.DecodeString(text)
+	d, _ := hex.DecodeString(text)
 
 	// use the machine unique id as the key
 	// but in some OS, this key will be changed if you reinstall the OS
