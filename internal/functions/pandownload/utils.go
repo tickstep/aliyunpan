@@ -50,14 +50,18 @@ func SymlinkFileExist(fullPath, rootPath string) bool {
 	originSaveRootSymlinkFile := localfile.NewSymlinkFile(rootPath)
 	suffixPath := localfile.GetSuffixPath(fullPath, rootPath)
 	savePathSymlinkFile, savePathFileInfo, err := localfile.RetrieveRealPathFromLogicSuffixPath(originSaveRootSymlinkFile, suffixPath)
-	if err != nil {
+	if err != nil || savePathFileInfo == nil {
 		return false
 	} else {
-		if savePathFileInfo.Size() == 0 {
-			return false
-		}
-		if _, err = os.Stat(savePathSymlinkFile.RealPath + DownloadSuffix); err != nil {
+		if savePathFileInfo.IsDir() {
 			return true
+		} else {
+			if savePathFileInfo.Size() == 0 {
+				return false
+			}
+			if _, err = os.Stat(savePathSymlinkFile.RealPath + DownloadSuffix); err != nil {
+				return true
+			}
 		}
 	}
 	return false

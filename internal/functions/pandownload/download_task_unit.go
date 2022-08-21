@@ -126,21 +126,25 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	suffixPath := localfile.GetSuffixPath(dir, dtu.OriginSaveRootPath)
 	saveDirPathSymlinkFile, saveDirPathFileInfo, err := localfile.RetrieveRealPathFromLogicSuffixPath(originSaveRootSymlinkFile, suffixPath)
 	if err != nil && !os.IsExist(err) {
-		realSavePath := saveDirPathSymlinkFile.RealPath
-		suffixPath = localfile.GetSuffixPath(dtu.SavePath, saveDirPathSymlinkFile.LogicPath) // 获取后缀不存在的路径
+		// 本地保存目录不存在，需要创建对应的保存目录
+		realSaveDirPath := saveDirPathSymlinkFile.RealPath
+		suffixPath = localfile.GetSuffixPath(path.Dir(dtu.SavePath), saveDirPathSymlinkFile.LogicPath) // 获取后缀不存在的路径
 		if suffixPath != "" {
-			realSavePath = filepath.Join(realSavePath, suffixPath) // 拼接
+			realSaveDirPath = filepath.Join(realSaveDirPath, suffixPath) // 拼接
 		}
-		// 目录不存在, 创建
-		err = os.MkdirAll(realSavePath, 0777)
+		// 创建保存目录
+		err = os.MkdirAll(realSaveDirPath, 0777)
 		if err != nil {
 			return err
 		}
-		savePathSymlinkFile.RealPath = realSavePath + "/" + filepath.Base(localfile.CleanPath(dtu.SavePath))
+
+		// 拼接完整的保存文件路径
+		savePathSymlinkFile.RealPath = filepath.Join(realSaveDirPath, filepath.Base(localfile.CleanPath(dtu.SavePath)))
 	} else if !saveDirPathFileInfo.IsDir() {
 		// SavePath所在的目录不是目录
 		return fmt.Errorf("%s, path %s: not a directory", StrDownloadInitError, saveDirPathSymlinkFile.RealPath)
 	} else {
+		// 保存目录已存在，直接拼接成文件完整保存路径
 		savePathSymlinkFile.RealPath = filepath.Join(saveDirPathSymlinkFile.RealPath, filepath.Base(localfile.CleanPath(dtu.SavePath)))
 	}
 	savePathSymlinkFile, _, _ = localfile.RetrieveRealPath(savePathSymlinkFile)
@@ -485,7 +489,14 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			if suffixPath != "" {
 				realSavePath = filepath.Join(realSavePath, suffixPath)
 			}
-			os.MkdirAll(realSavePath, 0777) // 首先在本地创建目录, 保证空目录也能被保存
+			err1 := os.MkdirAll(realSavePath, 0777) // 首先在本地创建目录, 保证空目录也能被保存
+			if err1 != nil {
+				result.ResultMessage = "创建目录错误"
+				result.Succeed = false
+				result.Err = err1
+				result.NeedRetry = false
+				return
+			}
 		}
 
 		// 获取该目录下的文件列表
