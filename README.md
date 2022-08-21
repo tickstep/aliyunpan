@@ -1,5 +1,5 @@
 # 关于
-阿里云盘CLI。仿 Linux shell 文件处理命令的阿里云盘命令行客户端，支持webdav文件协议，支持同步备份功能。
+阿里云盘CLI。仿 Linux shell 文件处理命令的阿里云盘命令行客户端，支持JavaScript插件，支持webdav文件协议，支持同步备份功能。
 
 # 特色
 1. 多平台支持, 支持 Windows, macOS, linux(x86/x64/arm), android, iOS 等
@@ -13,7 +13,36 @@
 9. 支持[webdav文件服务](docs/manual.md#webdav文件服务)，可以将阿里云盘当做webdav文件网盘挂载到Windows, macOS, linux的磁盘中进行使用。webdav部署支持docker镜像，镜像只有不到10MB非常小巧。
 10. 支持[JavaScript插件](docs/manual.md#JavaScript插件)，你可以按照自己的需要定制上传/下载中关键步骤的行为，最大程度满足自己的个性化需求
 
-# 版本标签说明
+# 目录
+- [如何安装](#如何安装)
+    * [直接下载安装](#直接下载安装)
+    * [apt安装](#apt安装)
+    * [rpm安装](#rpm安装)
+    * [docker安装](#docker安装)
+        + [sync同步盘](#sync同步盘)
+        + [webdav共享盘](#webdav共享盘)
+- [如何使用](#如何使用)
+    * [基本使用](#基本使用)
+        + [修改文件配置目录](#修改文件配置目录)
+        + [启动程序](#启动程序)
+        + [查看帮助](#查看帮助)
+        + [登录](#登录)
+        + [查看文件列表](#查看文件列表)
+        + [下载文件](#下载文件)
+        + [上传文件](#上传文件)
+        + [同步备份文件](#同步备份文件)
+    * [更多命令](#更多命令)
+- [常见问题](#常见问题)
+    * [如何获取RefreshToken](#如何获取RefreshToken)
+    * [如何开启Debug调试日志](#如何开启Debug调试日志)
+- [交流反馈](#交流反馈)
+- [鸣谢](#鸣谢)
+
+# 如何安装
+## 直接下载安装
+可以直接在本仓库 [发布页](https://github.com/tickstep/aliyunpan/releases) 下载安装包，解压后使用。   
+   
+要特别注意安装包的标签，不同的标签对应不同架构的系统，相关版本文件的标签说明如下：
 1. arm / armv5 / armv7 : 适用32位ARM系统
 2. arm64 : 适用64位ARM系统
 3. 386 / x86 : 适用32系统，包括Intel和AMD的CPU系统
@@ -22,9 +51,13 @@
 6. macOS amd64适用Intel CPU的机器，macOS arm64目前主要是适用苹果M1芯片的机器
 7. iOS arm64适用iPhone手机，并且必须是越狱的手机才能正常运行
 
-# 如何安装
-## 直接下载安装
-可以直接在本仓库 [发布页](https://github.com/tickstep/aliyunpan/releases) 下载，解压后使用。
+参考例子：
+```shell
+wget https://github.com/tickstep/aliyunpan/releases/download/v0.1.8/aliyunpan-v0.1.8-linux-amd64.zip
+unzip aliyunpan-v0.1.8-linux-amd64.zip
+cd aliyunpan-v0.1.8-linux-amd64
+./aliyunpan
+```
 
 ## apt安装
 适用于apt包管理器的系统，例如Ubuntu，国产deepin深度操作系统等。目前只支持amd64和arm64架构的机器。
@@ -77,26 +110,27 @@ ALIYUNPAN_PAN_DIR 网盘文件夹的webdav服务根目录
 # 如何使用
 完整和详细的命令说明请查看手册：[命令手册](docs/manual.md)   
 
-如果程序运行时输出乱码, 请检查下终端的编码方式是否为 `UTF-8`.   
-使用本程序之前, 非常建议先学习一些 linux 基础命令知识.   
-如果没有带任何参数运行程序, 程序将会进入仿Linux shell系统用户界面的cli交互模式, 可直接运行相关命令.   
-cli交互模式下, 光标所在行的前缀应为 `aliyunpan >`, 如果登录了帐号则格式为 `aliyunpan:<工作目录> <用户昵称>$ `   
-程序会提供相关命令的使用说明.   
-
 1. Windows
-程序应在 命令提示符 (Command Prompt) 或 PowerShell 中运行.   
-也可直接双击程序运行, 具体使用方法请参见 [命令列表及说明](docs/manual.md#命令列表及说明)   
+   程序应在 命令提示符 (Command Prompt) 或 PowerShell 中运行.   
+   也可直接双击程序运行, 具体使用方法请参见 [命令列表及说明](docs/manual.md#命令列表及说明)
 
 2. Linux / macOS
-程序应在 终端 (Terminal) 运行.   
-具体使用方法请参见 [命令列表及说明](docs/manual.md#命令列表及说明)   
+   程序应在 终端 (Terminal) 运行.   
+   具体使用方法请参见 [命令列表及说明](docs/manual.md#命令列表及说明)   
 
+如果程序运行时输出乱码, 请检查下终端的编码方式是否为 `UTF-8`.   
+
+如果没有带任何参数运行程序, 程序将会进入仿Linux shell系统用户界面的CLI交互模式, 可直接运行相关命令.   
+在交互模式下, 光标所在行的前缀应为 `aliyunpan >`, 如果登录了帐号则格式为 `aliyunpan:<工作目录> <用户昵称>$ `  
+   
+程序内置了相关命令的使用说明，你可以通过运行`命令 -h`的方式获取命令的使用说明，例如：`upload -h`获取上传命令的使用说明。   
 
 ## 基本使用
 本程序支持阿里云盘大多数命令操作，这里只介绍基本的使用，更多更详细的命令请查看手册：[命令手册](docs/manual.md)。
 
-### 指定配置文件存储路径(可选)
-设置环境变量`ALIYUNPAN_CONFIG_DIR`并指定一个存在的目录，例如linux下面可以这样指定
+### 修改文件配置目录
+你可以指定程序配置文件的存储路径，如果没有指定程序会使用默认的目录。   
+方法为设置环境变量`ALIYUNPAN_CONFIG_DIR`并指定一个存在的目录，例如linux下面可以这样指定
 ```shell
 export ALIYUNPAN_CONFIG_DIR=/home/tickstep/tools/aliyunpan/config
 ```
@@ -232,6 +266,10 @@ aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir 
 云盘目录: /备份盘/我的文档
 ```
 
+## 更多命令
+更多更详细的命令请查看手册：[命令手册](docs/manual.md)。
+
+# 常见问题
 ## 如何获取RefreshToken
 需要通过浏览器获取refresh_token。这里以Chrome浏览器为例，其他浏览器类似。   
 打开 [阿里云盘网页](https://www.aliyundrive.com/drive) 并进行登录，然后F12按键打开浏览器调试菜单，按照下面步骤进行
@@ -242,6 +280,26 @@ aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir 
 JSON.parse(localStorage.getItem("token")).refresh_token
 ```
 ![](./assets/images/how-to-get-refresh-token-cmd.png)
+
+
+## 如何开启Debug调试日志
+当需要定位问题，或者提交issue的时候抓取log，则需要开启debug日志。步骤如下：
+
+### 第一步
+Linux&MacOS   
+命令行运行
+```
+export ALIYUNPAN_VERBOSE=1
+```
+
+Windows   
+不同版本会有些许不一样，请自行查询具体方法   
+设置示意图如下：
+![](./assets/images/win10-env-debug-config.png)
+
+### 第二步
+打开aliyunpan命令行程序，任何云盘命令都有类似如下日志输出
+![](./assets/images/debug-log-screenshot.png)
 
 # 交流反馈
 提交issue: [issues页面](https://github.com/tickstep/aliyunpan/issues)   
