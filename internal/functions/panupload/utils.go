@@ -18,7 +18,9 @@ import (
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
 	"net/url"
+	"path"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -56,6 +58,23 @@ func IsUrlExpired(urlStr string) bool {
 	if (time.Now().Unix() - 10) >= expiredTimeSec {
 		// expired
 		return true
+	}
+	return false
+}
+
+func IsVideoFile(fileName string) bool {
+	if fileName == "" {
+		return false
+	}
+	extName := strings.ToLower(path.Ext(fileName))
+	if strings.Index(extName, ".") == 0 {
+		extName = strings.TrimPrefix(extName, ".")
+	}
+	extList := config.Config.GetVideoExtensionList()
+	for _, ext := range extList {
+		if ext == extName {
+			return true
+		}
 	}
 	return false
 }

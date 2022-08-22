@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
@@ -247,5 +248,24 @@ func (pu *PanUpload) CommitFile() (cerr error) {
 	if er != nil {
 		return er
 	}
+
+	// 视频文件触发云端转码请求
+	pu.triggerVideoTranscodeAction()
+
 	return nil
+}
+
+// TriggerVideoTranscodeAction 触发视频文件转码成功
+func (pu *PanUpload) triggerVideoTranscodeAction() {
+	// 视频文件触发云端转码请求
+	if pu.uploadOpEntity != nil && IsVideoFile(pu.uploadOpEntity.FileName) {
+		time.Sleep(3 * time.Second)
+		_, er1 := pu.panClient.VideoGetPreviewPlayInfo(&aliyunpan.VideoGetPreviewPlayInfoParam{
+			DriveId: pu.driveId,
+			FileId:  pu.uploadOpEntity.FileId,
+		})
+		if er1 == nil {
+			logger.Verboseln("触发视频文件转码成功：" + pu.uploadOpEntity.FileName)
+		}
+	}
 }

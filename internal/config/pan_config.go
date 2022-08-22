@@ -55,6 +55,9 @@ const (
 	// DefaultTokenServiceWebHost 默认的token服务
 	DefaultTokenServiceWebHost = "https://api.tickstep.com"
 	//DefaultTokenServiceWebHost = "http://localhost:8977"
+
+	// DefaultVideoFileExtensions 默认的视频文件后缀
+	DefaultVideoFileExtensions = "mp4,flv,mkv,mov,rm,rmvb,wmv,wma,mv,asf,asx,mpg,mpeg,mpe,3gp,m4v,avi,vob"
 )
 
 var (
@@ -96,6 +99,8 @@ type PanConfig struct {
 	Proxy           string          `json:"proxy"`      // 代理
 	LocalAddrs      string          `json:"localAddrs"` // 本地网卡地址
 	UpdateCheckInfo UpdateCheckInfo `json:"updateCheckInfo"`
+
+	VideoFileExtensions string `json:"videoFileExtensions"`
 
 	configFilePath string
 	configFile     *os.File
@@ -266,6 +271,7 @@ func (c *PanConfig) initDefaultConfig() {
 		}
 	}
 	c.ConfigVer = ConfigVersion
+	c.VideoFileExtensions = DefaultVideoFileExtensions
 }
 
 // GetConfigDir 获取配置路径
@@ -458,4 +464,19 @@ func (c *PanConfig) HTTPClient(ua string) *requester.HTTPClient {
 		client.SetUserAgent(ua)
 	}
 	return client
+}
+
+func (c *PanConfig) GetVideoExtensionList() []string {
+	if c.VideoFileExtensions == "" {
+		return []string{}
+	}
+	exts := strings.Split(c.VideoFileExtensions, ",")
+	r := []string{}
+	for _, ex := range exts {
+		ex = strings.TrimSpace(ex)
+		if ex != "" {
+			r = append(r, strings.ToLower(ex))
+		}
+	}
+	return r
 }
