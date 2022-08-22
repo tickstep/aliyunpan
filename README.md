@@ -23,7 +23,7 @@
         + [webdav共享盘](#webdav共享盘)
 - [如何使用](#如何使用)
     * [基本使用](#基本使用)
-        + [修改文件配置目录](#修改文件配置目录)
+        + [修改配置目录](#修改配置目录)
         + [启动程序](#启动程序)
         + [查看帮助](#查看帮助)
         + [登录](#登录)
@@ -53,9 +53,9 @@
 
 参考例子：
 ```shell
-wget https://github.com/tickstep/aliyunpan/releases/download/v0.1.8/aliyunpan-v0.1.8-linux-amd64.zip
-unzip aliyunpan-v0.1.8-linux-amd64.zip
-cd aliyunpan-v0.1.8-linux-amd64
+wget https://github.com/tickstep/aliyunpan/releases/download/v0.2.0/aliyunpan-v0.2.0-linux-amd64.zip
+unzip aliyunpan-v0.2.0-linux-amd64.zip
+cd aliyunpan-v0.2.0-linux-amd64
 ./aliyunpan
 ```
 
@@ -81,10 +81,9 @@ sudo curl -fsSL http://file.tickstep.com/rpm/aliyunpan/aliyunpan.repo | sudo tee
 2. 备份云盘文件，即下载网盘文件到本地，始终保持网盘的文件有一个完整的备份在本地
 3. 双向备份，保持网盘文件和本地文件严格一致
 ```
-docker run -d --name=aliyunpan-sync --restart=always -v "<your local dir>:/home/app/data" -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" tickstep/aliyunpan-sync:<tag>
+docker run -d --name=aliyunpan-sync --restart=always -v "<your local dir>:/home/app/data" -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" tickstep/aliyunpan-sync:v0.2.0
  
   
-<tag>: 版本号，例如：v0.1.8
 <your local dir>：本地目录绝对路径，例如：/tickstep/Documents/设计文档
 ALIYUNPAN_PAN_DIR：云盘目录
 ALIYUNPAN_REFRESH_TOKEN：RefreshToken
@@ -93,12 +92,11 @@ ALIYUNPAN_SYNC_MODE：备份模式，支持三种: upload(备份本地文件到�
 更详情文档请参考dockerhub网址：[tickstep/aliyunpan-sync](https://hub.docker.com/r/tickstep/aliyunpan-sync)
 
 ### webdav共享盘
-让阿里云盘变身为webdav协议的文件服务器。这样你可以把阿里云盘挂载为Windows、Linux、Mac系统的磁盘，可以通过NAS系统做文件管理或文件同步等等。
+让阿里云盘变身为webdav协议的文件服务器。这样使用webdav客户端软件，你可以把阿里云盘挂载为Windows、Linux、Mac系统的磁盘，可以通过NAS系统做文件管理或文件同步等等。
 ```
-docker run -d --name=aliyunpan-webdav --restart=always -p 23077:23077 -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_AUTH_USER="admin" -e ALIYUNPAN_AUTH_PASSWORD="admin" -e ALIYUNPAN_PAN_DRIVE="File" -e ALIYUNPAN_PAN_DIR="/" tickstep/aliyunpan-webdav:<tag>
+docker run -d --name=aliyunpan-webdav --restart=always -p 23077:23077 -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_AUTH_USER="admin" -e ALIYUNPAN_AUTH_PASSWORD="admin" -e ALIYUNPAN_PAN_DRIVE="File" -e ALIYUNPAN_PAN_DIR="/" tickstep/aliyunpan-webdav:v0.2.0
  
  
-<tag>: 版本号，例如：v0.1.8
 ALIYUNPAN_REFRESH_TOKEN RefreshToken
 ALIYUNPAN_AUTH_USER webdav登录用户名
 ALIYUNPAN_AUTH_PASSWORD webdav登录密码
@@ -128,8 +126,8 @@ ALIYUNPAN_PAN_DIR 网盘文件夹的webdav服务根目录
 ## 基本使用
 本程序支持阿里云盘大多数命令操作，这里只介绍基本的使用，更多更详细的命令请查看手册：[命令手册](docs/manual.md)。
 
-### 修改配置文件目录
-你可以指定程序配置文件的存储路径，如果没有指定程序会使用默认的目录。   
+### 修改配置目录
+你可以指定程序配置文件的存储路径，如果没有指定，程序会使用默认的目录。   
 方法为设置环境变量`ALIYUNPAN_CONFIG_DIR`并指定一个存在的目录，例如linux下面可以这样指定
 ```shell
 export ALIYUNPAN_CONFIG_DIR=/home/tickstep/tools/aliyunpan/config
