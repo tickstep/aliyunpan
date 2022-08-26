@@ -231,7 +231,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 		f.syncFileDb.Update(f.syncItem)
 		return fmt.Errorf("文件非法，无法下载")
 	}
-	localDir := path.Dir(f.syncItem.getLocalFileFullPath())
+	localDir := filepath.Dir(f.syncItem.getLocalFileFullPath())
 	if b, e := utils.PathExists(localDir); e == nil && !b {
 		f.localFolderCreateMutex.Lock()
 		os.MkdirAll(localDir, 0755)
@@ -406,7 +406,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		}
 
 		// 创建文件夹
-		panDirPath := path.Dir(targetPanFilePath)
+		panDirPath := filepath.Dir(targetPanFilePath)
 		panDirFileId := ""
 		if panDirItem, er := f.panFileDb.Get(panDirPath); er == nil {
 			if panDirItem != nil && panDirItem.IsFolder() {
