@@ -128,7 +128,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	if err != nil && !os.IsExist(err) {
 		// 本地保存目录不存在，需要创建对应的保存目录
 		realSaveDirPath := saveDirPathSymlinkFile.RealPath
-		suffixPath = localfile.GetSuffixPath(path.Dir(dtu.SavePath), saveDirPathSymlinkFile.LogicPath) // 获取后缀不存在的路径
+		suffixPath = localfile.GetSuffixPath(filepath.Dir(dtu.SavePath), saveDirPathSymlinkFile.LogicPath) // 获取后缀不存在的路径
 		if suffixPath != "" {
 			realSaveDirPath = filepath.Join(realSaveDirPath, suffixPath) // 拼接
 		}

@@ -24,7 +24,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -385,7 +385,7 @@ func RunShareExport(option, saveFilePath string) {
 }
 
 func ExportCsv(savePath string, data [][]string) bool {
-	folder := path.Dir(savePath)
+	folder := filepath.Dir(savePath)
 	if _, err := os.Stat(folder); err != nil {
 		if !os.IsExist(err) {
 			os.MkdirAll(folder, os.ModePerm)
