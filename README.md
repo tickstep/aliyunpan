@@ -17,7 +17,7 @@
 - [如何安装](#如何安装)
     * [直接下载安装](#直接下载安装)
     * [apt安装](#apt安装)
-    * [rpm安装](#rpm安装)
+    * [yum安装](#yum安装)
     * [docker安装](#docker安装)
         + [sync同步盘](#sync同步盘)
         + [webdav共享盘](#webdav共享盘)
@@ -66,8 +66,8 @@ sudo curl -fsSL http://file.tickstep.com/apt/pgp | gpg --dearmor | sudo tee /etc
  
 ```
 
-## rpm安装
-适用于rpm包管理器的系统，例如CentOS、RockyLinux等。目前只支持amd64和arm64架构的机器。
+## yum安装
+适用于yum包管理器的系统，例如CentOS、RockyLinux等。目前只支持amd64和arm64架构的机器。
 ```shell
 sudo curl -fsSL http://file.tickstep.com/rpm/aliyunpan/aliyunpan.repo | sudo tee /etc/yum.repos.d/tickstep-aliyunpan.repo > /dev/null && sudo yum install aliyunpan -y
  
