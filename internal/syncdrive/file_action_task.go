@@ -390,6 +390,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		} else {
 			efi, apierr := f.panClient.FileInfoByPath(f.syncItem.DriveId, targetPanFilePath)
 			if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
+				logger.Verbosef("上传文件错误: %s\n", apierr.String())
 				return apierr
 			}
 			if efi != nil && efi.FileId != "" {

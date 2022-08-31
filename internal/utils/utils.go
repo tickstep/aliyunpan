@@ -235,8 +235,8 @@ func Md5Str(text string) string {
 	return strings.ToLower(sb.String())
 }
 
-// IsAbsPath 是否是绝对路径
-func IsAbsPath(filePath string) bool {
+// IsLocalAbsPath 是否是本地绝对路径
+func IsLocalAbsPath(filePath string) bool {
 	if runtime.GOOS == "windows" {
 		// 是否是windows路径
 		matched, _ := regexp.MatchString("^([a-zA-Z]:)", filePath)
@@ -248,4 +248,9 @@ func IsAbsPath(filePath string) bool {
 	} else {
 		return path.IsAbs(filePath)
 	}
+}
+
+// IsPanAbsPath 是否是云盘绝对路径
+func IsPanAbsPath(filePath string) bool {
+	return path.IsAbs(filePath)
 }

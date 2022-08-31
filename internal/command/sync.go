@@ -166,16 +166,16 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 					mode := c.String("mode")
 					if localDir != "" && panDir != "" {
 						// make path absolute
-						if !utils.IsAbsPath(localDir) {
+						if !utils.IsLocalAbsPath(localDir) {
 							pwd, _ := os.Getwd()
 							localDir = path.Join(pwd, path.Clean(localDir))
 						}
 						panDir = activeUser.PathJoin(activeUser.ActiveDriveId, panDir)
-						if !utils.IsAbsPath(localDir) {
+						if !utils.IsLocalAbsPath(localDir) {
 							fmt.Println("本地目录请指定绝对路径")
 							return nil
 						}
-						if !path.IsAbs(panDir) {
+						if !utils.IsPanAbsPath(panDir) {
 							fmt.Println("网盘目录请指定绝对路径")
 							return nil
 						}

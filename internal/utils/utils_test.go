@@ -33,9 +33,9 @@ func TestParseTimeStr(t *testing.T) {
 }
 
 func TestIsAbsPath_ReturnTrue(t *testing.T) {
-	fmt.Println(IsAbsPath("D:\\my\\folder\\test"))
+	fmt.Println(IsLocalAbsPath("D:\\my\\folder\\test"))
 }
 
 func TestIsAbsPath_ReturnFalse(t *testing.T) {
-	fmt.Println(IsAbsPath("my\\folder\\test"))
+	fmt.Println(IsLocalAbsPath("my\\folder\\test"))
 }

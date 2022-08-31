@@ -134,6 +134,16 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
 		if len(task.Id) == 0 {
 			task.Id = utils.UuidStr()
 		}
+		// check pan path
+		if !utils.IsPanAbsPath(task.PanFolderPath) {
+			task.PanFolderPath = "/" + task.PanFolderPath
+		}
+
+		// check local path
+		if !utils.IsLocalAbsPath(task.LocalFolderPath) {
+			fmt.Println("任务启动失败，本地路径不是绝对路径: ", task.LocalFolderPath)
+			continue
+		}
 		task.panUser = m.PanUser
 		task.DriveId = m.DriveId
 		task.syncDbFolderPath = m.SyncConfigFolderPath
