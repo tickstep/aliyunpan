@@ -53,7 +53,14 @@ const (
 	lastFilePrefix = "└──"
 )
 
-func getTree(driveId, pathStr string, depth int) {
+type (
+	treeStatistic struct {
+		CountOfDir  int64
+		CountOfFile int64
+	}
+)
+
+func getTree(driveId, pathStr string, depth int, statistic *treeStatistic) {
 	activeUser := config.Config.ActiveUser()
 	pathStr = activeUser.PathJoin(driveId, pathStr)
 	pathStr = path.Clean(pathStr)
@@ -87,10 +94,12 @@ func getTree(driveId, pathStr string, depth int) {
 	)
 	for i, file := range fileList {
 		if file.IsFolder() {
+			statistic.CountOfDir += 1
 			fmt.Printf("%v%v %v/\n", indentPrefixStr, pathPrefix, file.FileName)
-			getTree(driveId, pathStr+"/"+file.Path, depth+1)
+			getTree(driveId, pathStr+"/"+file.Path, depth+1, statistic)
 			continue
 		}
+		statistic.CountOfFile += 1
 
 		if i+1 == fN {
 			prefix = lastFilePrefix
@@ -109,6 +118,11 @@ func RunTree(driveId, pathStr string) {
 	activeUser.PanClient().EnableCache()
 	defer activeUser.PanClient().DisableCache()
 	pathStr = activeUser.PathJoin(driveId, pathStr)
+	statistic := &treeStatistic{
+		CountOfDir:  0,
+		CountOfFile: 0,
+	}
 	fmt.Printf("%s\n", pathStr)
-	getTree(driveId, pathStr, 0)
+	getTree(driveId, pathStr, 0, statistic)
+	fmt.Printf("\n%d 个文件夹, %d 个文件\n", statistic.CountOfDir, statistic.CountOfFile)
 }
