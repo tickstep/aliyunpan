@@ -1131,7 +1131,8 @@ function uploadFileFinishCallback(context, params) {
 ```
 
 #### 3.下载文件并截断过长的文件名
-使用JavaScript下载插件中的`downloadFilePrepareCallback`函数。如下所示：
+有些文件的路径或者名称太长，下载的时候可能会由于路径名称过程导致无法下载，这时候可以使用JavaScript下载插件中的`downloadFilePrepareCallback`函数定制下载保存的文件名。   
+如下所示：
 ```
 function downloadFilePrepareCallback(context, params) {
     console.log(params)
@@ -1182,7 +1183,7 @@ function downloadFilePrepareCallback(context, params) {
 ```
 效果如下:   
 1）假如网盘源路径是：`/亚马逊书籍合集/亚马逊 kindle ebook 大合集5289册/经济金融 (2)/解密Instagram（ 《金融时报》和麦肯锡2020年度商业书籍！社交应用如何改变世界？解锁打造估值千亿美元爆品的核心方法！ ) by 莎拉·弗莱尔(z-lib.org).mobi`   
-2）下载后保存本地的路径是：`D:\test\亚马逊书籍合集\亚马逊 kindle ebook 大合集5289册/经济金融 (2)\解密Instagra.mobi`   
+2）下载后保存本地的路径是：`D:\test\亚马逊书籍合集\亚马逊 kindle ebook 大合集5289册\经济金融 (2)\解密Instagra.mobi`   
 ```
 [1] ----
 文件ID: 630f0623e67c0a1d2e554b1994a29108d089f0d5
