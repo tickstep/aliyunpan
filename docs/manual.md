@@ -1091,6 +1091,10 @@ function uploadFilePrepareCallback(context, params) {
         "uploadApproved": "yes",
         "driveFilePath": ""
     };
+    if (params["localFileType"] != "file") {
+        // do nothing
+        return result;
+    }
 
     // 禁止点号.开头的文件上传
     if (params["localFileName"].indexOf(".") == 0) {
