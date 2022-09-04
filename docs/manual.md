@@ -45,6 +45,10 @@
     * [JavaScript插件](#JavaScript插件)
         + [如何使用](#如何使用)
         + [JS中内置的函数](#JS中内置的函数)
+        + [常见场景样例](#常见场景样例)
+            + [1.禁止特定文件上传](#1.禁止特定文件上传)
+            + [2.上传文件后删除本地文件](#2.上传文件后删除本地文件)
+            + [3.下载文件并截断过长的文件名](#3.下载文件并截断过长的文件名)
     * [显示和修改程序配置项](#显示和修改程序配置项)
 - [常见问题Q&A](#常见问题Q&A)
     * [1. 如何获取RefreshToken](#1-如何获取RefreshToken)
@@ -1072,6 +1076,125 @@ console.log("hello world");
 ```
 PluginUtil.LocalFS.deleteFile(params["localFilePath"]);
 ```
+
+
+### 常见场景样例
+这里收集了一些常见的需求样例，可以作为插件定制的样例模板。
+
+#### 1.禁止特定文件上传
+使用JavaScript上传插件中的`uploadFilePrepareCallback`函数。如下所示：
+```
+function uploadFilePrepareCallback(context, params) {
+    console.log(params)
+
+    var result = {
+        "uploadApproved": "yes",
+        "driveFilePath": ""
+    };
+
+    // 禁止点号.开头的文件上传
+    if (params["localFileName"].indexOf(".") == 0) {
+        result["uploadApproved"] = "no";
+    }
+
+    // 禁止.txt文件上传
+    if (params["localFileName"].search(/.txt$/i) >= 0) {
+        result["uploadApproved"] = "no";
+    }
+
+    // 禁止password.key文件上传
+    if (params["localFileName"] == "password.key") {
+        result["uploadApproved"] = "no";
+    }    
+
+    return result;
+}
+```
+
+#### 2.上传文件后删除本地文件
+使用JavaScript上传插件中的`uploadFileFinishCallback`函数。如下所示：
+```
+function uploadFileFinishCallback(context, params) {
+    console.log(params);
+    if (params["localFileType"] != "file") {
+        // do nothing
+        return;
+    }
+    if (params["uploadResult"] == "success") {
+        PluginUtil.LocalFS.deleteFile(params["localFilePath"]);
+    }    
+}
+```
+
+#### 3.下载文件并截断过长的文件名
+使用JavaScript下载插件中的`downloadFilePrepareCallback`函数。如下所示：
+```
+function downloadFilePrepareCallback(context, params) {
+    console.log(params)
+
+    var result = {
+        "downloadApproved": "yes",
+        "localFilePath": ""
+    };
+    if (params["driveFileType"] != "file") {
+        return result;
+    }
+	
+    // 下面的代码都是分隔路径，方便后面修改路径时使用
+    var filePath =  params["localFilePath"];
+    filePath = filePath.replace(/\\/g, "/");
+    
+    // 目录完整路径
+    var dirPath = "";
+    // 文件名，不包括后缀名
+    var fileName = "";
+    // 文件后缀名
+    var fileExt = "";
+    
+    var idx = filePath.lastIndexOf('/');
+    if (idx > 0) {
+        dirPath = filePath.substring(0,idx);
+        fileName = filePath.substring(idx+1,filePath.length);
+    } else {
+        fileName = filePath;
+    }
+    idx = fileName.lastIndexOf(".")
+    if (idx > 0) {
+        fileExt = fileName.substring(idx,fileName.length);
+        fileName = fileName.substring(0, fileName.length-fileExt.length)
+    }
+
+    // 开始按照需要截断太长的文件路径，例如下面的这个例子:
+    // 
+    // dirPath + "/"          ==> 这个的意思是保留前面的文件夹路径，如果不需要就去掉
+    // fileName.substr(0,10)  ==> 文件名只取前面10个字符，其他的不要了
+    // + fileExt              ==> 把文件的后缀名补上
+    var saveFilePath = dirPath + "/" + fileName.substr(0,10) + fileExt;
+
+    // 返回
+    result["localFilePath"] = saveFilePath;
+    return result;
+}
+```
+效果如下:   
+1）假如网盘源路径是：`/亚马逊书籍合集/亚马逊 kindle ebook 大合集5289册/经济金融 (2)/解密Instagram（ 《金融时报》和麦肯锡2020年度商业书籍！社交应用如何改变世界？解锁打造估值千亿美元爆品的核心方法！ ) by 莎拉·弗莱尔(z-lib.org).mobi`   
+2）下载后保存本地的路径是：`D:\test\亚马逊书籍合集\亚马逊 kindle ebook 大合集5289册/经济金融 (2)\解密Instagra.mobi`   
+```
+[1] ----
+文件ID: 630f0623e67c0a1d2e554b1994a29108d089f0d5
+文件名: 解密Instagram（ 《金融时报》和麦肯锡2020年度商业书籍！社交应用如何改变世界？解锁打造估值千亿美元爆品的核心方法！ ) by 莎拉·弗莱尔(z-lib.org).mobi
+文件类型: 文件
+文件路径: /亚马逊书籍合集/亚马逊 kindle ebook 大合集5289册/经济金融 (2)/解密Instagram（ 《金融时报》和麦肯锡2020年度商业书籍！社交应用如何改变世界？解锁打造估值千亿美元爆品的核心方法！ ) by 莎拉·弗莱尔(z-lib.org).mobi
+
+插件修改文件下载保存路径为: D:\test\亚马逊书籍合集/亚马逊 kindle ebook 大合集5289册/经济金融 (2)/解密Instagra.mobi
+[1] 准备下载: /亚马逊书籍合集/亚马逊 kindle ebook 大合集5289册/经济金融 (2)/解密Instagram（ 《金融时报》和麦肯锡2020年度商业书籍！社交应用如何改变世界？解锁打造估值千亿美元爆品的核心方法！ ) by 莎拉·弗莱尔(z-lib.org).mobi
+[1] 将会下载到路径: D:\test\亚马逊书籍合集/亚马逊 kindle ebook 大合集5289册/经济金融 (2)/解密Instagra.mobi
+[1] 下载开始
+
+[1] 下载完成, 保存位置: D:\test\亚马逊书籍合集/亚马逊 kindle ebook 大合集5289册/经济金融 (2)/解密Instagra.mobi
+[1] 检验文件有效性成功: D:\test\亚马逊书籍合集/亚马逊 kindle ebook 大合集5289册/经济金融 (2)/解密Instagra.mobi
+```
+
 
 ## 显示和修改程序配置项
 ```
