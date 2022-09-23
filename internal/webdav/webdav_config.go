@@ -15,6 +15,7 @@ type WebdavUser struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Scope    string `json:"scope"`
+	Mode     string `json:"mode"`
 }
 
 type WebdavConfig struct {
@@ -52,7 +53,7 @@ func (w *WebdavConfig) StartServer() {
 			Username: u.Username,
 			Password: u.Password,
 			Scope:    u.Scope,
-			Modify:   true,
+			Modify:   u.Mode == "rw",
 			Rules:    nil,
 			Handler: &webdav.Handler{
 				Prefix: w.Prefix,

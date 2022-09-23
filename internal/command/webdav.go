@@ -60,8 +60,8 @@ aliyunpan webdav start -h
 	2. 使用默认配置启动webdav服务
 	aliyunpan webdav start
 
-	3. 启动webdav服务，并配置IP为127.0.0.1，端口为23077，登录用户名为admin，登录密码为admin123，文件网盘目录 /webdav_folder 作为服务的根目录
-	aliyunpan webdav start -ip "127.0.0.1" -port 23077 -webdav_user "admin" -webdav_password "admin123" -pan_drive "File" -pan_dir_path "/webdav_folder"
+	3. 启动webdav服务，并配置IP为127.0.0.1，端口为23077，登录用户名为admin，登录密码为admin123，模式为读写，文件网盘目录 /webdav_folder 作为服务的根目录
+	aliyunpan webdav start -ip "127.0.0.1" -port 23077 -webdav_user "admin" -webdav_password "admin123" -webdav_mode "rw" -pan_drive "File" -pan_dir_path "/webdav_folder"
 
 `,
 				Action: func(c *cli.Context) error {
@@ -70,18 +70,19 @@ aliyunpan webdav start -h
 						return nil
 					}
 					webdavServ := &webdav.WebdavConfig{
-						PanDriveId: "",
-						PanUserId: "",
-						PanUser: nil,
+						PanDriveId:      "",
+						PanUserId:       "",
+						PanUser:         nil,
 						UploadChunkSize: c.Int("bs") * 1024,
 						TransferUrlType: config.Config.TransferUrlType,
-						Address:   "0.0.0.0",
-						Port:      23077,
-						Prefix:    "/",
-						Users:     []webdav.WebdavUser{{
+						Address:         "0.0.0.0",
+						Port:            23077,
+						Prefix:          "/",
+						Users: []webdav.WebdavUser{{
 							Username: "admin",
 							Password: "admin",
 							Scope:    "/",
+							Mode:     "rw",
 						}},
 					}
 
@@ -138,15 +139,31 @@ aliyunpan webdav start -h
 					}
 					webdavServ.Users[0].Password = webdavPassword
 
+					webdavMode := "rw"
+					if c.IsSet("webdav_mode") {
+						webdavMode = c.String("webdav_mode")
+					}
+					webdavServ.Users[0].Mode = webdavMode
+					if webdavServ.Users[0].Mode != "rw" && webdavServ.Users[0].Mode != "ro" {
+						webdavServ.Users[0].Mode = "rw"
+					}
+
 					err := config.Config.Save()
 					if err != nil {
 						fmt.Println(err)
 						return err
 					}
 
+					modeStr := "读写"
+					if webdavServ.Users[0].Mode == "rw" {
+						modeStr = "读写"
+					} else if webdavServ.Users[0].Mode == "ro" {
+						modeStr = "只读"
+					}
+
 					fmt.Println("----------------------------------------")
-					fmt.Printf("webdav网盘信息：\n链接：http://localhost:%d\n用户名：%s\n密码：%s\n网盘服务类型：%s\n网盘服务目录：%s\n",
-						webdavServ.Port, webdavServ.Users[0].Username, webdavServ.Users[0].Password, panDriveNameStr, webdavServ.Users[0].Scope)
+					fmt.Printf("webdav网盘信息：\n链接：http://localhost:%d\n用户名：%s\n密码：%s\n网盘模式：%s\n网盘服务类型：%s\n网盘服务目录：%s\n",
+						webdavServ.Port, webdavServ.Users[0].Username, webdavServ.Users[0].Password, modeStr, panDriveNameStr, webdavServ.Users[0].Scope)
 					fmt.Println("----------------------------------------")
 					fmt.Println("webdav在线网盘服务运行中...")
 					webdavServ.StartServer()
@@ -169,6 +186,11 @@ aliyunpan webdav start -h
 					cli.StringFlag{
 						Name:  "webdav_password",
 						Usage: "Webdav登录密码，默认为：admin",
+					},
+					cli.StringFlag{
+						Name:  "webdav_mode",
+						Usage: "Webdav模式，包括：rw-读写，ro-只读，默认为：rw",
+						Value: "rw",
 					},
 					cli.StringFlag{
 						Name:  "pan_drive",
