@@ -3,6 +3,7 @@ package webdav
 import (
 	"context"
 	"github.com/tickstep/library-go/logger"
+	"golang.org/x/net/webdav"
 	"net/http"
 	"strconv"
 	"strings"
@@ -111,11 +112,11 @@ func (c *Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Method == "HEAD" ||
 		r.Method == "OPTIONS" ||
 		r.Method == "PROPFIND" ||
-		r.Method == "PUT" ||
 		r.Method == "LOCK" ||
-		r.Method == "UNLOCK" ||
-		r.Method == "MOVE" ||
-		r.Method == "DELETE"
+		r.Method == "UNLOCK"
+	//r.Method == "PUT" ||
+	//r.Method == "MOVE" ||
+	//r.Method == "DELETE"
 
 	if !u.Allowed(r.URL.Path, noModification) {
 		w.WriteHeader(http.StatusForbidden)
@@ -144,7 +145,7 @@ func (c *Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// Runs the WebDAV.
-	//u.Handler.LockSystem = webdav.NewMemLS()
+	u.Handler.LockSystem = webdav.NewMemLS()
 	u.Handler.ServeHTTP(w, addContextValue(r))
 }
 

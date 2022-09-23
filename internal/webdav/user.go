@@ -21,8 +21,8 @@ type User struct {
 	Username string
 	Password string
 	Scope    string
-	Modify   bool
-	Rules    []*Rule
+	Modify   bool    // 用户是否具备修改权限
+	Rules    []*Rule // 根据访问路径进行精细化权限控制
 	Handler  *webdav.Handler
 }
 
