@@ -18,8 +18,10 @@ import (
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/webdav"
+	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"strings"
+	"time"
 )
 
 func CmdWebdav() cli.Command {
@@ -69,6 +71,17 @@ aliyunpan webdav start -h
 						fmt.Println("未登录账号，请先登录")
 						return nil
 					}
+					activeUser := GetActiveUser()
+					go func() {
+						for {
+							time.Sleep(time.Duration(1) * time.Minute)
+							//time.Sleep(time.Duration(5) * time.Second)
+							if ReloadRefreshTokenInNeed(activeUser) {
+								logger.Verboseln("reload new access token for webdav")
+							}
+						}
+					}()
+
 					webdavServ := &webdav.WebdavConfig{
 						PanDriveId:      "",
 						PanUserId:       "",
@@ -87,8 +100,7 @@ aliyunpan webdav start -h
 					}
 
 					// pan user
-					panUserId := config.Config.ActiveUID
-					activeUser := GetActiveUser()
+					panUserId := activeUser.UserId
 					webdavServ.PanUserId = panUserId
 					webdavServ.PanUser = activeUser
 

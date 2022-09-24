@@ -81,7 +81,7 @@ func checkLoginExpiredAndRelogin() {
 		// maybe expired, try to login
 		cmder.TryLogin()
 	} else {
-		// refresh expired token
+		// 刷新过期Token并保存到配置文件
 		command.RefreshTokenInNeed(activeUser)
 	}
 	cmder.SaveConfigFunc(nil)
@@ -96,6 +96,7 @@ func main() {
 	// check token expired task
 	go func() {
 		for {
+			// Token刷新进程，不管是CLI命令行模式，还是直接命令模式，本刷新任务都会执行
 			time.Sleep(time.Duration(5) * time.Minute)
 			//time.Sleep(time.Duration(5) * time.Second)
 			checkLoginExpiredAndRelogin()
