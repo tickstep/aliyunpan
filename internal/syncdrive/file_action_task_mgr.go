@@ -164,7 +164,7 @@ func (f *FileActionTaskManager) Stop() error {
 // getPanPathFromLocalPath 通过本地文件路径获取网盘文件的对应路径
 func (f *FileActionTaskManager) getPanPathFromLocalPath(localPath string) string {
 	localPath = strings.ReplaceAll(localPath, "\\", "/")
-	localRootPath := strings.ReplaceAll(f.task.LocalFolderPath, "\\", "/")
+	localRootPath := path.Clean(strings.ReplaceAll(f.task.LocalFolderPath, "\\", "/"))
 
 	relativePath := strings.TrimPrefix(localPath, localRootPath)
 	return path.Join(path.Clean(f.task.PanFolderPath), relativePath)
@@ -173,7 +173,7 @@ func (f *FileActionTaskManager) getPanPathFromLocalPath(localPath string) string
 // getLocalPathFromPanPath 通过网盘文件路径获取对应的本地文件的对应路径
 func (f *FileActionTaskManager) getLocalPathFromPanPath(panPath string) string {
 	panPath = strings.ReplaceAll(panPath, "\\", "/")
-	panRootPath := strings.ReplaceAll(f.task.PanFolderPath, "\\", "/")
+	panRootPath := path.Clean(strings.ReplaceAll(f.task.PanFolderPath, "\\", "/"))
 
 	relativePath := strings.TrimPrefix(panPath, panRootPath)
 	return path.Join(path.Clean(f.task.LocalFolderPath), relativePath)
@@ -901,6 +901,9 @@ func (l *localFileSet) getRelativePath(localPath string) string {
 	localPath = strings.ReplaceAll(localPath, "\\", "/")
 	localRootPath := strings.ReplaceAll(l.localFolderPath, "\\", "/")
 	relativePath := strings.TrimPrefix(localPath, localRootPath)
+	if strings.HasPrefix(relativePath, "/") {
+		relativePath = strings.TrimPrefix(relativePath, "/")
+	}
 	return path.Clean(relativePath)
 }
 
@@ -949,6 +952,9 @@ func (p *panFileSet) getRelativePath(panPath string) string {
 	panPath = strings.ReplaceAll(panPath, "\\", "/")
 	panRootPath := strings.ReplaceAll(p.panFolderPath, "\\", "/")
 	relativePath := strings.TrimPrefix(panPath, panRootPath)
+	if strings.HasPrefix(relativePath, "/") {
+		relativePath = strings.TrimPrefix(relativePath, "/")
+	}
 	return path.Clean(relativePath)
 }
 

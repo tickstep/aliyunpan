@@ -155,9 +155,11 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
 			task.Priority = SyncPriorityTimestampFirst
 			task.syncOption.SyncPriority = SyncPriorityTimestampFirst
 		}
+		task.LocalFolderPath = path.Clean(task.LocalFolderPath)
+		task.PanFolderPath = path.Clean(task.PanFolderPath)
 		if e := task.Start(); e != nil {
 			logger.Verboseln(e)
-			fmt.Println("start sync task error: {}", task.Id)
+			fmt.Printf("启动同步任务[%s]出错: %s\n", task.Id, e.Error())
 			continue
 		}
 		fmt.Println("\n启动同步任务")
