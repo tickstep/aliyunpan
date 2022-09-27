@@ -124,9 +124,23 @@ func (t *SyncTask) Start() error {
 	if t.ctx != nil {
 		return fmt.Errorf("task have starting")
 	}
-	t.setupDb()
 
-	// check root dir
+	// 同步模式下，如果本地磁盘有问题，会导致云盘备份删除文件，需要验证本地磁盘可靠性以避免误删云盘文件
+	if t.Mode == SyncTwoWay {
+		// check local disk unplug issue
+		fi, err := os.Stat(t.localSyncDbFullPath())
+		if err == nil && fi.Size() > 0 { // local db existed
+			// check local sync dir state
+			if b, e := utils.PathExists(t.LocalFolderPath); e == nil {
+				if !b {
+					// maybe the local disk unplug, check
+					return fmt.Errorf("异常：本地同步目录不存在，本任务已经停止。如需继续同步请手动删除同步数据再重试。")
+				}
+			}
+		}
+	}
+
+	// check root dir & init
 	if b, e := utils.PathExists(t.LocalFolderPath); e == nil {
 		if !b {
 			// create local root folder
@@ -138,6 +152,9 @@ func (t *SyncTask) Start() error {
 			t.panClient.MkdirByFullPath(t.DriveId, t.PanFolderPath)
 		}
 	}
+
+	// setup sync db file
+	t.setupDb()
 
 	if t.fileActionTaskManager == nil {
 		t.fileActionTaskManager = NewFileActionTaskManager(t)
@@ -359,6 +376,19 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 				startTimeOfThisLoop = time.Now().Unix()
 				logger.Verboseln("do scan local file process at ", utils.NowTimeStr())
 			}
+
+			// check local sync dir
+			if t.Mode == SyncTwoWay {
+				// check local disk unplug issue
+				if b, e := utils.PathExists(t.LocalFolderPath); e == nil {
+					if !b {
+						// maybe the local disk unplug, check
+						fmt.Println("异常：本地同步目录不存在，本任务已经停止。如需继续同步请手动删除同步数据再重试。")
+						return
+					}
+				}
+			}
+
 			obj := folderQueue.Pop()
 			if obj == nil {
 				// label discard file from DB
