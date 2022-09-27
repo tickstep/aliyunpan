@@ -9,6 +9,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/aliyunpan/library/collection"
 	"github.com/tickstep/library-go/logger"
+	"os"
 	"path"
 	"strings"
 	"sync"
@@ -377,6 +378,16 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 		for _, file := range localFilesNeedToUpload {
 			if file.ScanStatus == ScanStatusNormal { // 上传文件到云盘
 				if f.task.Mode == UploadOnly || f.task.Mode == SyncTwoWay {
+					// check local file modified or not
+					if file.IsFile() {
+						if fi, fe := os.Stat(file.Path); fe == nil {
+							if fi.ModTime().Unix() > file.UpdateTimeUnix() {
+								logger.Verboseln("本地文件已被修改，等下一轮扫描最新的再上传: ", file.Path)
+								continue
+							}
+						}
+					}
+
 					syncItem := &SyncFileItem{
 						Action:            "",
 						Status:            SyncFileStatusCreate,
@@ -590,6 +601,16 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 			}
 
 			if actFlag == "upload" { // upload file
+				// check local file modified or not
+				if localFile.IsFile() {
+					if fi, fe := os.Stat(localFile.Path); fe == nil {
+						if fi.ModTime().Unix() > localFile.UpdateTimeUnix() {
+							logger.Verboseln("本地文件已被修改，等下一轮扫描最新的再上传: ", localFile.Path)
+							continue
+						}
+					}
+				}
+
 				uploadLocalFile := &FileActionTask{
 					syncItem: &SyncFileItem{
 						Action:            SyncFileActionUpload,

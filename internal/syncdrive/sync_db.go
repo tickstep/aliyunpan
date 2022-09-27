@@ -276,6 +276,10 @@ func (item *LocalFileItem) IsFolder() bool {
 	return item.FileType == "folder"
 }
 
+func (item *LocalFileItem) IsFile() bool {
+	return item.FileType == "file"
+}
+
 func (item *LocalFileItem) UpdateTimeUnix() int64 {
 	return item.UpdateTime().Unix()
 }
