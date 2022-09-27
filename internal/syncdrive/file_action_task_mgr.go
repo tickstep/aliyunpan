@@ -380,6 +380,9 @@ func (f *FileActionTaskManager) doFileDiffRoutine(panFiles PanFileList, localFil
 				if f.task.Mode == UploadOnly || f.task.Mode == SyncTwoWay {
 					// check local file modified or not
 					if file.IsFile() {
+						if f.syncOption.LocalFileModifiedCheckIntervalSec > 0 {
+							time.Sleep(time.Duration(f.syncOption.LocalFileModifiedCheckIntervalSec) * time.Second)
+						}
 						if fi, fe := os.Stat(file.Path); fe == nil {
 							if fi.ModTime().Unix() > file.UpdateTimeUnix() {
 								logger.Verboseln("本地文件已被修改，等下一轮扫描最新的再上传: ", file.Path)

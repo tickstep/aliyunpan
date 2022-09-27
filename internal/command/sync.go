@@ -206,7 +206,7 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 						task.Priority = syncOpt
 					}
 
-					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt)
+					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"))
 					return nil
 				},
 				Flags: []cli.Flag{
@@ -253,6 +253,11 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 						Usage: "是否显示文件备份过程日志，true-显示，false-不显示",
 						Value: "false",
 					},
+					cli.IntFlag{
+						Name:  "ldt",
+						Usage: "local delay time，本地文件修改检测延迟间隔，单位秒。如果本地文件会被频繁修改，例如录制视频文件，配置好该时间可以避免上传未录制好的文件",
+						Value: 3,
+					},
 				},
 			},
 		},
@@ -260,7 +265,7 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 }
 
 func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64,
-	flag syncdrive.SyncPriorityOption) {
+	flag syncdrive.SyncPriorityOption, localDelayTime int) {
 	useInternalUrl := config.Config.TransferUrlType == 2
 	maxDownloadRate := config.Config.MaxDownloadRate
 	maxUploadRate := config.Config.MaxUploadRate
@@ -298,14 +303,15 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 		typeUrlStr = "阿里ECS内部链接"
 	}
 	option := syncdrive.SyncOption{
-		FileDownloadParallel:  fileDownloadParallel,
-		FileUploadParallel:    fileUploadParallel,
-		FileDownloadBlockSize: downloadBlockSize,
-		FileUploadBlockSize:   uploadBlockSize,
-		UseInternalUrl:        useInternalUrl,
-		MaxDownloadRate:       maxDownloadRate,
-		MaxUploadRate:         maxUploadRate,
-		SyncPriority:          flag,
+		FileDownloadParallel:              fileDownloadParallel,
+		FileUploadParallel:                fileUploadParallel,
+		FileDownloadBlockSize:             downloadBlockSize,
+		FileUploadBlockSize:               uploadBlockSize,
+		UseInternalUrl:                    useInternalUrl,
+		MaxDownloadRate:                   maxDownloadRate,
+		MaxUploadRate:                     maxUploadRate,
+		SyncPriority:                      flag,
+		LocalFileModifiedCheckIntervalSec: localDelayTime,
 	}
 	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath, option)
 	syncConfigFile := syncMgr.ConfigFilePath()

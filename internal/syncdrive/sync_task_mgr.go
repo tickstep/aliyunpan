@@ -26,6 +26,9 @@ type (
 
 		// 优先级选项
 		SyncPriority SyncPriorityOption
+
+		// 本地文件修改检测间隔
+		LocalFileModifiedCheckIntervalSec int
 	}
 
 	// SyncTaskManager 同步任务管理器
