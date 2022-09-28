@@ -96,12 +96,23 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 				// file existed
 				// remove old local file
 				logger.Verbosef("delete local old file")
-				os.Remove(f.syncItem.getLocalFileFullPath())
+				if err := os.Remove(f.syncItem.getLocalFileFullPath()); err != nil {
+					// error
+					logger.Verbosef("移除本地旧文件出错: %s, %s\n", f.syncItem.getLocalFileFullPath(), err)
+				}
 				time.Sleep(200 * time.Millisecond)
 			}
 
 			// rename downloading file into target name file
-			os.Rename(f.syncItem.getLocalFileDownloadingFullPath(), f.syncItem.getLocalFileFullPath())
+			if err1 := os.Rename(f.syncItem.getLocalFileDownloadingFullPath(), f.syncItem.getLocalFileFullPath()); err1 != nil {
+				logger.Verbosef("重命名下载文件出错: %s, %s\n", f.syncItem.getLocalFileDownloadingFullPath(), err1)
+				time.Sleep(200 * time.Millisecond)
+				return fmt.Errorf("重命名下载文件出错")
+			}
+			// success
+			f.syncItem.Status = SyncFileStatusSuccess
+			f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+			f.syncFileDb.Update(f.syncItem)
 			time.Sleep(200 * time.Millisecond)
 
 			// change modify time of local file
@@ -194,14 +205,6 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 }
 
 func (f *FileActionTask) downloadFile(ctx context.Context) error {
-	// check local file existed or not
-	if b, e := utils.PathExists(f.syncItem.getLocalFileFullPath()); e == nil && b {
-		// file existed
-		logger.Verbosef("delete local old file")
-		os.Remove(f.syncItem.getLocalFileFullPath())
-		time.Sleep(200 * time.Millisecond)
-	}
-
 	durl, apierr := f.panClient.GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
 		DriveId: f.syncItem.PanFile.DriveId,
 		FileId:  f.syncItem.PanFile.FileId,
@@ -214,7 +217,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 			f.syncFileDb.Update(f.syncItem)
 			return fmt.Errorf("文件不存在")
 		}
-		logger.Verbosef("ERROR: get download url error: %s\n", f.syncItem.PanFile.FileId)
+		logger.Verbosef("ERROR: get download url error: %s, %s\n", f.syncItem.PanFile.Path, apierr.Error())
 		return apierr
 	}
 	if durl == nil || durl.Url == "" {
@@ -245,7 +248,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	defer file.Close()
 	if f.syncItem.PanFile.FileSize == 0 {
 		// zero file
-		f.syncItem.Status = SyncFileStatusSuccess
+		f.syncItem.Status = SyncFileStatusDownloading
 		f.syncItem.StatusUpdateTime = utils.NowTimeStr()
 		f.syncFileDb.Update(f.syncItem)
 		return nil
@@ -316,6 +319,11 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 			}
 			worker.SetRange(f.syncItem.DownloadRange) // 分片
 
+			// 检查上次执行是否有下载已完成
+			if f.syncItem.DownloadRange.Begin == f.syncItem.PanFile.FileSize {
+				return nil
+			}
+
 			// 下载分片
 			// TODO: 下载失败，分片重试策略
 			worker.Execute()
@@ -323,7 +331,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 			if worker.GetStatus().StatusCode() == downloader.StatusCodeSuccessed {
 				if f.syncItem.DownloadRange.End == f.syncItem.PanFile.FileSize {
 					// finished
-					f.syncItem.Status = SyncFileStatusSuccess
+					f.syncItem.Status = SyncFileStatusDownloading
 					f.syncItem.StatusUpdateTime = utils.NowTimeStr()
 					f.syncFileDb.Update(f.syncItem)
 					return nil
