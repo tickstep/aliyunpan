@@ -94,12 +94,13 @@ ALIYUNPAN_SYNC_MODE：备份模式，支持三种: upload(备份本地文件到�
 ### webdav共享盘
 让阿里云盘变身为webdav协议的文件服务器。这样使用webdav客户端软件，你可以把阿里云盘挂载为Windows、Linux、Mac系统的磁盘，可以通过NAS系统做文件管理或文件同步等等。
 ```
-docker run -d --name=aliyunpan-webdav --restart=always -p 23077:23077 -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_AUTH_USER="admin" -e ALIYUNPAN_AUTH_PASSWORD="admin" -e ALIYUNPAN_PAN_DRIVE="File" -e ALIYUNPAN_PAN_DIR="/" tickstep/aliyunpan-webdav:v0.2.1
+docker run -d --name=aliyunpan-webdav --restart=always -p 23077:23077 -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_AUTH_USER="admin" -e ALIYUNPAN_AUTH_PASSWORD="admin" -e ALIYUNPAN_WEBDAV_MODE="rw" -e ALIYUNPAN_PAN_DRIVE="File" -e ALIYUNPAN_PAN_DIR="/" tickstep/aliyunpan-webdav:v0.2.1
  
  
 ALIYUNPAN_REFRESH_TOKEN RefreshToken
 ALIYUNPAN_AUTH_USER webdav登录用户名
 ALIYUNPAN_AUTH_PASSWORD webdav登录密码
+ALIYUNPAN_WEBDAV_MODE webdav模式，支持：rw-读写，ro-只读
 ALIYUNPAN_PAN_DRIVE 网盘类型，可选： File-文件 Album-相册
 ALIYUNPAN_PAN_DIR 网盘文件夹的webdav服务根目录
 ```
