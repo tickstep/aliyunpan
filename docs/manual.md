@@ -485,6 +485,8 @@ aliyunpan share mc share_folder/
 
 备份功能一般用于NAS等系统，进行文件备份。比如备份照片，就可以使用这个功能定期备份照片到云盘，十分好用。
 
+***如果你同步目录下有非常多的文件，最好在首次备份前先运行一次scan任务，等scan任务完成并建立起同步数据库后，再正常启动同步任务。这样同步任务可以更加快速并且能有效避免同步重复文件。***
+
 ### 常用命令说明
 ```
 查看同步备份功能说明
@@ -508,6 +510,10 @@ aliyunpan sync start
 
 使用配置文件启动同步备份服务，并配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
 aliyunpan sync start -dp 2 -up 1 -dbs 256 -ubs 1024
+
+当你本地同步目录文件非常多，或者云盘同步目录文件非常多，为了后期更快更精准同步文件，可以先进行文件扫描并构建同步数据库，然后再正常启动同步任务。如下所示：
+aliyunpan sync start -step scan
+aliyunpan sync start
 ```
 
 ### 备份配置文件说明
@@ -649,12 +655,14 @@ D:\Program Files\aliyunpan>alisync stop
 
 1. 直接运行
 ```
-docker run -d --name=aliyunpan-sync --restart=always -v "<your local dir>:/home/app/data" -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" tickstep/aliyunpan-sync
-
+docker run -d --name=aliyunpan-sync --restart=always -v "<your local dir>:/home/app/data" -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_TASK_STEP="sync" tickstep/aliyunpan-sync:<tag>
+ 
+  
 <your local dir>：本地目录绝对路径，例如：/tickstep/Documents/设计文档
 ALIYUNPAN_PAN_DIR：云盘目录
 ALIYUNPAN_REFRESH_TOKEN：RefreshToken
 ALIYUNPAN_SYNC_MODE：备份模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+ALIYUNPAN_TASK_STEP：任务步骤, 支持两种: scan(只扫描并建立同步数据库),sync(正常启动同步任务)。如果你同步目录文件非常多，首次运行最好先跑一次scan步骤，然后再正常启动文件同步任务
 ```
 
 2. docker-compose运行   
@@ -692,6 +700,14 @@ services:
       - ALIYUNPAN_PAN_DIR=/备份盘/我的文档
       # 备份模式：upload(备份本地文件到云盘), download(备份云盘文件到本地), sync(双向同步备份)
       - ALIYUNPAN_SYNC_MODE=upload
+      # 优先级，只对双向同步备份模式有效。选项支持三种: time-时间优先，local-本地优先，pan-网盘优先
+      - ALIYUNPAN_SYNC_PRIORITY=time
+      # 是否显示文件备份过程日志，true-显示，false-不显示
+      - ALIYUNPAN_SYNC_LOG=true
+      # 本地文件修改检测延迟间隔，单位秒。如果本地文件会被频繁修改，例如录制视频文件，配置好该时间可以避免上传未录制好的文件
+      - ALIYUNPAN_LOCAL_DELAY_TIME=3
+      # 任务步骤, 支持两种: scan(只扫描并建立同步数据库),sync(正常启动同步任务)
+      - ALIYUNPAN_TASK_STEP=sync      
 ```
 
 3. sync_handler.js插件说明   
