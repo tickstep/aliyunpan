@@ -30,7 +30,7 @@ func TestSyncTask(t *testing.T) {
 		syncDbFolderPath: "D:\\smb\\feny\\goprojects\\dev\\sync_drive",
 		panClient:        panClient,
 	}
-	task.Start()
+	task.Start(StepSyncFile)
 	//go func() {
 	//	time.Sleep(10 * time.Second)
 	//	task.Stop()

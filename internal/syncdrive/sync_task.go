@@ -20,6 +20,7 @@ import (
 )
 
 type (
+	TaskStep string
 	SyncMode string
 
 	// SyncTask 同步任务
@@ -69,6 +70,13 @@ const (
 	DownloadOnly SyncMode = "download"
 	// SyncTwoWay 双向同步，本地和云盘文件完全保持一致
 	SyncTwoWay SyncMode = "sync"
+
+	// StepScanFile 任务步骤，扫描文件建立同步数据库
+	StepScanFile TaskStep = "scan"
+	// StepDiffFile 任务步骤，对比文件
+	StepDiffFile TaskStep = "diff"
+	// StepSyncFile 任务步骤，同步文件
+	StepSyncFile TaskStep = "sync"
 )
 
 func (t *SyncTask) NameLabel() string {
@@ -120,7 +128,7 @@ func (t *SyncTask) setupDb() error {
 
 // Start 启动同步任务
 // 扫描本地和云盘文件信息并存储到本地数据库
-func (t *SyncTask) Start() error {
+func (t *SyncTask) Start(step TaskStep) error {
 	if t.ctx != nil {
 		return fmt.Errorf("task have starting")
 	}
@@ -174,13 +182,28 @@ func (t *SyncTask) Start() error {
 	t.ctx, cancel = context.WithCancel(context.Background())
 	t.cancelFunc = cancel
 
-	go t.scanLocalFile(t.ctx)
-	go t.scanPanFile(t.ctx)
+	go t.scanLocalFile(t.ctx, step == StepScanFile)
+	go t.scanPanFile(t.ctx, step == StepScanFile)
 
-	// start file sync manager
-	if e := t.fileActionTaskManager.Start(); e != nil {
-		return e
+	// 如果只扫描文件建立同步数据库，则无需进行文件对比这一步
+	if step != StepScanFile {
+		// start file sync manager
+		if e := t.fileActionTaskManager.Start(); e != nil {
+			return e
+		}
+	} else {
+		// delay
+		time.Sleep(1 * time.Second)
 	}
+	return nil
+}
+
+// WaitToStop 等待异步任务执行完成后停止
+func (t *SyncTask) WaitToStop() error {
+	// wait for finished
+	t.wg.Wait()
+
+	t.Stop()
 	return nil
 }
 
@@ -317,7 +340,10 @@ func (t *SyncTask) skipLocalFile(file *LocalFileItem) bool {
 }
 
 // scanLocalFile 本地文件循环扫描进程
-func (t *SyncTask) scanLocalFile(ctx context.Context) {
+func (t *SyncTask) scanLocalFile(ctx context.Context, scanFileOnly bool) {
+	t.wg.AddDelta()
+	defer t.wg.Done()
+
 	type folderItem struct {
 		fileInfo os.FileInfo
 		path     string
@@ -357,8 +383,9 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 	delayTimeCount := int64(0)
 	isLocalFolderModify := false
 
-	t.wg.AddDelta()
-	defer t.wg.Done()
+	// 触发一次文件对比任务
+	t.fileActionTaskManager.AddLocalFolderModifyCount()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -399,6 +426,11 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					isLocalFolderModify = false // 重置标记
 				}
 
+				if scanFileOnly {
+					// 全盘扫描文件一次，建立好文件同步数据库，然后退出
+					return
+				}
+
 				// restart scan loop over again
 				folderQueue.Push(&folderItem{
 					fileInfo: rootFolder,
@@ -429,8 +461,12 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 
 				localFile := newLocalFileItem(file, item.path+"/"+file.Name())
 				if t.skipLocalFile(localFile) {
-					logger.Verboseln("插件禁止扫描本地文件: ", localFile.Path)
+					fmt.Println("插件禁止扫描本地文件: ", localFile.Path)
 					continue
+				}
+
+				if scanFileOnly {
+					fmt.Println("扫描本地文件：" + item.path + "/" + file.Name())
 				}
 
 				localFileInDb, _ := t.localFileDb.Get(localFile.Path)
@@ -534,7 +570,10 @@ func (t *SyncTask) skipPanFile(file *PanFileItem) bool {
 }
 
 // scanPanFile 云盘文件循环扫描进程
-func (t *SyncTask) scanPanFile(ctx context.Context) {
+func (t *SyncTask) scanPanFile(ctx context.Context, scanFileOnly bool) {
+	t.wg.AddDelta()
+	defer t.wg.Done()
+
 	// init the root folders info
 	pathParts := strings.Split(strings.ReplaceAll(t.PanFolderPath, "\\", "/"), "/")
 	fullPath := ""
@@ -560,8 +599,9 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 	delayTimeCount := int64(0)
 	isPanFolderModify := false
 
-	t.wg.AddDelta()
-	defer t.wg.Done()
+	// 触发一次文件对比任务
+	t.fileActionTaskManager.AddPanFolderModifyCount()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -587,6 +627,11 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 					t.fileActionTaskManager.AddPanFolderModifyCount()
 					t.fileActionTaskManager.AddLocalFolderModifyCount()
 					isPanFolderModify = false
+				}
+
+				if scanFileOnly {
+					// 全盘扫描文件一次，建立好文件同步数据库，然后退出
+					return
 				}
 
 				// restart scan loop over again
@@ -618,6 +663,10 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 					logger.Verboseln("插件禁止扫描云盘文件: ", panFile.Path)
 					continue
 				}
+				if scanFileOnly {
+					fmt.Println("扫描云盘文件：" + file.Path)
+				}
+
 				panFileInDb, _ := t.panFileDb.Get(file.Path)
 				if panFileInDb == nil {
 					// append
