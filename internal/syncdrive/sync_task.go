@@ -134,7 +134,7 @@ func (t *SyncTask) Start() error {
 			if b, e := utils.PathExists(t.LocalFolderPath); e == nil {
 				if !b {
 					// maybe the local disk unplug, check
-					return fmt.Errorf("异常：本地同步目录不存在，本任务已经停止。如需继续同步请手动删除同步数据再重试。")
+					return fmt.Errorf("异常：本地同步目录不存在，本任务已经停止。如需继续同步请手动删除同步数据库再重试。")
 				}
 			}
 		}
@@ -383,7 +383,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 				if b, e := utils.PathExists(t.LocalFolderPath); e == nil {
 					if !b {
 						// maybe the local disk unplug, check
-						fmt.Println("异常：本地同步目录不存在，本任务已经停止。如需继续同步请手动删除同步数据再重试。")
+						fmt.Println("异常：本地同步目录不存在，本任务已经停止。如需继续同步请手动删除同步数据库再重试。")
 						return
 					}
 				}
