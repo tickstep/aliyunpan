@@ -16,6 +16,7 @@ package downloader
 import (
 	"io"
 	"os"
+	"runtime"
 )
 
 type (
@@ -32,6 +33,9 @@ type (
 
 // NewDownloaderWriterByFilename 创建下载器数据输出接口, 类似于os.OpenFile
 func NewDownloaderWriterByFilename(name string, flag int, perm os.FileMode) (writer Writer, file *os.File, err error) {
+	if runtime.GOOS == "windows" {
+		// TODO: name进行特殊字符转换
+	}
 	file, err = os.OpenFile(name, flag, perm)
 	if err != nil {
 		return
