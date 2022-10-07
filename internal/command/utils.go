@@ -21,6 +21,7 @@ import (
 	"math/rand"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -160,4 +161,12 @@ func ReloadRefreshTokenInNeed(activeUser *config.PanUser) bool {
 		}
 	}
 	return false
+}
+
+func isIncludeFile(pattern string, fileName string) bool {
+	b, er := filepath.Match(pattern, fileName)
+	if er != nil {
+		return false
+	}
+	return b
 }

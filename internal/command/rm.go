@@ -23,7 +23,6 @@ import (
 	"github.com/urfave/cli"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 )
 
@@ -81,7 +80,7 @@ func CmdRm() cli.Command {
 			},
 			cli.BoolFlag{
 				Name:  "wc",
-				Usage: "wildcard，使用通配符匹配",
+				Usage: "wildcard，使用通配符匹配文件名",
 			},
 		},
 	}
@@ -175,12 +174,4 @@ func RunRemove(driveId string, option RmOption, paths ...string) {
 		fmt.Println("无法删除文件，请稍后重试")
 		return
 	}
-}
-
-func isIncludeFile(pattern string, fileName string) bool {
-	b, er := filepath.Match(pattern, fileName)
-	if er != nil {
-		return false
-	}
-	return b
 }
