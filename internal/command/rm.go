@@ -19,10 +19,18 @@ import (
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
+)
+
+type (
+	RmOption struct {
+		UseWildcard bool
+	}
 )
 
 func CmdRm() cli.Command {
@@ -32,7 +40,7 @@ func CmdRm() cli.Command {
 		UsageText: cmder.App().Name + " rm <文件/目录的路径1> <文件/目录2> <文件/目录3> ...",
 		Description: `
 	注意: 删除多个文件和目录时, 请确保每一个文件和目录都存在, 否则删除操作会失败.
-	被删除的文件或目录可在网盘文件回收站找回.
+	被删除的文件或目录可在网盘文件回收站找回。支持通配符匹配删除文件，通配符当前只能匹配文件名，不能匹配文件路径。
 
 	示例:
 
@@ -44,6 +52,9 @@ func CmdRm() cli.Command {
 
 	删除 /我的资源 整个目录 !!
 	aliyunpan rm /我的资源
+
+	删除 /我的资源 目录下面的所有.zip文件，使用通配符匹配
+	aliyunpan rm -wc /我的资源/*.zip
 `,
 		Category: "阿里云盘",
 		Before:   cmder.ReloadConfigFunc,
@@ -56,7 +67,10 @@ func CmdRm() cli.Command {
 				fmt.Println("未登录账号")
 				return nil
 			}
-			RunRemove(parseDriveId(c), c.Args()...)
+			opt := RmOption{
+				UseWildcard: c.Bool("wc"),
+			}
+			RunRemove(parseDriveId(c), opt, c.Args()...)
 			return nil
 		},
 		Flags: []cli.Flag{
@@ -65,12 +79,16 @@ func CmdRm() cli.Command {
 				Usage: "网盘ID",
 				Value: "",
 			},
+			cli.BoolFlag{
+				Name:  "wc",
+				Usage: "wildcard，使用通配符匹配",
+			},
 		},
 	}
 }
 
 // RunRemove 执行 批量删除文件/目录
-func RunRemove(driveId string, paths ...string) {
+func RunRemove(driveId string, option RmOption, paths ...string) {
 	activeUser := GetActiveUser()
 
 	cacheCleanDirs := []string{}
@@ -80,18 +98,50 @@ func RunRemove(driveId string, paths ...string) {
 
 	for _, p := range paths {
 		absolutePath := path.Clean(activeUser.PathJoin(driveId, p))
-		fe, err := activeUser.PanClient().FileInfoByPath(driveId, absolutePath)
-		if err != nil {
-			failedRmPaths = append(failedRmPaths, absolutePath)
-			continue
+		if option.UseWildcard {
+			// 通配符
+			parentDir := path.Dir(absolutePath)
+			wildcardName := path.Base(absolutePath)
+			pf, err := activeUser.PanClient().FileInfoByPath(driveId, parentDir)
+			if err != nil {
+				failedRmPaths = append(failedRmPaths, absolutePath)
+				continue
+			}
+			fileList, er := activeUser.PanClient().FileListGetAll(&aliyunpan.FileListParam{
+				DriveId:      driveId,
+				ParentFileId: pf.FileId,
+			}, 500)
+			if er != nil {
+				failedRmPaths = append(failedRmPaths, absolutePath)
+				continue
+			}
+			for _, f := range fileList {
+				if isIncludeFile(wildcardName, f.FileName) {
+					f.Path = parentDir + "/" + f.FileName
+					logger.Verboseln("wildcard match delete: " + f.Path)
+					delFileInfos = append(delFileInfos, &aliyunpan.FileBatchActionParam{
+						DriveId: driveId,
+						FileId:  f.FileId,
+					})
+					fileId2FileEntity[f.FileId] = f
+					cacheCleanDirs = append(cacheCleanDirs, path.Dir(f.Path))
+				}
+			}
+		} else {
+			fe, err := activeUser.PanClient().FileInfoByPath(driveId, absolutePath)
+			if err != nil {
+				failedRmPaths = append(failedRmPaths, absolutePath)
+				continue
+			}
+			fe.Path = absolutePath
+			delFileInfos = append(delFileInfos, &aliyunpan.FileBatchActionParam{
+				DriveId: driveId,
+				FileId:  fe.FileId,
+			})
+			fileId2FileEntity[fe.FileId] = fe
+			cacheCleanDirs = append(cacheCleanDirs, path.Dir(fe.Path))
+
 		}
-		fe.Path = absolutePath
-		delFileInfos = append(delFileInfos, &aliyunpan.FileBatchActionParam{
-			DriveId: driveId,
-			FileId:  fe.FileId,
-		})
-		fileId2FileEntity[fe.FileId] = fe
-		cacheCleanDirs = append(cacheCleanDirs, path.Dir(fe.Path))
 	}
 
 	// delete
@@ -125,4 +175,12 @@ func RunRemove(driveId string, paths ...string) {
 		fmt.Println("无法删除文件，请稍后重试")
 		return
 	}
+}
+
+func isIncludeFile(pattern string, fileName string) bool {
+	b, er := filepath.Match(pattern, fileName)
+	if er != nil {
+		return false
+	}
+	return b
 }
