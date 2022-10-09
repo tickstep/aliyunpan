@@ -5,6 +5,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/library-go/converter"
 	"github.com/urfave/cli"
 	"path"
 	"strings"
@@ -63,6 +64,7 @@ type (
 	treeStatistic struct {
 		CountOfDir  int64
 		CountOfFile int64
+		SizeOfFile  int64
 	}
 )
 
@@ -110,6 +112,7 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, showF
 			continue
 		}
 		statistic.CountOfFile += 1
+		statistic.SizeOfFile += file.FileSize
 
 		if i+1 == fN {
 			prefix = lastFilePrefix
@@ -135,8 +138,9 @@ func RunTree(driveId, pathStr string, showFullPath bool) {
 	statistic := &treeStatistic{
 		CountOfDir:  0,
 		CountOfFile: 0,
+		SizeOfFile:  0,
 	}
 	fmt.Printf("%s\n", pathStr)
 	getTree(driveId, pathStr, 0, statistic, showFullPath)
-	fmt.Printf("\n%d 个文件夹, %d 个文件\n", statistic.CountOfDir, statistic.CountOfFile)
+	fmt.Printf("\n%d 个文件夹, %d 个文件, %s 总大小\n", statistic.CountOfDir, statistic.CountOfFile, converter.ConvertFileSize(statistic.SizeOfFile, 2))
 }
