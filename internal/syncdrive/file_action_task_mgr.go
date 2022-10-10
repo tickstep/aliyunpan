@@ -5,7 +5,9 @@ import (
 	"fmt"
 	mapset "github.com/deckarep/golang-set"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/localfile"
+	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/aliyunpan/library/collection"
 	"github.com/tickstep/library-go/logger"
@@ -36,6 +38,12 @@ type (
 		panFolderModifyCount   int // 云盘文件扫描变更记录次数，作为后续文件对比进程的参考以节省CPU资源
 		syncActionModifyCount  int // 文件对比进程检测的文件上传下载删除变更记录次数，作为后续文件上传下载处理进程的参考以节省CPU资源
 		resourceModifyMutex    *sync.Mutex
+
+		panUser *config.PanUser
+
+		// 插件
+		plugin      plugins.Plugin
+		pluginMutex *sync.Mutex
 	}
 
 	localFileSet struct {
@@ -62,6 +70,8 @@ func NewFileActionTaskManager(task *SyncTask) *FileActionTaskManager {
 		panFolderModifyCount:   1,
 		syncActionModifyCount:  1,
 		resourceModifyMutex:    &sync.Mutex{},
+
+		panUser: task.panUser,
 	}
 }
 
@@ -139,6 +149,14 @@ func (f *FileActionTaskManager) Start() error {
 	var cancel context.CancelFunc
 	f.ctx, cancel = context.WithCancel(context.Background())
 	f.cancelFunc = cancel
+
+	if f.plugin == nil {
+		pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+		f.plugin, _ = pluginManger.GetPlugin()
+	}
+	if f.pluginMutex == nil {
+		f.pluginMutex = &sync.Mutex{}
+	}
 
 	go f.doLocalFileDiffRoutine(f.ctx)
 	go f.doPanFileDiffRoutine(f.ctx)
@@ -798,9 +816,11 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 						if e := uploadItem.DoAction(ctx); e == nil {
 							// success
 							f.fileInProcessQueue.Remove(uploadItem.syncItem)
+							f.doPluginCallback(uploadItem.syncItem, "success")
 						} else {
 							// retry?
 							f.fileInProcessQueue.Remove(uploadItem.syncItem)
+							f.doPluginCallback(uploadItem.syncItem, "fail")
 						}
 						uploadWaitGroup.Done()
 					}()
@@ -818,9 +838,11 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 						if e := downloadItem.DoAction(ctx); e == nil {
 							// success
 							f.fileInProcessQueue.Remove(downloadItem.syncItem)
+							f.doPluginCallback(downloadItem.syncItem, "success")
 						} else {
 							// retry?
 							f.fileInProcessQueue.Remove(downloadItem.syncItem)
+							f.doPluginCallback(downloadItem.syncItem, "fail")
 						}
 						downloadWaitGroup.Done()
 					}()
@@ -838,9 +860,11 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 						if e := deleteLocalItem.DoAction(ctx); e == nil {
 							// success
 							f.fileInProcessQueue.Remove(deleteLocalItem.syncItem)
+							f.doPluginCallback(deleteLocalItem.syncItem, "success")
 						} else {
 							// retry?
 							f.fileInProcessQueue.Remove(deleteLocalItem.syncItem)
+							f.doPluginCallback(deleteLocalItem.syncItem, "fail")
 						}
 						localFileWaitGroup.Done()
 					}()
@@ -858,9 +882,11 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 						if e := deletePanItem.DoAction(ctx); e == nil {
 							// success
 							f.fileInProcessQueue.Remove(deletePanItem.syncItem)
+							f.doPluginCallback(deletePanItem.syncItem, "success")
 						} else {
 							// retry?
 							f.fileInProcessQueue.Remove(deletePanItem.syncItem)
+							f.doPluginCallback(deletePanItem.syncItem, "fail")
 						}
 						panFileWaitGroup.Done()
 					}()
@@ -878,9 +904,11 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 						if e := createLocalFolderItem.DoAction(ctx); e == nil {
 							// success
 							f.fileInProcessQueue.Remove(createLocalFolderItem.syncItem)
+							f.doPluginCallback(createLocalFolderItem.syncItem, "success")
 						} else {
 							// retry?
 							f.fileInProcessQueue.Remove(createLocalFolderItem.syncItem)
+							f.doPluginCallback(createLocalFolderItem.syncItem, "fail")
 						}
 						localFileWaitGroup.Done()
 					}()
@@ -898,9 +926,11 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 						if e := createPanFolderItem.DoAction(ctx); e == nil {
 							// success
 							f.fileInProcessQueue.Remove(createPanFolderItem.syncItem)
+							f.doPluginCallback(createPanFolderItem.syncItem, "success")
 						} else {
 							// retry?
 							f.fileInProcessQueue.Remove(createPanFolderItem.syncItem)
+							f.doPluginCallback(createPanFolderItem.syncItem, "fail")
 						}
 						panFileWaitGroup.Done()
 					}()
@@ -918,6 +948,51 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 			time.Sleep(1 * time.Second)
 		}
 	}
+}
+
+func (f *FileActionTaskManager) doPluginCallback(syncFile *SyncFileItem, actionResult string) bool {
+	// 插件回调
+	var pluginParam *plugins.SyncFileFinishParams
+	if syncFile.Action == SyncFileActionUpload ||
+		syncFile.Action == SyncFileActionCreatePanFolder ||
+		syncFile.Action == SyncFileActionDeletePan {
+		file := syncFile.LocalFile
+		pluginParam = &plugins.SyncFileFinishParams{
+			Action:        string(syncFile.Action),
+			ActionResult:  actionResult,
+			DriveId:       syncFile.DriveId,
+			FileName:      file.FileName,
+			FilePath:      syncFile.getPanFileFullPath(),
+			FileSha1:      file.Sha1Hash,
+			FileSize:      file.FileSize,
+			FileType:      file.FileType,
+			FileUpdatedAt: file.UpdatedAt,
+		}
+	} else if syncFile.Action == SyncFileActionDownload ||
+		syncFile.Action == SyncFileActionCreateLocalFolder ||
+		syncFile.Action == SyncFileActionDeleteLocal {
+		file := syncFile.PanFile
+		pluginParam = &plugins.SyncFileFinishParams{
+			Action:        string(syncFile.Action),
+			ActionResult:  actionResult,
+			DriveId:       syncFile.DriveId,
+			FileName:      file.FileName,
+			FilePath:      syncFile.getLocalFileFullPath(),
+			FileSha1:      file.Sha1Hash,
+			FileSize:      file.FileSize,
+			FileType:      file.FileType,
+			FileUpdatedAt: file.UpdatedAt,
+		}
+	} else {
+		return false
+	}
+
+	f.pluginMutex.Lock()
+	defer f.pluginMutex.Unlock()
+	if er := f.plugin.SyncFileFinishCallback(plugins.GetContext(f.panUser), pluginParam); er == nil {
+		return true
+	}
+	return false
 }
 
 // getRelativePath 获取文件的相对路径

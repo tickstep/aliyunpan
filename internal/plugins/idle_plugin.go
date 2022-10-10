@@ -40,6 +40,10 @@ func (p *IdlePlugin) SyncScanPanFilePrepareCallback(context *Context, params *Sy
 	return nil, nil
 }
 
+func (p *IdlePlugin) SyncFileFinishCallback(context *Context, params *SyncFileFinishParams) error {
+	return nil
+}
+
 func (p *IdlePlugin) Stop() error {
 	return nil
 }

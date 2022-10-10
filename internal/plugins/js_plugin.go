@@ -190,6 +190,25 @@ func (js *JsPlugin) SyncScanPanFilePrepareCallback(context *Context, params *Syn
 	return r, nil
 }
 
+// SyncFileFinishCallback 同步备份-同步文件完成的回调函数
+func (js *JsPlugin) SyncFileFinishCallback(context *Context, params *SyncFileFinishParams) error {
+	var fn func(*Context, *SyncFileFinishParams) error
+	if !js.isHandlerFuncExisted("syncFileFinishCallback") {
+		return nil
+	}
+	err := js.vm.ExportTo(js.vm.Get("syncFileFinishCallback"), &fn)
+	if err != nil {
+		logger.Verboseln("Js函数映射到 Go 函数失败！")
+		return nil
+	}
+	er := fn(context, params)
+	if er != nil {
+		logger.Verboseln(er)
+		return nil
+	}
+	return nil
+}
+
 func (js *JsPlugin) Stop() error {
 	return nil
 }

@@ -637,7 +637,7 @@ func (f *FileActionTask) deletePanFile(ctx context.Context) error {
 
 	// 删除
 	var fileDeleteResult []*aliyunpan.FileBatchActionResult
-	var err *apierror.ApiError
+	var err *apierror.ApiError = nil
 	fileDeleteResult, err = f.panClient.FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: driveId, FileId: panFileId}})
 	time.Sleep(1 * time.Second)
 	if err != nil || len(fileDeleteResult) == 0 {
@@ -647,6 +647,9 @@ func (f *FileActionTask) deletePanFile(ctx context.Context) error {
 	}
 	f.syncItem.StatusUpdateTime = utils.NowTimeStr()
 	f.syncFileDb.Update(f.syncItem)
+	if err == nil {
+		return nil
+	}
 	return err
 }
 

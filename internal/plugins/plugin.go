@@ -122,6 +122,19 @@ type (
 		SyncScanPanApproved string `json:"syncScanPanApproved"`
 	}
 
+	// SyncFileFinishParams 同步备份-文件同步结束-回调参数
+	SyncFileFinishParams struct {
+		Action        string `json:"action"`
+		ActionResult  string `json:"actionResult"`
+		DriveId       string `json:"driveId"`
+		FileName      string `json:"fileName"`
+		FilePath      string `json:"filePath"`
+		FileSha1      string `json:"fileSha1"`
+		FileSize      int64  `json:"fileSize"`
+		FileType      string `json:"fileType"`
+		FileUpdatedAt string `json:"fileUpdatedAt"`
+	}
+
 	// Plugin 插件接口
 	Plugin interface {
 		// Start 启动
@@ -144,6 +157,9 @@ type (
 
 		// SyncScanPanFilePrepareCallback 同步备份-扫描本地文件的回调函数
 		SyncScanPanFilePrepareCallback(context *Context, params *SyncScanPanFilePrepareParams) (*SyncScanPanFilePrepareResult, error)
+
+		// SyncFileFinishCallback 同步备份-同步文件完成的回调函数
+		SyncFileFinishCallback(context *Context, params *SyncFileFinishParams) error
 
 		// Stop 停止
 		Stop() error
