@@ -57,6 +57,7 @@ type (
 		AllParallel    int // 所有文件并发上传数量，即可以同时并发上传多少个文件
 		Parallel       int // 单个文件并发上传数量
 		MaxRetry       int
+		MaxTimeoutSec  int // http请求超时时间，单位秒
 		NoRapidUpload  bool
 		ShowProgress   bool
 		IsOverwrite    bool // 覆盖已存在的文件，如果同名文件已存在则移到回收站里
@@ -77,6 +78,10 @@ var UploadFlags = []cli.Flag{
 		Name:  "retry",
 		Usage: "上传失败最大重试次数",
 		Value: DefaultUploadMaxRetry,
+	},
+	cli.IntFlag{
+		Name:  "timeout",
+		Usage: "上传请求超时时间，单位为秒。当遇到网络不好导致上传超时可以尝试调大该值，建议设置30秒以上",
 	},
 	cli.BoolFlag{
 		Name:  "np",
@@ -159,10 +164,20 @@ func CmdUpload() cli.Command {
 			}
 
 			subArgs := c.Args()
+
+			timeout := 0
+			if c.IsSet("timeout") {
+				timeout = c.Int("timeout")
+				if timeout < 0 {
+					timeout = 0
+				}
+			}
+
 			RunUpload(subArgs[:c.NArg()-1], subArgs[c.NArg()-1], &UploadOptions{
 				AllParallel:   c.Int("p"), // 多文件上传的时候，允许同时并行上传的文件数量
 				Parallel:      1,          // 一个文件同时多少个线程并发上传的数量。阿里云盘只支持单线程按顺序进行文件part数据上传，所以只能是1
 				MaxRetry:      c.Int("retry"),
+				MaxTimeoutSec: timeout,
 				NoRapidUpload: c.Bool("norapid"),
 				ShowProgress:  !c.Bool("np"),
 				IsOverwrite:   c.Bool("ow"),
@@ -267,6 +282,11 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		opt.MaxRetry = DefaultUploadMaxRetry
 	}
 	opt.UseInternalUrl = config.Config.TransferUrlType == 2
+
+	// 超时时间
+	if opt.MaxTimeoutSec > 0 {
+		activeUser.PanClient().SetTimeout(time.Duration(opt.MaxTimeoutSec) * time.Second)
+	}
 
 	fmt.Printf("\n[0] 当前文件上传最大并发量为: %d, 上传分片大小为: %s\n", opt.AllParallel, converter.ConvertFileSize(opt.BlockSize, 2))
 
