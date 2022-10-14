@@ -26,12 +26,6 @@ import (
 	"strconv"
 )
 
-type (
-	RmOption struct {
-		UseWildcard bool
-	}
-)
-
 func CmdRm() cli.Command {
 	return cli.Command{
 		Name:      "rm",
@@ -53,7 +47,7 @@ func CmdRm() cli.Command {
 	aliyunpan rm /我的资源
 
 	删除 /我的资源 目录下面的所有.zip文件，使用通配符匹配
-	aliyunpan rm -wc /我的资源/*.zip
+	aliyunpan rm /我的资源/*.zip
 `,
 		Category: "阿里云盘",
 		Before:   cmder.ReloadConfigFunc,
@@ -66,10 +60,7 @@ func CmdRm() cli.Command {
 				fmt.Println("未登录账号")
 				return nil
 			}
-			opt := RmOption{
-				UseWildcard: c.Bool("wc"),
-			}
-			RunRemove(parseDriveId(c), opt, c.Args()...)
+			RunRemove(parseDriveId(c), c.Args()...)
 			return nil
 		},
 		Flags: []cli.Flag{
@@ -78,16 +69,12 @@ func CmdRm() cli.Command {
 				Usage: "网盘ID",
 				Value: "",
 			},
-			cli.BoolFlag{
-				Name:  "wc",
-				Usage: "wildcard，使用通配符匹配文件名",
-			},
 		},
 	}
 }
 
 // RunRemove 执行 批量删除文件/目录
-func RunRemove(driveId string, option RmOption, paths ...string) {
+func RunRemove(driveId string, paths ...string) {
 	activeUser := GetActiveUser()
 
 	cacheCleanDirs := []string{}
@@ -97,41 +84,47 @@ func RunRemove(driveId string, option RmOption, paths ...string) {
 
 	for _, p := range paths {
 		absolutePath := path.Clean(activeUser.PathJoin(driveId, p))
-		if option.UseWildcard {
-			// 通配符
-			parentDir := path.Dir(absolutePath)
-			wildcardName := path.Base(absolutePath)
-			pf, err := activeUser.PanClient().FileInfoByPath(driveId, parentDir)
-			if err != nil {
-				failedRmPaths = append(failedRmPaths, absolutePath)
-				continue
-			}
-			fileList, er := activeUser.PanClient().FileListGetAll(&aliyunpan.FileListParam{
-				DriveId:      driveId,
-				ParentFileId: pf.FileId,
-			}, 500)
-			if er != nil {
-				failedRmPaths = append(failedRmPaths, absolutePath)
-				continue
-			}
-			for _, f := range fileList {
-				if isIncludeFile(wildcardName, f.FileName) {
-					f.Path = parentDir + "/" + f.FileName
-					logger.Verboseln("wildcard match delete: " + f.Path)
-					delFileInfos = append(delFileInfos, &aliyunpan.FileBatchActionParam{
-						DriveId: driveId,
-						FileId:  f.FileId,
-					})
-					fileId2FileEntity[f.FileId] = f
-					cacheCleanDirs = append(cacheCleanDirs, path.Dir(f.Path))
+		name := path.Base(absolutePath)
+
+		fe, err := activeUser.PanClient().FileInfoByPath(driveId, absolutePath)
+		if err != nil {
+			// 匹配的文件不存在，是否是通配符匹配的文件
+			if isMatchWildcardPattern(name) {
+				// 通配符
+				parentDir := path.Dir(absolutePath)
+				wildcardName := path.Base(absolutePath)
+				pf, err1 := activeUser.PanClient().FileInfoByPath(driveId, parentDir)
+				if err1 != nil {
+					failedRmPaths = append(failedRmPaths, absolutePath)
+					continue
 				}
+				fileList, er := activeUser.PanClient().FileListGetAll(&aliyunpan.FileListParam{
+					DriveId:      driveId,
+					ParentFileId: pf.FileId,
+				}, 500)
+				if er != nil {
+					failedRmPaths = append(failedRmPaths, absolutePath)
+					continue
+				}
+				for _, f := range fileList {
+					if isIncludeFile(wildcardName, f.FileName) {
+						f.Path = parentDir + "/" + f.FileName
+						logger.Verboseln("wildcard match delete: " + f.Path)
+						delFileInfos = append(delFileInfos, &aliyunpan.FileBatchActionParam{
+							DriveId: driveId,
+							FileId:  f.FileId,
+						})
+						fileId2FileEntity[f.FileId] = f
+						cacheCleanDirs = append(cacheCleanDirs, path.Dir(f.Path))
+					}
+				}
+			} else {
+				// 失败，文件不存在
+				failedRmPaths = append(failedRmPaths, absolutePath)
+				continue
 			}
 		} else {
-			fe, err := activeUser.PanClient().FileInfoByPath(driveId, absolutePath)
-			if err != nil {
-				failedRmPaths = append(failedRmPaths, absolutePath)
-				continue
-			}
+			// 直接删除匹配的文件
 			fe.Path = absolutePath
 			delFileInfos = append(delFileInfos, &aliyunpan.FileBatchActionParam{
 				DriveId: driveId,
@@ -139,7 +132,6 @@ func RunRemove(driveId string, option RmOption, paths ...string) {
 			})
 			fileId2FileEntity[fe.FileId] = fe
 			cacheCleanDirs = append(cacheCleanDirs, path.Dir(fe.Path))
-
 		}
 	}
 

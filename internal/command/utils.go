@@ -151,3 +151,8 @@ func isIncludeFile(pattern string, fileName string) bool {
 	}
 	return b
 }
+
+// isMatchWildcardPattern 是否是统配符字符串
+func isMatchWildcardPattern(name string) bool {
+	return strings.ContainsAny(name, "*") || strings.ContainsAny(name, "?") || strings.ContainsAny(name, "[")
+}
