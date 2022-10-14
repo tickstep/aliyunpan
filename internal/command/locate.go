@@ -31,6 +31,7 @@ func CmdLocateUrl() cli.Command {
 		UsageText: cmder.App().Name + " locate <文件1> <文件2> <文件3> ...",
 		Description: `
 	获取文件下载直链，只支持文件，不支持文件夹。下载链接有效时间为4个小时。
+	注意：由于阿里云盘网页端有防盗链设置所以不能直接使用网页Token登录，你必须使用手机扫码二维码登录(命令：login -QrCode)，否则获取的直链无法正常下载，会提示 403 Forbidden 下载被禁止。
 
 	示例:
 	获取 /我的资源/1.mp4 下载直链
