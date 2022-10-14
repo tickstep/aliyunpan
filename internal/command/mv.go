@@ -26,12 +26,6 @@ import (
 	"strconv"
 )
 
-type (
-	MvOption struct {
-		UseWildcard bool
-	}
-)
-
 func CmdMv() cli.Command {
 	return cli.Command{
 		Name:  "mv",
@@ -47,7 +41,7 @@ func CmdMv() cli.Command {
 	aliyunpan mv /我的资源/1.mp4 /
 
 	将 /我的资源 目录下所有的.png文件 移动到 /我的图片 目录下面，使用通配符匹配
-	aliyunpan mv -wc /我的资源/*.png /我的图片
+	aliyunpan mv /我的资源/*.png /我的图片
 `,
 		Category: "阿里云盘",
 		Before:   cmder.ReloadConfigFunc,
@@ -60,11 +54,7 @@ func CmdMv() cli.Command {
 				fmt.Println("未登录账号")
 				return nil
 			}
-
-			opt := MvOption{
-				UseWildcard: c.Bool("wc"),
-			}
-			RunMove(parseDriveId(c), opt, c.Args()...)
+			RunMove(parseDriveId(c), c.Args()...)
 			return nil
 		},
 		Flags: []cli.Flag{
@@ -73,19 +63,15 @@ func CmdMv() cli.Command {
 				Usage: "网盘ID",
 				Value: "",
 			},
-			cli.BoolFlag{
-				Name:  "wc",
-				Usage: "wildcard，使用通配符匹配文件名",
-			},
 		},
 	}
 }
 
 // RunMove 执行移动文件/目录
-func RunMove(driveId string, option MvOption, paths ...string) {
+func RunMove(driveId string, paths ...string) {
 	activeUser := GetActiveUser()
 	cacheCleanPaths := []string{}
-	opFileList, targetFile, _, err := getFileInfo(driveId, option, paths...)
+	opFileList, targetFile, _, err := getFileInfo(driveId, paths...)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -146,7 +132,7 @@ func RunMove(driveId string, option MvOption, paths ...string) {
 	}
 }
 
-func getFileInfo(driveId string, option MvOption, paths ...string) (opFileList []*aliyunpan.FileEntity, targetFile *aliyunpan.FileEntity, failedPaths []string, error error) {
+func getFileInfo(driveId string, paths ...string) (opFileList []*aliyunpan.FileEntity, targetFile *aliyunpan.FileEntity, failedPaths []string, error error) {
 	if len(paths) <= 1 {
 		return nil, nil, nil, fmt.Errorf("请指定目标文件夹路径")
 	}
@@ -161,36 +147,41 @@ func getFileInfo(driveId string, option MvOption, paths ...string) (opFileList [
 
 	for idx := 0; idx < (len(paths) - 1); idx++ {
 		absolutePath = path.Clean(activeUser.PathJoin(driveId, paths[idx]))
-		if option.UseWildcard {
-			// 通配符
-			parentDir := path.Dir(absolutePath)
-			wildcardName := path.Base(absolutePath)
-			pf, err1 := activeUser.PanClient().FileInfoByPath(driveId, parentDir)
-			if err1 != nil {
-				failedPaths = append(failedPaths, absolutePath)
-				continue
-			}
-			fileList, er := activeUser.PanClient().FileListGetAll(&aliyunpan.FileListParam{
-				DriveId:      driveId,
-				ParentFileId: pf.FileId,
-			}, 500)
-			if er != nil {
-				failedPaths = append(failedPaths, absolutePath)
-				continue
-			}
-			for _, f := range fileList {
-				if isIncludeFile(wildcardName, f.FileName) {
-					f.Path = parentDir + "/" + f.FileName
-					logger.Verboseln("wildcard match move: " + f.Path)
-					opFileList = append(opFileList, f)
+		name := path.Base(absolutePath)
+		fe, err1 := activeUser.PanClient().FileInfoByPath(driveId, absolutePath)
+		if err1 != nil {
+			// 匹配的文件不存在，检查是否是通配符匹配
+			if isMatchWildcardPattern(name) {
+				// 通配符
+				parentDir := path.Dir(absolutePath)
+				wildcardName := path.Base(absolutePath)
+				pf, err2 := activeUser.PanClient().FileInfoByPath(driveId, parentDir)
+				if err2 != nil {
+					failedPaths = append(failedPaths, absolutePath)
+					continue
 				}
+				fileList, er := activeUser.PanClient().FileListGetAll(&aliyunpan.FileListParam{
+					DriveId:      driveId,
+					ParentFileId: pf.FileId,
+				}, 500)
+				if er != nil {
+					failedPaths = append(failedPaths, absolutePath)
+					continue
+				}
+				for _, f := range fileList {
+					if isIncludeFile(wildcardName, f.FileName) {
+						f.Path = parentDir + "/" + f.FileName
+						logger.Verboseln("wildcard match move: " + f.Path)
+						opFileList = append(opFileList, f)
+					}
+				}
+			} else {
+				// 文件不存在
+				failedPaths = append(failedPaths, absolutePath)
+				continue
 			}
 		} else {
-			fe, err1 := activeUser.PanClient().FileInfoByPath(driveId, absolutePath)
-			if err1 != nil {
-				failedPaths = append(failedPaths, absolutePath)
-				continue
-			}
+			// 直接删除匹配的文件
 			opFileList = append(opFileList, fe)
 		}
 	}
