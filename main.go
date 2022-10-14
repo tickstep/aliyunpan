@@ -450,6 +450,9 @@ func main() {
 		// 下载文件/目录 download
 		command.CmdDownload(),
 
+		// 获取文件下载链接
+		command.CmdLocateUrl(),
+
 		// 导出文件/目录元数据 export
 		//command.CmdExport(),
 
