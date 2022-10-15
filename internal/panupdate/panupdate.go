@@ -17,10 +17,12 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/tickstep/aliyunpan/cmder/cmdliner"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/cachepool"
 	"github.com/tickstep/library-go/checkaccess"
 	"github.com/tickstep/library-go/converter"
@@ -28,7 +30,7 @@ import (
 	"github.com/tickstep/library-go/jsonhelper"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
-	"github.com/tickstep/aliyunpan/library/requester/transfer"
+	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"regexp"
@@ -50,14 +52,14 @@ type info struct {
 }
 
 type tsResp struct {
-	Code int `json:"code"`
+	Code int         `json:"code"`
 	Data interface{} `json:"data"`
-	Msg string `json:"msg"`
+	Msg  string      `json:"msg"`
 }
 
 func getReleaseFromTicstep(client *requester.HTTPClient, showPrompt bool) *ReleaseInfo {
 	tsReleaseInfo := &ReleaseInfo{}
-	tsResp := &tsResp{Data: tsReleaseInfo}
+	tsRespObj := &tsResp{Data: tsReleaseInfo}
 	fullUrl := strings.Builder{}
 	ipAddr, err := getip.IPInfoFromTechainBaidu()
 	if err != nil {
@@ -75,15 +77,32 @@ func getReleaseFromTicstep(client *requester.HTTPClient, showPrompt bool) *Relea
 		}
 		return nil
 	}
-	err = jsonhelper.UnmarshalData(resp.Body, tsResp)
+	respBytes, _ := ioutil.ReadAll(resp.Body)
+
+	// 解析响应返回
+	tsRespEntity := &tsResp{}
+	if err = jsoniter.Unmarshal(respBytes, tsRespEntity); err == nil {
+		if tsRespEntity.Code != 0 {
+			if showPrompt {
+				fmt.Printf("错误: %s\n", tsRespEntity.Msg)
+			}
+			logger.Verboseln(string(respBytes))
+			return nil
+		}
+	}
+
+	// 解析可用版本返回
+	err = jsoniter.Unmarshal(respBytes, tsRespObj)
 	if err != nil {
 		if showPrompt {
 			fmt.Printf("json数据解析失败: %s\n", err)
 		}
 		return nil
 	}
-	if tsResp.Code == 0 {
-		return tsReleaseInfo
+	if tsRespObj.Code == 0 {
+		if tsReleaseInfo != nil && len(tsReleaseInfo.Assets) > 0 {
+			return tsReleaseInfo
+		}
 	}
 	return nil
 }
