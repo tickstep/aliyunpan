@@ -20,8 +20,10 @@ import (
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
+	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func CmdLocateUrl() cli.Command {
@@ -31,11 +33,16 @@ func CmdLocateUrl() cli.Command {
 		UsageText: cmder.App().Name + " locate <文件1> <文件2> <文件3> ...",
 		Description: `
 	获取文件下载直链，只支持文件，不支持文件夹。下载链接有效时间为4个小时。
+	导出的下载链接可以使用任何支持http下载的工具进行下载，如果是视频文件还可以使用支持在线流播放的视频软件进行在线播放。
+	
 	注意：由于阿里云盘网页端有防盗链设置所以不能直接使用网页Token登录，你必须使用手机扫码二维码登录(命令：login -QrCode)，否则获取的直链无法正常下载，会提示 403 Forbidden 下载被禁止。
 
 	示例:
 	获取 /我的资源/1.mp4 下载直链
 	aliyunpan locate /我的资源/1.mp4
+
+	获取 /我的资源/1.mp4 下载直链并保存到本地文件 /Volumes/Downloads/file_url.txt 中
+	aliyunpan locate -saveto "/Volumes/Downloads/file_url.txt" /我的资源/1.mp4
 `,
 		Category: "阿里云盘",
 		Before:   cmder.ReloadConfigFunc,
@@ -44,7 +51,11 @@ func CmdLocateUrl() cli.Command {
 				cli.ShowCommandHelp(c, c.Command.Name)
 				return nil
 			}
-			RunLocateUrl(parseDriveId(c), c.Args())
+			saveFilePath := ""
+			if c.IsSet("saveto") {
+				saveFilePath = c.String("saveto")
+			}
+			RunLocateUrl(parseDriveId(c), c.Args(), saveFilePath)
 			return nil
 		},
 		Flags: []cli.Flag{
@@ -53,12 +64,16 @@ func CmdLocateUrl() cli.Command {
 				Usage: "网盘ID",
 				Value: "",
 			},
+			cli.StringFlag{
+				Name:  "saveto",
+				Usage: "导出链接成文件并保存到指定的位置",
+			},
 		},
 	}
 }
 
 // RunLocateUrl 执行下载网盘内文件
-func RunLocateUrl(driveId string, paths []string) {
+func RunLocateUrl(driveId string, paths []string, saveFilePath string) {
 	useInternalUrl := config.Config.TransferUrlType == 2
 	activeUser := GetActiveUser()
 	activeUser.PanClient().EnableCache()
@@ -71,6 +86,7 @@ func RunLocateUrl(driveId string, paths []string) {
 		return
 	}
 
+	sb := &strings.Builder{}
 	failedList := []string{}
 	for k := range paths {
 		p := paths[k]
@@ -91,7 +107,20 @@ func RunLocateUrl(driveId string, paths []string) {
 			if useInternalUrl {
 				url = durl.InternalUrl
 			}
-			fmt.Printf("\n文件：%s\n%s\n", p, url)
+			if saveFilePath != "" {
+				fmt.Fprintf(sb, "\n文件：%s\n%s\n", p, url)
+			} else {
+				fmt.Printf("\n文件：%s\n%s\n", p, url)
+			}
+		}
+	}
+
+	if saveFilePath != "" {
+		// save file
+		if e := ioutil.WriteFile(saveFilePath, []byte(sb.String()), 0777); e == nil {
+			fmt.Printf("保存文件成功：%s\n", saveFilePath)
+		} else {
+			fmt.Printf("保存文件失败：%s\n", saveFilePath)
 		}
 	}
 
