@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/library/collection"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"os"
@@ -30,9 +31,9 @@ func CmdLocateUrl() cli.Command {
 	return cli.Command{
 		Name:      "locate",
 		Usage:     "获取文件下载链接",
-		UsageText: cmder.App().Name + " locate <文件1> <文件2> <文件3> ...",
+		UsageText: cmder.App().Name + " locate <文件/目录1> <文件/目录2> <文件/目录3> ...",
 		Description: `
-	获取文件下载直链，只支持文件，不支持文件夹。下载链接有效时间为4个小时。
+	获取文件下载直链，支持文件和文件夹。下载链接有效时间为4个小时。
 	导出的下载链接可以使用任何支持http下载的工具进行下载，如果是视频文件还可以使用支持在线流播放的视频软件进行在线播放。
 	
 	注意：由于阿里云盘网页端有防盗链设置所以不能直接使用网页Token登录，你必须使用手机扫码二维码登录(命令：login -QrCode)，否则获取的直链无法正常下载，会提示 403 Forbidden 下载被禁止。
@@ -41,8 +42,8 @@ func CmdLocateUrl() cli.Command {
 	获取 /我的资源/1.mp4 下载直链
 	aliyunpan locate /我的资源/1.mp4
 
-	获取 /我的资源/1.mp4 下载直链并保存到本地文件 /Volumes/Downloads/file_url.txt 中
-	aliyunpan locate -saveto "/Volumes/Downloads/file_url.txt" /我的资源/1.mp4
+	获取 /我的资源 目录下面所有文件的下载直链并保存到本地文件 /Volumes/Downloads/file_url.txt 中
+	aliyunpan locate -saveto "/Volumes/Downloads/file_url.txt" /我的资源
 `,
 		Category: "阿里云盘",
 		Before:   cmder.ReloadConfigFunc,
@@ -85,22 +86,66 @@ func RunLocateUrl(driveId string, paths []string, saveFilePath string) {
 		fmt.Println(err)
 		return
 	}
-
+	fileEntityQueue := collection.NewFifoQueue()
 	sb := &strings.Builder{}
 	failedList := []string{}
-	for k := range paths {
-		p := paths[k]
+	for _, p := range paths {
 		if fileInfo, e := activeUser.PanClient().FileInfoByPath(driveId, p); e == nil {
-			if fileInfo.IsFolder() {
-				failedList = append(failedList, p)
+			fileInfo.Path = p
+			fileEntityQueue.Push(fileInfo)
+		} else {
+			failedList = append(failedList, p)
+		}
+	}
+
+	for {
+		item := fileEntityQueue.Pop()
+		if item == nil {
+			break
+		}
+		fileInfo := item.(*aliyunpan.FileEntity)
+		if fileInfo.IsFolder() { // 文件夹，获取下面所有文件
+			allFilesInFolder, er := activeUser.PanClient().FileListGetAll(&aliyunpan.FileListParam{
+				DriveId:      driveId,
+				ParentFileId: fileInfo.FileId,
+			}, 300)
+			if er != nil {
+				failedList = append(failedList, fileInfo.Path)
 				continue
 			}
+			for _, f := range allFilesInFolder {
+				f.Path = fileInfo.Path + "/" + f.FileName
+				if f.IsFolder() {
+					// for next term
+					fileEntityQueue.Push(f)
+					continue
+				}
+				durl, apierr := activeUser.PanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+					DriveId: driveId,
+					FileId:  f.FileId,
+				})
+				if apierr != nil {
+					failedList = append(failedList, f.Path)
+					continue
+				}
+				url := durl.Url
+				if useInternalUrl {
+					url = durl.InternalUrl
+				}
+				if saveFilePath != "" {
+					fmt.Printf("获取文件下载链接：%s\n", f.Path)
+					fmt.Fprintf(sb, "\n文件：%s\n%s\n", f.Path, url)
+				} else {
+					fmt.Printf("\n文件：%s\n%s\n", f.Path, url)
+				}
+			}
+		} else { // 文件
 			durl, apierr := activeUser.PanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
 				DriveId: driveId,
 				FileId:  fileInfo.FileId,
 			})
 			if apierr != nil {
-				failedList = append(failedList, p)
+				failedList = append(failedList, fileInfo.Path)
 				continue
 			}
 			url := durl.Url
@@ -108,9 +153,10 @@ func RunLocateUrl(driveId string, paths []string, saveFilePath string) {
 				url = durl.InternalUrl
 			}
 			if saveFilePath != "" {
-				fmt.Fprintf(sb, "\n文件：%s\n%s\n", p, url)
+				fmt.Printf("获取文件下载链接：%s\n", fileInfo.Path)
+				fmt.Fprintf(sb, "\n文件：%s\n%s\n", fileInfo.Path, url)
 			} else {
-				fmt.Printf("\n文件：%s\n%s\n", p, url)
+				fmt.Printf("\n文件：%s\n%s\n", fileInfo.Path, url)
 			}
 		}
 	}
