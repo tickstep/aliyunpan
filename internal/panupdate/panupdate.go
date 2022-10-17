@@ -297,7 +297,15 @@ func CheckUpdate(version string, yes bool) {
 
 	// 开始下载
 	buf := cachepool.RawMallocByteSlice(int(target.size))
-	resp, err := client.Req("GET", target.downloadURL, nil, nil)
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		logger.Verboseln("下载文件：" + req.URL.String())
+		req.Header.Del("Referer") // aliyundrive会检测盗链行为，所以删除Referer
+		return nil
+	}
+	header := map[string]string{}
+	header["Referer"] = ""
+	header["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36 Edg/106.0.1370.42"
+	resp, err := client.Req("GET", target.downloadURL, nil, header)
 	if err != nil {
 		fmt.Printf("下载更新文件发生错误: %s\n", err)
 		return
@@ -305,6 +313,10 @@ func CheckUpdate(version string, yes bool) {
 	total, _ := strconv.Atoi(resp.Header.Get("Content-Length"))
 	if total > 0 {
 		if int64(total) != target.size {
+			if es, e := ioutil.ReadAll(resp.Body); e == nil {
+				// 发生错误
+				logger.Verboseln(string(es))
+			}
 			fmt.Printf("下载更新文件发生错误: %s\n", err)
 			return
 		}
