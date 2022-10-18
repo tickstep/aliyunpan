@@ -263,7 +263,7 @@ func RunShareSet(driveId string, paths []string, expiredTime string, sharePwd st
 		if err1.Code == apierror.ApiCodeFileShareNotAllowed {
 			fmt.Printf("创建分享链接失败: 该文件类型不允许分享\n")
 		} else {
-			fmt.Printf("创建分享链接失败: %s\n", err)
+			fmt.Printf("创建分享链接失败: %s\n", err1)
 		}
 		return
 	}
