@@ -214,6 +214,7 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 						task.Name = path.Base(task.LocalFolderPath)
 						task.Id = utils.Md5Str(task.LocalFolderPath)
 						task.Priority = syncOpt
+						task.UserId = activeUser.UserId
 					}
 
 					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"), step)

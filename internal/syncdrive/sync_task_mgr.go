@@ -137,6 +137,17 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask, step TaskStep) (bool, error) 
 		if len(task.Id) == 0 {
 			task.Id = utils.UuidStr()
 		}
+		// check userId
+		if len(task.UserId) > 0 {
+			if task.UserId != m.PanUser.UserId {
+				// not this user task, skip
+				logger.Verboseln("skip sync task: " + task.NameLabel())
+				continue
+			}
+		} else {
+			task.UserId = m.PanUser.UserId
+		}
+
 		// check pan path
 		if !utils.IsPanAbsPath(task.PanFolderPath) {
 			task.PanFolderPath = "/" + task.PanFolderPath

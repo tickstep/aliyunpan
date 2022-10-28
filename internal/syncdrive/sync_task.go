@@ -29,6 +29,8 @@ type (
 		Name string `json:"name"`
 		// Id 任务ID
 		Id string `json:"id"`
+		// UserId 账号ID
+		UserId string `json:"userId"`
 		// DriveId 网盘ID，目前支持文件网盘
 		DriveId string `json:"-"`
 		// LocalFolderPath 本地目录
