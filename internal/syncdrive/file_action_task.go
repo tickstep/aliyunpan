@@ -227,7 +227,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 		f.syncFileDb.Update(f.syncItem)
 		return fmt.Errorf("无法获取有效的下载链接")
 	}
-	if durl.Url == aliyunpan.IllegalDownloadUrl {
+	if strings.HasPrefix(durl.Url, aliyunpan.IllegalDownloadUrlPrefix) {
 		logger.Verbosef("无法获取有效的下载链接: %+v\n", durl)
 		f.syncItem.Status = SyncFileStatusIllegal
 		f.syncItem.StatusUpdateTime = utils.NowTimeStr()

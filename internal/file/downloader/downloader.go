@@ -28,6 +28,7 @@ import (
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -388,7 +389,7 @@ func (der *Downloader) Execute() error {
 		cmdutil.Trigger(der.onCancelEvent)
 		return apierr
 	}
-	if durl == nil || durl.Url == "" || durl.Url == aliyunpan.IllegalDownloadUrl {
+	if durl == nil || durl.Url == "" || strings.HasPrefix(durl.Url, aliyunpan.IllegalDownloadUrlPrefix) {
 		logger.Verbosef("无法获取有效的下载链接: %+v\n", durl)
 		cmdutil.Trigger(der.onCancelEvent)
 		der.removeInstanceState() // 移除断点续传文件
