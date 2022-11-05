@@ -14,7 +14,6 @@
 package functions
 
 import (
-	"github.com/tickstep/library-go/expires"
 	"sync/atomic"
 	"time"
 )
@@ -36,7 +35,6 @@ func (s *Statistic) TotalSize() int64 {
 
 func (s *Statistic) StartTimer() {
 	s.startTime = time.Now()
-	expires.StripMono(&s.startTime)
 }
 
 func (s *Statistic) Elapsed() time.Duration {
