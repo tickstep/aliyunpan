@@ -364,6 +364,9 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 	err := localFile.OpenPath()
 	if err != nil {
 		logger.Verbosef("文件不可读 %s, 错误信息: %s\n", localFile.Path, err)
+		f.syncItem.Status = SyncFileStatusFailed
+		f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+		f.syncFileDb.Update(f.syncItem)
 		return err
 	}
 	defer localFile.Close() // 关闭文件
