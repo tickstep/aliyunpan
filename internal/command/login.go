@@ -147,10 +147,11 @@ func RunLogin(useQrCodeLogin bool, refreshToken string) (tokenId, refreshTokenSt
 		// handler waiting
 		line := cmdliner.NewLiner()
 		var qrCodeLoginResult *panlogin.QRCodeLoginResult
+		queryResult := true
 		defer line.Close()
 
 		go func() {
-			for {
+			for queryResult {
 				time.Sleep(3 * time.Second)
 				qr, er := h.GetQRCodeLoginResult(qrCodeUrlResult.TokenId)
 				if er != nil {
@@ -169,6 +170,7 @@ func RunLogin(useQrCodeLogin bool, refreshToken string) (tokenId, refreshTokenSt
 
 		line.State.Prompt("请在浏览器里面完成扫码登录，然后再按Enter键继续...")
 		if qrCodeLoginResult == nil {
+			queryResult = false
 			return "", "", aliyunpan.WebLoginToken{}, fmt.Errorf("二维码登录失败")
 		}
 
