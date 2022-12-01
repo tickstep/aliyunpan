@@ -284,11 +284,13 @@ func (dtu *DownloadTaskUnit) panHTTPClient() (client *requester.HTTPClient) {
 	return client
 }
 
+// handleError 下载错误处理器
 func (dtu *DownloadTaskUnit) handleError(result *taskframework.TaskUnitRunResult) {
 	switch value := result.Err.(type) {
 	case *apierror.ApiError:
 		switch value.ErrCode() {
 		case apierror.ApiCodeFileNotFoundCode:
+		case apierror.ApiCodeForbiddenFileInTheRecycleBin:
 			result.NeedRetry = false
 			break
 		default:
