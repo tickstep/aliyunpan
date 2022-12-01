@@ -211,7 +211,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	})
 	time.Sleep(time.Duration(200) * time.Millisecond)
 	if apierr != nil {
-		if apierr.Code == apierror.ApiCodeFileNotFoundCode {
+		if apierr.Code == apierror.ApiCodeFileNotFoundCode || apierr.Code == apierror.ApiCodeForbiddenFileInTheRecycleBin {
 			f.syncItem.Status = SyncFileStatusNotExisted
 			f.syncItem.StatusUpdateTime = utils.NowTimeStr()
 			f.syncFileDb.Update(f.syncItem)
