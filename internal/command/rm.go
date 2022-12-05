@@ -19,7 +19,6 @@ import (
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
-	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"os"
 	"path"
@@ -84,54 +83,24 @@ func RunRemove(driveId string, paths ...string) {
 
 	for _, p := range paths {
 		absolutePath := path.Clean(activeUser.PathJoin(driveId, p))
-		name := path.Base(absolutePath)
-
-		fe, err := activeUser.PanClient().FileInfoByPath(driveId, absolutePath)
-		if err != nil {
-			// 匹配的文件不存在，是否是通配符匹配的文件
-			if isMatchWildcardPattern(name) {
-				// 通配符
-				parentDir := path.Dir(absolutePath)
-				wildcardName := path.Base(absolutePath)
-				pf, err1 := activeUser.PanClient().FileInfoByPath(driveId, parentDir)
-				if err1 != nil {
-					failedRmPaths = append(failedRmPaths, absolutePath)
-					continue
-				}
-				fileList, er := activeUser.PanClient().FileListGetAll(&aliyunpan.FileListParam{
-					DriveId:      driveId,
-					ParentFileId: pf.FileId,
-				}, 500)
-				if er != nil {
-					failedRmPaths = append(failedRmPaths, absolutePath)
-					continue
-				}
-				for _, f := range fileList {
-					if isIncludeFile(wildcardName, f.FileName) {
-						f.Path = parentDir + "/" + f.FileName
-						logger.Verboseln("wildcard match delete: " + f.Path)
-						delFileInfos = append(delFileInfos, &aliyunpan.FileBatchActionParam{
-							DriveId: driveId,
-							FileId:  f.FileId,
-						})
-						fileId2FileEntity[f.FileId] = f
-						cacheCleanDirs = append(cacheCleanDirs, path.Dir(f.Path))
-					}
-				}
-			} else {
-				// 失败，文件不存在
-				failedRmPaths = append(failedRmPaths, absolutePath)
-				continue
-			}
-		} else {
-			// 直接删除匹配的文件
-			fe.Path = absolutePath
+		fileList, err1 := matchPathByShellPattern(driveId, absolutePath)
+		if err1 != nil {
+			failedRmPaths = append(failedRmPaths, absolutePath)
+			continue
+		}
+		if fileList == nil || len(fileList) == 0 {
+			// 失败，文件不存在
+			failedRmPaths = append(failedRmPaths, absolutePath)
+			continue
+		}
+		for _, f := range fileList {
+			// 删除匹配的文件
 			delFileInfos = append(delFileInfos, &aliyunpan.FileBatchActionParam{
 				DriveId: driveId,
-				FileId:  fe.FileId,
+				FileId:  f.FileId,
 			})
-			fileId2FileEntity[fe.FileId] = fe
-			cacheCleanDirs = append(cacheCleanDirs, path.Dir(fe.Path))
+			fileId2FileEntity[f.FileId] = f
+			cacheCleanDirs = append(cacheCleanDirs, path.Dir(f.Path))
 		}
 	}
 
