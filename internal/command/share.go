@@ -24,6 +24,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -51,6 +52,9 @@ func CmdShare() cli.Command {
 
     创建文件 1.mp4 的分享链接 
 	aliyunpan share set 1.mp4
+
+    创建 /我的视频/ 目录下所有mp4文件的分享链接，支持通配符
+	aliyunpan share set /我的视频/*.mp4
 
     创建文件 1.mp4 的分享链接，并指定分享密码为2333
 	aliyunpan share set -sharePwd 2333 1.mp4
@@ -235,15 +239,32 @@ func CmdShare() cli.Command {
 
 // RunShareSet 执行分享
 func RunShareSet(driveId string, paths []string, expiredTime string, sharePwd string) {
-	panClient := GetActivePanClient()
-	fileList, _, err := GetFileInfoByPaths(paths[:len(paths)]...)
-	if err != nil {
-		fmt.Println(err)
+	if len(paths) <= 0 {
+		fmt.Println("请指定文件路径")
 		return
+	}
+	activeUser := GetActiveUser()
+	panClient := activeUser.PanClient()
+
+	allFileList := []*aliyunpan.FileEntity{}
+	for idx := 0; idx < len(paths); idx++ {
+		absolutePath := path.Clean(activeUser.PathJoin(driveId, paths[idx]))
+		fileList, err1 := matchPathByShellPattern(driveId, absolutePath)
+		if err1 != nil {
+			fmt.Println("文件不存在: " + absolutePath)
+			continue
+		}
+		if fileList == nil || len(fileList) == 0 {
+			// 文件不存在
+			fmt.Println("文件不存在: " + absolutePath)
+			continue
+		}
+		// 匹配的文件
+		allFileList = append(allFileList, fileList...)
 	}
 
 	fidList := []string{}
-	for _, f := range fileList {
+	for _, f := range allFileList {
 		fidList = append(fidList, f.FileId)
 	}
 

@@ -14,7 +14,6 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/config"
@@ -31,25 +30,6 @@ var (
 	panCommandVerbose = logger.New("PANCOMMAND", config.EnvVerbose)
 )
 
-// GetFileInfoByPaths 获取指定文件路径的文件详情信息
-func GetFileInfoByPaths(paths ...string) (fileInfoList []*aliyunpan.FileEntity, failedPaths []string, error error) {
-	if len(paths) <= 0 {
-		return nil, nil, fmt.Errorf("请指定文件路径")
-	}
-	activeUser := GetActiveUser()
-
-	for idx := 0; idx < len(paths); idx++ {
-		absolutePath := path.Clean(activeUser.PathJoin(activeUser.ActiveDriveId, paths[idx]))
-		fe, err := activeUser.PanClient().FileInfoByPath(activeUser.ActiveDriveId, absolutePath)
-		if err != nil {
-			failedPaths = append(failedPaths, absolutePath)
-			continue
-		}
-		fileInfoList = append(fileInfoList, fe)
-	}
-	return
-}
-
 // RunTestShellPattern 执行测试通配符
 func RunTestShellPattern(driveId string, pattern string) {
 	acUser := GetActiveUser()
@@ -62,23 +42,6 @@ func RunTestShellPattern(driveId string, pattern string) {
 		fmt.Printf("%s\n", f.Path)
 	}
 	return
-}
-
-// matchPathByShellPatternOnce 通配符匹配唯一结果，如果有多条则报错
-func matchPathByShellPatternOnce(driveId string, pattern string) (*aliyunpan.FileEntity, error) {
-	acUser := GetActiveUser()
-	files, err := acUser.PanClient().MatchPathByShellPattern(driveId, GetActiveUser().PathJoin(driveId, pattern))
-	if err != nil {
-		return nil, err
-	}
-	switch files.ItemCount() {
-	case 0:
-		return nil, errors.New("未匹配到路径, 请检测通配符")
-	case 1:
-		return files.Item(0), nil
-	default:
-		return nil, errors.New("多条通配符匹配结果")
-	}
 }
 
 // matchPathByShellPattern 通配符匹配路径，允许返回多个匹配结果
