@@ -42,6 +42,9 @@ func CmdLocateUrl() cli.Command {
 	获取 /我的资源/1.mp4 下载直链
 	aliyunpan locate /我的资源/1.mp4
 
+	获取 /我的资源 目录下面所有mp4文件的下载直链，使用通配符
+	aliyunpan locate /我的资源/*.mp4
+
 	获取 /我的资源 目录下面所有文件的下载直链并保存到本地文件 /Volumes/Downloads/file_url.txt 中
 	aliyunpan locate -saveto "/Volumes/Downloads/file_url.txt" /我的资源
 `,
@@ -90,11 +93,19 @@ func RunLocateUrl(driveId string, paths []string, saveFilePath string) {
 	sb := &strings.Builder{}
 	failedList := []string{}
 	for _, p := range paths {
-		if fileInfo, e := activeUser.PanClient().FileInfoByPath(driveId, p); e == nil {
-			fileInfo.Path = p
-			fileEntityQueue.Push(fileInfo)
-		} else {
+		fileList, err1 := matchPathByShellPattern(driveId, p)
+		if err1 != nil {
 			failedList = append(failedList, p)
+			continue
+		}
+		if fileList == nil || len(fileList) == 0 {
+			// 文件不存在
+			failedList = append(failedList, p)
+			continue
+		}
+		for _, f := range fileList {
+			// 匹配的文件
+			fileEntityQueue.Push(f)
 		}
 	}
 
