@@ -65,9 +65,9 @@ func RunTestShellPattern(driveId string, pattern string) {
 }
 
 // matchPathByShellPatternOnce 通配符匹配唯一结果，如果有多条则报错
-func matchPathByShellPatternOnce(driveId string, pattern *string) (*aliyunpan.FileEntity, error) {
+func matchPathByShellPatternOnce(driveId string, pattern string) (*aliyunpan.FileEntity, error) {
 	acUser := GetActiveUser()
-	files, err := acUser.PanClient().MatchPathByShellPattern(driveId, GetActiveUser().PathJoin(driveId, *pattern))
+	files, err := acUser.PanClient().MatchPathByShellPattern(driveId, GetActiveUser().PathJoin(driveId, pattern))
 	if err != nil {
 		return nil, err
 	}
