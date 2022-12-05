@@ -142,9 +142,30 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions,
 		targetPath = text.Substr(targetPath, 0, len(targetPath)-1)
 	}
 
-	targetPathInfo, err := activeUser.PanClient().FileInfoByPath(driveId, targetPath)
+	//targetPathInfo, err := activeUser.PanClient().FileInfoByPath(driveId, targetPath)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+
+	files, err := matchPathByShellPattern(driveId, targetPath)
 	if err != nil {
 		fmt.Println(err)
+		return
+	}
+	var targetPathInfo *aliyunpan.FileEntity
+	if len(files) == 1 {
+		targetPathInfo = files[0]
+	} else {
+		for _, f := range files {
+			if f.IsFolder() {
+				targetPathInfo = f
+				break
+			}
+		}
+	}
+	if targetPathInfo == nil {
+		fmt.Println("目录路径不存在")
 		return
 	}
 
@@ -164,7 +185,7 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions,
 	} else {
 		fileList = append(fileList, targetPathInfo)
 	}
-	renderTable(opLs, lsOptions.Total, targetPath, fileList)
+	renderTable(opLs, lsOptions.Total, targetPathInfo.Path, fileList)
 }
 
 func renderTable(op int, isTotal bool, path string, files aliyunpan.FileList) {
@@ -218,12 +239,8 @@ func renderTable(op int, isTotal bool, path string, files aliyunpan.FileList) {
 		fN, dN = files.Count()
 		tb.Append([]string{"", "总: " + converter.ConvertFileSize(files.TotalSize(), 2), "", fmt.Sprintf("文件总数: %d, 目录总数: %d", fN, dN)})
 	}
-
+	fmt.Printf("\n当前目录: %s\n", path)
+	fmt.Printf("----\n")
 	tb.Render()
-
-	if fN+dN >= 60 {
-		fmt.Printf("\n当前目录: %s\n", path)
-	}
-
 	fmt.Printf("----\n")
 }
