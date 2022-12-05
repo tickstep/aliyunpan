@@ -429,7 +429,7 @@ func RunAlbumAddFile(albumName string, filePathList []string, filterOption Album
 		return
 	}
 
-	paths, err := matchPathByShellPattern(activeUser.ActiveDriveId, filePathList...)
+	paths, err := makePathAbsolute(activeUser.ActiveDriveId, filePathList...)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -81,7 +81,7 @@ func RunLocateUrl(driveId string, paths []string, saveFilePath string) {
 	activeUser.PanClient().ClearCache()
 	defer activeUser.PanClient().DisableCache()
 
-	paths, err := matchPathByShellPattern(driveId, paths...)
+	paths, err := makePathAbsolute(driveId, paths...)
 	if err != nil {
 		fmt.Println(err)
 		return

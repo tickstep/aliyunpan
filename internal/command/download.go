@@ -255,7 +255,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		}
 	}
 
-	paths, err := matchPathByShellPattern(options.DriveId, paths...)
+	paths, err := makePathAbsolute(options.DriveId, paths...)
 	if err != nil {
 		fmt.Println(err)
 		return
