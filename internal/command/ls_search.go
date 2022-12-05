@@ -176,9 +176,9 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions,
 	fileListParam.OrderBy = orderBy
 	fileListParam.OrderDirection = orderDirection
 	if targetPathInfo.IsFolder() {
-		fileResult, err := activeUser.PanClient().FileListGetAll(fileListParam, 0)
-		if err != nil {
-			fmt.Println(err)
+		fileResult, err1 := activeUser.PanClient().FileListGetAll(fileListParam, 200)
+		if err1 != nil {
+			fmt.Println(err1)
 			return
 		}
 		fileList = fileResult
