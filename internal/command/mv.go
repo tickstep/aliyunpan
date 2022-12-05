@@ -19,7 +19,6 @@ import (
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
-	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"os"
 	"path"
@@ -147,42 +146,19 @@ func getFileInfo(driveId string, paths ...string) (opFileList []*aliyunpan.FileE
 
 	for idx := 0; idx < (len(paths) - 1); idx++ {
 		absolutePath = path.Clean(activeUser.PathJoin(driveId, paths[idx]))
-		name := path.Base(absolutePath)
-		fe, err1 := activeUser.PanClient().FileInfoByPath(driveId, absolutePath)
+		fileList, err1 := matchPathByShellPattern(driveId, absolutePath)
 		if err1 != nil {
-			// 匹配的文件不存在，检查是否是通配符匹配
-			if isMatchWildcardPattern(name) {
-				// 通配符
-				parentDir := path.Dir(absolutePath)
-				wildcardName := path.Base(absolutePath)
-				pf, err2 := activeUser.PanClient().FileInfoByPath(driveId, parentDir)
-				if err2 != nil {
-					failedPaths = append(failedPaths, absolutePath)
-					continue
-				}
-				fileList, er := activeUser.PanClient().FileListGetAll(&aliyunpan.FileListParam{
-					DriveId:      driveId,
-					ParentFileId: pf.FileId,
-				}, 500)
-				if er != nil {
-					failedPaths = append(failedPaths, absolutePath)
-					continue
-				}
-				for _, f := range fileList {
-					if isIncludeFile(wildcardName, f.FileName) {
-						f.Path = parentDir + "/" + f.FileName
-						logger.Verboseln("wildcard match move: " + f.Path)
-						opFileList = append(opFileList, f)
-					}
-				}
-			} else {
-				// 文件不存在
-				failedPaths = append(failedPaths, absolutePath)
-				continue
-			}
-		} else {
-			// 直接删除匹配的文件
-			opFileList = append(opFileList, fe)
+			failedPaths = append(failedPaths, absolutePath)
+			continue
+		}
+		if fileList == nil || len(fileList) == 0 {
+			// 文件不存在
+			failedPaths = append(failedPaths, absolutePath)
+			continue
+		}
+		for _, f := range fileList {
+			// 移动匹配的文件
+			opFileList = append(opFileList, f)
 		}
 	}
 	return
