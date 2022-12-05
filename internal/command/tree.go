@@ -73,11 +73,32 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, showF
 	pathStr = activeUser.PathJoin(driveId, pathStr)
 	pathStr = path.Clean(pathStr)
 
-	targetPathInfo, err1 := activeUser.PanClient().FileInfoByPath(driveId, pathStr)
-	if err1 != nil {
-		fmt.Println(err1)
+	files, err := matchPathByShellPattern(driveId, pathStr)
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
+
+	var targetPathInfo *aliyunpan.FileEntity
+	if len(files) == 1 {
+		targetPathInfo = files[0]
+	} else {
+		for _, f := range files {
+			if f.IsFolder() {
+				targetPathInfo = f
+				break
+			}
+		}
+	}
+	if targetPathInfo == nil {
+		fmt.Println("路径不存在")
+		return
+	}
+
+	if depth == 0 {
+		fmt.Printf("%s\n", targetPathInfo.Path)
+	}
+
 	fileList := aliyunpan.FileList{}
 	fileListParam := &aliyunpan.FileListParam{}
 	fileListParam.ParentFileId = targetPathInfo.FileId
@@ -85,7 +106,7 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, showF
 	fileListParam.OrderBy = aliyunpan.FileOrderByName
 	fileListParam.OrderDirection = aliyunpan.FileOrderDirectionAsc
 	if targetPathInfo.IsFolder() {
-		fileResult, err := activeUser.PanClient().FileListGetAll(fileListParam, 0)
+		fileResult, err := activeUser.PanClient().FileListGetAll(fileListParam, 100)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -104,11 +125,11 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, showF
 		if file.IsFolder() {
 			statistic.CountOfDir += 1
 			if showFullPath {
-				fmt.Printf("%v%v %v/ -> %s\n", indentPrefixStr, pathPrefix, file.FileName, pathStr+"/"+file.FileName)
+				fmt.Printf("%v%v %v/ -> %s\n", indentPrefixStr, pathPrefix, file.FileName, targetPathInfo.Path+"/"+file.FileName)
 			} else {
 				fmt.Printf("%v%v %v/\n", indentPrefixStr, pathPrefix, file.FileName)
 			}
-			getTree(driveId, pathStr+"/"+file.Path, depth+1, statistic, showFullPath)
+			getTree(driveId, targetPathInfo.Path+"/"+file.Path, depth+1, statistic, showFullPath)
 			continue
 		}
 		statistic.CountOfFile += 1
@@ -119,7 +140,7 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, showF
 		}
 
 		if showFullPath {
-			fmt.Printf("%v%v %v -> %s\n", indentPrefixStr, prefix, file.FileName, pathStr+"/"+file.FileName)
+			fmt.Printf("%v%v %v -> %s\n", indentPrefixStr, prefix, file.FileName, targetPathInfo.Path+"/"+file.FileName)
 		} else {
 			fmt.Printf("%v%v %v\n", indentPrefixStr, prefix, file.FileName)
 		}
@@ -140,7 +161,6 @@ func RunTree(driveId, pathStr string, showFullPath bool) {
 		CountOfFile: 0,
 		SizeOfFile:  0,
 	}
-	fmt.Printf("%s\n", pathStr)
 	getTree(driveId, pathStr, 0, statistic, showFullPath)
 	fmt.Printf("\n%d 个文件夹, %d 个文件, %s 总大小\n", statistic.CountOfDir, statistic.CountOfFile, converter.ConvertFileSize(statistic.SizeOfFile, 2))
 }
