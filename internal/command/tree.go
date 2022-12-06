@@ -27,6 +27,9 @@ func CmdTree() cli.Command {
 	列出 /我的资源 内的文件和目录的树形图
 	aliyunpan tree /我的资源
 
+	列出 /我的资源 内的文件和目录的树形图，使用通配符
+	aliyunpan tree /我的*
+
 	列出 /我的资源 内的文件和目录的树形图，并且显示文件对应的完整绝对路径
 	aliyunpan tree -fp /我的资源
 `,

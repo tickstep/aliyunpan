@@ -62,6 +62,9 @@ func CmdLs() cli.Command {
 	绝对路径
 	aliyunpan ls /我的资源
 
+	列出 我的资源 内的文件和目录，使用通配符
+	aliyunpan ls /我的*
+
 	详细列出 我的资源 内的文件和目录
 	aliyunpan ll /我的资源
 `,
