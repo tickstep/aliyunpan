@@ -47,7 +47,8 @@ type (
 		NoCheck              bool
 		ShowProgress         bool
 		DriveId              string
-		UseInternalUrl       bool // 是否使用内置链接
+		UseInternalUrl       bool     // 是否使用内置链接
+		ExcludeNames         []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行下载，支持正则表达式
 	}
 
 	// LocateDownloadOption 获取下载链接可选参数
@@ -93,8 +94,19 @@ func CmdDownload() cli.Command {
 	下载 /我的资源 整个目录!!
 	aliyunpan download /我的资源
 
-    下载 /我的资源/1.mp4 并保存下载的文件到本地的 d:/panfile
+	下载 /我的资源 整个目录，但是排除所有的jpg文件
+	aliyunpan download -exn "\.jpg$" /我的资源
+
+	下载 /我的资源/1.mp4 并保存下载的文件到本地的 d:/panfile
 	aliyunpan download --saveto d:/panfile /我的资源/1.mp4
+
+  参考：
+    以下是典型的排除特定文件或者文件夹的例子，注意：参数值必须是正则表达式。在正则表达式中，^表示匹配开头，$表示匹配结尾。
+    1)排除@eadir文件或者文件夹：-exn "^@eadir$"
+    2)排除.jpg文件：-exn "\.jpg$"
+    3)排除.号开头的文件：-exn "^\."
+    4)排除~号开头的文件：-exn "^~"
+    5)排除 myfile.txt 文件：-exn "^myfile.txt$"
 `,
 		Category: "阿里云盘",
 		Before:   cmder.ReloadConfigFunc,
@@ -127,6 +139,7 @@ func CmdDownload() cli.Command {
 				NoCheck:              c.Bool("nocheck"),
 				ShowProgress:         !c.Bool("np"),
 				DriveId:              parseDriveId(c),
+				ExcludeNames:         c.StringSlice("exn"),
 			}
 
 			RunDownload(c.Args(), do)
@@ -174,6 +187,11 @@ func CmdDownload() cli.Command {
 				Name:  "driveId",
 				Usage: "网盘ID",
 				Value: "",
+			},
+			cli.StringSliceFlag{
+				Name:  "exn",
+				Usage: "exclude name，指定排除的文件夹或者文件的名称，被排除的文件不会进行下载，只支持正则表达式。支持同时排除多个名称，每一个名称就是一个exn参数",
+				Value: nil,
 			},
 		},
 	}
@@ -224,6 +242,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		InstanceStateStorageFormat: downloader.InstanceStateStorageFormatJSON,
 		ShowProgress:               options.ShowProgress,
 		UseInternalUrl:             config.Config.TransferUrlType == 2,
+		ExcludeNames:               options.ExcludeNames,
 	}
 	if cfg.CacheSize == 0 {
 		cfg.CacheSize = int(DownloadCacheSize)
@@ -297,8 +316,15 @@ func RunDownload(paths []string, options *DownloadOptions) {
 			continue
 		}
 		for _, f := range fileList {
-			// 匹配的文件
 			newCfg := *cfg
+
+			// 是否排除下载
+			if utils.IsExcludeFile(f.Path, &newCfg.ExcludeNames) {
+				fmt.Printf("排除文件: %s\n", f.Path)
+				continue
+			}
+
+			// 匹配的文件
 			unit := pandownload.DownloadTaskUnit{
 				Cfg:                  &newCfg, // 复制一份新的cfg
 				PanClient:            panClient,

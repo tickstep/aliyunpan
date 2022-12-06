@@ -25,6 +25,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/localfile"
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
@@ -537,6 +538,13 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		// 创建对应的任务进行下载
 		for k := range fileList {
 			fileList[k].Path = path.Join(dtu.FilePanPath, fileList[k].FileName)
+
+			// 是否排除下载
+			if utils.IsExcludeFile(fileList[k].Path, &dtu.Cfg.ExcludeNames) {
+				fmt.Printf("排除文件: %s\n", fileList[k].Path)
+				continue
+			}
+
 			if fileList[k].IsFolder() {
 				logger.Verbosef("[%s] create sub folder download task: %s\n",
 					dtu.taskInfo.Id(), fileList[k].Path)

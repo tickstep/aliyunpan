@@ -337,7 +337,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		localPathDir := filepath.Dir(curPath)
 
 		// 是否排除上传
-		if isExcludeFile(curPath, &opt.ExcludeNames) {
+		if utils.IsExcludeFile(curPath, &opt.ExcludeNames) {
 			fmt.Printf("排除文件: %s\n", curPath)
 			continue
 		}
@@ -359,7 +359,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			}
 
 			// 是否排除上传
-			if isExcludeFile(file.LogicPath, &opt.ExcludeNames) {
+			if utils.IsExcludeFile(file.LogicPath, &opt.ExcludeNames) {
 				fmt.Printf("排除文件: %s\n", file.LogicPath)
 				return filepath.SkipDir
 			}

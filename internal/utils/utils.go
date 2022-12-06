@@ -254,3 +254,19 @@ func IsLocalAbsPath(filePath string) bool {
 func IsPanAbsPath(filePath string) bool {
 	return path.IsAbs(filePath)
 }
+
+// IsExcludeFile 是否是指定排除的文件
+func IsExcludeFile(filePath string, excludeNames *[]string) bool {
+	if excludeNames == nil || len(*excludeNames) == 0 {
+		return false
+	}
+
+	for _, pattern := range *excludeNames {
+		fileName := path.Base(strings.ReplaceAll(filePath, "\\", "/"))
+		m, _ := regexp.MatchString(pattern, fileName)
+		if m {
+			return true
+		}
+	}
+	return false
+}

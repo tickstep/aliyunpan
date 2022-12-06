@@ -22,7 +22,6 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -165,20 +164,4 @@ func isIncludeFile(pattern string, fileName string) bool {
 // isMatchWildcardPattern 是否是统配符字符串
 func isMatchWildcardPattern(name string) bool {
 	return strings.ContainsAny(name, "*") || strings.ContainsAny(name, "?") || strings.ContainsAny(name, "[")
-}
-
-// 是否是指定排除的文件
-func isExcludeFile(filePath string, excludeNames *[]string) bool {
-	if excludeNames == nil || len(*excludeNames) == 0 {
-		return false
-	}
-
-	for _, pattern := range *excludeNames {
-		fileName := path.Base(strings.ReplaceAll(filePath, "\\", "/"))
-		m, _ := regexp.MatchString(pattern, fileName)
-		if m {
-			return true
-		}
-	}
-	return false
 }
