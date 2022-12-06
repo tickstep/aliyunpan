@@ -85,13 +85,16 @@ func CmdDownload() cli.Command {
 	aliyunpan config set -savedir D:/Downloads
 
 	下载 /我的资源/1.mp4
-	aliyunpan d /我的资源/1.mp4
+	aliyunpan download /我的资源/1.mp4
+
+	下载 /我的资源 目录下面所有的mp4文件，使用通配符
+	aliyunpan download /我的资源/*.mp4
 
 	下载 /我的资源 整个目录!!
-	aliyunpan d /我的资源
+	aliyunpan download /我的资源
 
     下载 /我的资源/1.mp4 并保存下载的文件到本地的 d:/panfile
-	aliyunpan d --saveto d:/panfile /我的资源/1.mp4
+	aliyunpan download --saveto d:/panfile /我的资源/1.mp4
 `,
 		Category: "阿里云盘",
 		Before:   cmder.ReloadConfigFunc,
@@ -282,34 +285,48 @@ func RunDownload(paths []string, options *DownloadOptions) {
 
 	// 处理队列
 	for k := range paths {
-		newCfg := *cfg
-		unit := pandownload.DownloadTaskUnit{
-			Cfg:                  &newCfg, // 复制一份新的cfg
-			PanClient:            panClient,
-			VerbosePrinter:       panCommandVerbose,
-			PrintFormat:          downloadPrintFormat(options.Load),
-			ParentTaskExecutor:   &executor,
-			DownloadStatistic:    statistic,
-			IsPrintStatus:        options.IsPrintStatus,
-			IsExecutedPermission: options.IsExecutedPermission,
-			IsOverwrite:          options.IsOverwrite,
-			NoCheck:              options.NoCheck,
-			FilePanPath:          paths[k],
-			DriveId:              options.DriveId,
-			GlobalSpeedsStat:     globalSpeedsStat,
+		// 使用通配符匹配
+		fileList, err2 := matchPathByShellPattern(options.DriveId, paths[k])
+		if err2 != nil {
+			fmt.Printf("获取文件出错，请稍后重试: %s\n", paths[k])
+			continue
 		}
+		if fileList == nil || len(fileList) == 0 {
+			// 文件不存在
+			fmt.Printf("文件不存在: %s\n", paths[k])
+			continue
+		}
+		for _, f := range fileList {
+			// 匹配的文件
+			newCfg := *cfg
+			unit := pandownload.DownloadTaskUnit{
+				Cfg:                  &newCfg, // 复制一份新的cfg
+				PanClient:            panClient,
+				VerbosePrinter:       panCommandVerbose,
+				PrintFormat:          downloadPrintFormat(options.Load),
+				ParentTaskExecutor:   &executor,
+				DownloadStatistic:    statistic,
+				IsPrintStatus:        options.IsPrintStatus,
+				IsExecutedPermission: options.IsExecutedPermission,
+				IsOverwrite:          options.IsOverwrite,
+				NoCheck:              options.NoCheck,
+				FilePanPath:          f.Path,
+				DriveId:              options.DriveId,
+				GlobalSpeedsStat:     globalSpeedsStat,
+			}
 
-		// 设置储存的路径
-		if options.SaveTo != "" {
-			unit.OriginSaveRootPath = options.SaveTo
-			unit.SavePath = filepath.Join(options.SaveTo, paths[k])
-		} else {
-			// 使用默认的保存路径
-			unit.OriginSaveRootPath = GetActiveUser().GetSavePath("")
-			unit.SavePath = GetActiveUser().GetSavePath(paths[k])
+			// 设置储存的路径
+			if options.SaveTo != "" {
+				unit.OriginSaveRootPath = options.SaveTo
+				unit.SavePath = filepath.Join(options.SaveTo, f.Path)
+			} else {
+				// 使用默认的保存路径
+				unit.OriginSaveRootPath = GetActiveUser().GetSavePath("")
+				unit.SavePath = GetActiveUser().GetSavePath(f.Path)
+			}
+			info := executor.Append(&unit, options.MaxRetry)
+			fmt.Printf("[%s] 加入下载队列: %s\n", info.Id(), f.Path)
 		}
-		info := executor.Append(&unit, options.MaxRetry)
-		fmt.Printf("[%s] 加入下载队列: %s\n", info.Id(), paths[k])
 	}
 
 	// 开始计时
