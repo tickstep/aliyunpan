@@ -97,7 +97,7 @@ func main() {
 	go func() {
 		for {
 			// Token刷新进程，不管是CLI命令行模式，还是直接命令模式，本刷新任务都会执行
-			time.Sleep(time.Duration(5) * time.Minute)
+			time.Sleep(time.Duration(1) * time.Minute)
 			//time.Sleep(time.Duration(5) * time.Second)
 			checkLoginExpiredAndRelogin()
 		}
