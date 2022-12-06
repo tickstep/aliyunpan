@@ -431,6 +431,11 @@ StepUploadPrepareUpload:
 	if apierr != nil {
 		result.Err = apierr
 		result.ResultMessage = "创建上传任务失败：" + apierr.Error()
+		if apierr.Code == apierror.ApiCodeTooManyRequests || apierr.Code == apierror.ApiCodeBadGateway {
+			logger.Verboseln("create upload file error: " + result.ResultMessage)
+			// 重试
+			result.NeedRetry = true
+		}
 		return
 	}
 
