@@ -23,7 +23,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -338,7 +337,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		localPathDir := filepath.Dir(curPath)
 
 		// 是否排除上传
-		if isExcludeFile(curPath, opt) {
+		if isExcludeFile(curPath, &opt.ExcludeNames) {
 			fmt.Printf("排除文件: %s\n", curPath)
 			continue
 		}
@@ -360,7 +359,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			}
 
 			// 是否排除上传
-			if isExcludeFile(file.LogicPath, opt) {
+			if isExcludeFile(file.LogicPath, &opt.ExcludeNames) {
 				fmt.Printf("排除文件: %s\n", file.LogicPath)
 				return filepath.SkipDir
 			}
@@ -472,22 +471,6 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		}
 	}
 	activeUser.DeleteCache(GetAllPathFolderByPath(savePath))
-}
-
-// 是否是排除上传的文件
-func isExcludeFile(filePath string, opt *UploadOptions) bool {
-	if opt == nil || len(opt.ExcludeNames) == 0 {
-		return false
-	}
-
-	for _, pattern := range opt.ExcludeNames {
-		fileName := path.Base(strings.ReplaceAll(filePath, "\\", "/"))
-		m, _ := regexp.MatchString(pattern, fileName)
-		if m {
-			return true
-		}
-	}
-	return false
 }
 
 // RunRapidUpload 秒传
