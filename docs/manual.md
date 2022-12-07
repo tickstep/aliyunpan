@@ -50,6 +50,7 @@
             + [1.禁止特定文件上传](#1.禁止特定文件上传)
             + [2.上传文件后删除本地文件](#2.上传文件后删除本地文件)
             + [3.下载文件并截断过长的文件名](#3.下载文件并截断过长的文件名)
+            + [4.上传文件去掉文件名包含的部分字符](#4.上传文件去掉文件名包含的部分字符)
     * [显示和修改程序配置项](#显示和修改程序配置项)
 - [常见问题Q&A](#常见问题Q&A)
     * [1. 如何获取RefreshToken](#1-如何获取RefreshToken)
@@ -1113,6 +1114,47 @@ console.log("hello world");
 PluginUtil.LocalFS.deleteFile(params["localFilePath"]);
 ```
 
+5.PluginUtil.Email.sendTextMail()
+发送文本邮件，定义如下
+```
+PluginUtil.Email.sendTextMail(mailServer, userName, password, to, subject, body)
+
+其中：
+mailServer - smtp服务器+端口
+userName - 发件人邮箱地址
+password - 发件人邮箱密码
+to - 收件人邮箱地址
+subject - 邮件标题
+body - 邮件内容，纯文本
+```
+样例
+```js
+PluginUtil.Email.sendTextMail("smtp.qq.com:465", "123xxx@qq.com", "pwdxxxxxx", "12545xxx@qq.com", "文件上传通知", "该文件已经上传完毕");
+```
+
+6.PluginUtil.Email.sendHtmlMail()
+发送HTML富文本邮件，定义如下
+```
+PluginUtil.Email.sendHtmlMail(mailServer, userName, password, to, subject, body)
+
+其中：
+mailServer - smtp服务器+端口
+userName - 发件人邮箱地址
+password - 发件人邮箱密码
+to - 收件人邮箱地址
+subject - 邮件标题
+body - 邮件内容，HTML富文本
+```
+样例
+```js
+var html = "<html>"
+    +"<body>"
+    +"<h1>文件上传通知</h1>"
+    +"<h2>该文件已经上传完毕</h2>"
+    +"</body>"
+    +"</html>";
+PluginUtil.Email.sendHtmlMail("smtp.qq.com:465", "123xxx@qq.com", "pwdxxxxxx", "12545xxx@qq.com", "文件上传通知", html);
+```
 
 ### 常见场景样例
 这里收集了一些常见的需求样例，可以作为插件定制的样例模板。

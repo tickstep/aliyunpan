@@ -45,6 +45,24 @@ func DeleteLocalFile(localFilePath string) bool {
 	return false
 }
 
+// SendTextMail 发送文本邮件
+func SendTextMail(mailServer, userName, password, to, subject, body string) bool {
+	if e := sendEmail(mailServer, userName, password, to, subject, body, "text", true); e != nil {
+		logger.Verboseln("js SendTextMail error ", e)
+		return false
+	}
+	return true
+}
+
+// SendHtmlMail 发送HTML富文本邮件
+func SendHtmlMail(mailServer, userName, password, to, subject, body string) bool {
+	if e := sendEmail(mailServer, userName, password, to, subject, body, "html", true); e != nil {
+		logger.Verboseln("js SendHtmlMail error ", e)
+		return false
+	}
+	return true
+}
+
 func sendEmail(mailServer, userName, password, to, subject, body, mailType string, useSsl bool) error {
 	mailServerHost := strings.Split(mailServer, ":")[0]
 	auth := smtp.PlainAuth("", userName, password, mailServerHost)
@@ -64,28 +82,4 @@ func sendEmail(mailServer, userName, password, to, subject, body, mailType strin
 	} else {
 		return e.Send(mailServer, auth)
 	}
-	//
-	//// 拼接消息体
-	//var contentType string
-	//if mailType == "html" {
-	//	contentType = "Content-Type: text/" + mailType + "; charset=UTF-8"
-	//} else {
-	//	contentType = "Content-Type: text/plain" + "; charset=UTF-8"
-	//}
-	//msg := []byte("To: " + to + "\r\nFrom: " + userName + "\r\nSubject: " + subject + "\r\n" + contentType + "\r\n\r\n" + body)
-	//
-	//// msg 内容输出查看
-	//logger.Verboseln("To: " + to + "\r\n" +
-	//	"From: " + userName + "\r\n" +
-	//	"Subject: " + subject + "\r\n" +
-	//	"" + contentType + "\r\n\r\n" +
-	//	"" + body)
-	//
-	//// 进行身份认证
-	//hp := strings.Split(mailServer, ":")
-	//auth := smtp.PlainAuth("", userName, password, hp[0])
-	//
-	//sendTo := strings.Split(to, ";")
-	//err := smtp.SendMail(mailServer, auth, userName, sendTo, msg)
-	//return err
 }

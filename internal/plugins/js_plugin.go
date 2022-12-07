@@ -55,6 +55,12 @@ func (js *JsPlugin) Start() error {
 	pluginObj.Set("LocalFS", localFS)
 	localFS.Set("deleteFile", DeleteLocalFile) // PluginUtil.LocalFS.deleteFile()
 
+	// PluginUtil.Email
+	emailObj := js.vm.NewObject()
+	pluginObj.Set("Email", emailObj)
+	emailObj.Set("sendTextMail", SendTextMail) // PluginUtil.Email.sendTextMail()
+	emailObj.Set("sendHtmlMail", SendHtmlMail) // PluginUtil.Email.sendHtmlMail()
+
 	return nil
 }
 
