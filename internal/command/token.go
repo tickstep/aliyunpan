@@ -114,6 +114,7 @@ func RunTokenUpdate(modeFlag string) {
 			params.NewToken = newToken.RefreshToken
 
 			user.RefreshToken = newToken.RefreshToken
+			user.WebToken = *newToken
 			fmt.Printf("成功刷新%s用户的RefreshToken\n", user.Nickname)
 		} else {
 			params.Result = "fail"

@@ -117,6 +117,7 @@ func RefreshTokenInNeed(activeUser *config.PanUser) bool {
 				// need update refresh token
 				logger.Verboseln("access token expired, get new from refresh token")
 				if wt, er := aliyunpan.GetAccessTokenFromRefreshToken(activeUser.RefreshToken); er == nil {
+					activeUser.RefreshToken = wt.RefreshToken
 					activeUser.WebToken = *wt
 					activeUser.PanClient().UpdateToken(*wt)
 					logger.Verboseln("get new access token success")
