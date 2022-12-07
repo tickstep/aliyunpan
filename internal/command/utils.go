@@ -122,32 +122,11 @@ func RefreshTokenInNeed(activeUser *config.PanUser) bool {
 					activeUser.PanClient().UpdateToken(*wt)
 					logger.Verboseln("get new access token success")
 					return true
+				} else {
+					// token refresh error
+					// if token has expired, callback plugin api
+					// TODO: plugin api callback
 				}
-			}
-		}
-	}
-	return false
-}
-
-// ReloadRefreshTokenInNeed 从配置文件加载最新token
-func ReloadRefreshTokenInNeed(activeUser *config.PanUser) bool {
-	if activeUser == nil {
-		return false
-	}
-
-	// refresh expired token
-	if activeUser.PanClient() != nil {
-		if len(activeUser.WebToken.RefreshToken) > 0 {
-			cz := time.FixedZone("CST", 8*3600) // 东8区
-			expiredTime, _ := time.ParseInLocation("2006-01-02 15:04:05", activeUser.WebToken.ExpireTime, cz)
-			now := time.Now()
-			if (expiredTime.Unix() - now.Unix()) <= (10 * 60) { // 10min
-				// reload refresh token from config file
-				u := config.Config.ActiveUser()
-				activeUser.WebToken = u.WebToken
-				activeUser.PanClient().UpdateToken(u.WebToken)
-				logger.Verboseln("reload access token from config file")
-				return true
 			}
 		}
 	}
