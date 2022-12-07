@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/plugins"
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/logger"
 	"math/rand"
 	"net/url"
@@ -124,8 +126,21 @@ func RefreshTokenInNeed(activeUser *config.PanUser) bool {
 					return true
 				} else {
 					// token refresh error
-					// if token has expired, callback plugin api
-					// TODO: plugin api callback
+					// if token has expired, callback plugin api for notify
+					if now.Unix() >= expiredTime.Unix() {
+						pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+						plugin, _ := pluginManger.GetPlugin()
+						params := &plugins.UserTokenRefreshFinishParams{
+							Result:    "fail",
+							Message:   er.Error(),
+							OldToken:  activeUser.RefreshToken,
+							NewToken:  "",
+							UpdatedAt: utils.NowTimeStr(),
+						}
+						if er1 := plugin.UserTokenRefreshFinishCallback(plugins.GetContext(activeUser), params); er1 != nil {
+							logger.Verbosef("UserTokenRefreshFinishCallback error: " + er1.Error())
+						}
+					}
 				}
 			}
 		}
