@@ -1061,13 +1061,13 @@ JS插件的样本文件默认存放在程序所在的plugin/js文件夹下，分
 目前只开放了如下函数，你可以在你的js脚本中直接调用   
 1.console.log()   
 打印日志
-```
+```js
 console.log("hello world");
 ```
 
 2.PluginUtil.Http.get()   
 发起HTTP的get请求
-```
+```js
     var header = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36",
         "Content-Type": "application/json",
@@ -1085,7 +1085,7 @@ console.log("hello world");
 
 3.PluginUtil.Http.post()   
 发起HTTP的post请求
-```
+```js
     var header = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36",
         "Content-Type": "application/json",
@@ -1109,7 +1109,7 @@ console.log("hello world");
 
 4.PluginUtil.LocalFS.deleteFile()   
 删除本地指定文件，不支持文件夹
-```
+```js
 PluginUtil.LocalFS.deleteFile(params["localFilePath"]);
 ```
 
@@ -1119,7 +1119,7 @@ PluginUtil.LocalFS.deleteFile(params["localFilePath"]);
 
 #### 1.禁止特定文件上传
 使用JavaScript上传插件中的`uploadFilePrepareCallback`函数。如下所示：
-```
+```js
 function uploadFilePrepareCallback(context, params) {
     console.log(params)
 
@@ -1153,7 +1153,7 @@ function uploadFilePrepareCallback(context, params) {
 
 #### 2.上传文件后删除本地文件
 使用JavaScript上传插件中的`uploadFileFinishCallback`函数。如下所示：
-```
+```js
 function uploadFileFinishCallback(context, params) {
     console.log(params);
     if (params["localFileType"] != "file") {
@@ -1169,7 +1169,7 @@ function uploadFileFinishCallback(context, params) {
 #### 3.下载文件并截断过长的文件名
 有些文件的路径或者名称太长，下载的时候可能会由于路径名称过程导致无法下载，这时候可以使用JavaScript下载插件中的`downloadFilePrepareCallback`函数定制下载保存的文件名。   
 如下所示：
-```
+```js
 function downloadFilePrepareCallback(context, params) {
     console.log(params)
 
@@ -1235,7 +1235,23 @@ function downloadFilePrepareCallback(context, params) {
 [1] 下载完成, 保存位置: D:\test\亚马逊书籍合集/亚马逊 kindle ebook 大合集5289册/经济金融 (2)/解密Instagra.mobi
 [1] 检验文件有效性成功: D:\test\亚马逊书籍合集/亚马逊 kindle ebook 大合集5289册/经济金融 (2)/解密Instagra.mobi
 ```
+#### 4.上传文件去掉文件名包含的部分字符
+例如本地文件夹名称为```[周杰伦]范特西[mp3]```，上传到网盘希望能更改成名称```[周杰伦]范特西```但保持本地文件夹名称不变，因为文件夹有很多不希望每个手动更改，可以这样实现：
+```js
+function uploadFilePrepareCallback(context, params) {
+    var result = {
+        "uploadApproved": "yes",
+        "driveFilePath": ""
+    };
 
+    // 去掉网盘保存路径中包含的[mp3]字段
+    var filePath =  params["driveFilePath"];
+    filePath = filePath.replace(/\[mp3\]/g, "");
+    result["driveFilePath"] = filePath;
+
+    return result;
+}
+```
 
 ## 显示和修改程序配置项
 ```
