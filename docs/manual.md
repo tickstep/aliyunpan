@@ -51,6 +51,7 @@
             + [2.上传文件后删除本地文件](#2.上传文件后删除本地文件)
             + [3.下载文件并截断过长的文件名](#3.下载文件并截断过长的文件名)
             + [4.上传文件去掉文件名包含的部分字符](#4.上传文件去掉文件名包含的部分字符)
+            + [5.Token刷新失败发送外部通知](#5.Token刷新失败发送外部通知)
     * [显示和修改程序配置项](#显示和修改程序配置项)
 - [常见问题Q&A](#常见问题Q&A)
     * [1. 如何获取RefreshToken](#1-如何获取RefreshToken)
@@ -1050,9 +1051,10 @@ server {
 8.下载的文件路径进行更改，但是网盘的文件保持不变   
 9.下载文件完成后，通过HTTP通知其他服务   
 10.同步备份功能，支持过滤本地文件，或者过滤云盘文件。定制上传或者下载需要同步的文件
+11.Token刷新失败或者过期，发送外部通知（HTTP&邮件）
 
 ### 如何使用
-JS插件的样本文件默认存放在程序所在的plugin/js文件夹下，分为下载(download_handler.js.sample)、上传(upload_handler.js.sample)、同步备份(sync_handler.js.sample)插件。
+JS插件的样本文件默认存放在程序所在的plugin/js文件夹下，分为下载(download_handler.js.sample)、上传(upload_handler.js.sample)、同步备份(sync_handler.js.sample)、用户Token(token_handler.js.sample)插件。
 
 建议拷贝一份并将后缀名更改为.js，例如：upload_handler.js，不然插件不会生效。   
 你必须具备一定的JS语言基础，然后按照里面的样例根据自己所需进行改动即可。   
@@ -1294,6 +1296,32 @@ function uploadFilePrepareCallback(context, params) {
     return result;
 }
 ```
+
+#### 5.Token刷新失败发送外部通知
+Token刷新失败发送外部通知，例如Server酱
+```js
+function userTokenRefreshFinishCallback(context, params) {
+    var header = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    };
+    try {
+        if (params["result"] === "fail") {
+            var reqData = {
+                "text": "Token刷新失败",
+                "desp": params["message"]
+            };
+            var r = PluginUtil.Http.post(header, "https://sctapi.ftqq.com/xxxxxkeyxxxxxx.send", JSON.stringify(reqData));
+        }
+    } catch (e) {
+        if (e !== "Error") {
+            throw e;
+        }
+    }
+}
+```
+
 
 ## 显示和修改程序配置项
 ```

@@ -215,6 +215,24 @@ func (js *JsPlugin) SyncFileFinishCallback(context *Context, params *SyncFileFin
 	return nil
 }
 
+func (js *JsPlugin) UserTokenRefreshFinishCallback(context *Context, params *UserTokenRefreshFinishParams) error {
+	var fn func(*Context, *UserTokenRefreshFinishParams) error
+	if !js.isHandlerFuncExisted("userTokenRefreshFinishCallback") {
+		return nil
+	}
+	err := js.vm.ExportTo(js.vm.Get("userTokenRefreshFinishCallback"), &fn)
+	if err != nil {
+		logger.Verboseln("Js函数映射到 Go 函数失败！")
+		return nil
+	}
+	er := fn(context, params)
+	if er != nil {
+		logger.Verboseln(er)
+		return nil
+	}
+	return nil
+}
+
 func (js *JsPlugin) Stop() error {
 	return nil
 }

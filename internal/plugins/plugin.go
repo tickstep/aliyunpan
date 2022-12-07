@@ -135,6 +135,15 @@ type (
 		FileUpdatedAt string `json:"fileUpdatedAt"`
 	}
 
+	// UserTokenRefreshFinishParams 用户Token刷新完成后回调函数
+	UserTokenRefreshFinishParams struct {
+		Result    string `json:"result"`
+		Message   string `json:"message"`
+		OldToken  string `json:"oldToken"`
+		NewToken  string `json:"newToken"`
+		UpdatedAt string `json:"updatedAt"`
+	}
+
 	// Plugin 插件接口
 	Plugin interface {
 		// Start 启动
@@ -160,6 +169,9 @@ type (
 
 		// SyncFileFinishCallback 同步备份-同步文件完成的回调函数
 		SyncFileFinishCallback(context *Context, params *SyncFileFinishParams) error
+
+		// UserTokenRefreshFinishCallback 用户Token刷新完成后回调函数
+		UserTokenRefreshFinishCallback(context *Context, params *UserTokenRefreshFinishParams) error
 
 		// Stop 停止
 		Stop() error

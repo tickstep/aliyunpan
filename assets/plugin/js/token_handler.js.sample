@@ -1,0 +1,48 @@
+// ==========================================================================================
+// aliyunpan JS插件回调处理函数
+// 支持 JavaScript ECMAScript 5.1 语言规范
+//
+// 更多内容请查看官方文档：https://github.com/tickstep/aliyunpan
+// ==========================================================================================
+
+
+// ------------------------------------------------------------------------------------------
+// 函数说明：用户Token刷新完成后回调函数
+//
+// 参数说明
+// context - 当前调用的上下文信息
+// {
+// 	"appName": "aliyunpan",
+// 	"version": "v0.1.3",
+// 	"userId": "11001d48564f43b3bc5662874f04bb11",
+// 	"nickname": "tickstep",
+// 	"fileDriveId": "19519111",
+// 	"albumDriveId": "29519122"
+// }
+// appName - 应用名称，当前固定为aliyunpan
+// version - 版本号
+// userId - 当前登录用户的ID
+// nickname - 用户昵称
+// fileDriveId - 用户文件网盘ID
+// albumDriveId - 用户相册网盘ID
+//
+// params - Token刷新参数
+// {
+// 	"result": "success",
+// 	"message": "ok",
+// 	"oldToken": "aa31fcc229c54d5ab6d8bfb17aff3711",
+// 	"newToken": "bb31fcc229c54d5ab6d8bfb17aff3722",
+// 	"updatedAt": "2022-04-14 07:05:12"
+// }
+// result - Token刷新的结果，success-成功，fail-失败
+// message - 消息说明，如果失败这里会有原因说明
+// oldToken - 刷新前的Token
+// newToken - 刷新后的Token，只有result为success的才有该值
+// updatedAt - Token刷新的时间
+//
+// 返回值说明
+// （没有返回值）
+// ------------------------------------------------------------------------------------------
+function userTokenRefreshFinishCallback(context, params) {
+    console.log(params)
+}
