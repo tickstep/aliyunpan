@@ -1158,6 +1158,33 @@ var html = "<html>"
 PluginUtil.Email.sendHtmlMail("smtp.qq.com:465", "123xxx@qq.com", "pwdxxxxxx", "12545xxx@qq.com", "文件上传通知", html);
 ```
 
+7.PluginUtil.KV.putString()
+存储键值对，定义如下
+```
+PluginUtil.KV.putString(key, value)
+
+其中：
+key - 键，字符串
+value - 值，字符串
+```
+样例
+```js
+PluginUtil.KV.putString("mykey", "1670419352");
+```
+
+8.PluginUtil.KV.getString()
+获取存储的键值，指定对应的键，返回存储的值，如果没有则返回空字符串，定义如下
+```
+PluginUtil.KV.getString(key)
+
+其中：
+key - 键，字符串
+```
+样例
+```js
+var value = PluginUtil.KV.getString("mykey");
+```
+
 ### 常见场景样例
 这里收集了一些常见的需求样例，可以作为插件定制的样例模板。
 

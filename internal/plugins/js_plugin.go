@@ -3,6 +3,7 @@ package plugins
 import (
 	"fmt"
 	"github.com/dop251/goja"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/logger"
 	"strings"
 )
@@ -60,6 +61,13 @@ func (js *JsPlugin) Start() error {
 	pluginObj.Set("Email", emailObj)
 	emailObj.Set("sendTextMail", SendTextMail) // PluginUtil.Email.sendTextMail()
 	emailObj.Set("sendHtmlMail", SendHtmlMail) // PluginUtil.Email.sendHtmlMail()
+
+	// PluginUtil.KV
+	PersistenceFilePath = config.GetPluginKvFile()
+	kvObj := js.vm.NewObject()
+	pluginObj.Set("KV", kvObj)
+	kvObj.Set("getString", GetString) // PluginUtil.KV.getString()
+	kvObj.Set("putString", PutString) // PluginUtil.KV.putString()
 
 	return nil
 }

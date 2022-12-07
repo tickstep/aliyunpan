@@ -3,11 +3,28 @@ package plugins
 import (
 	"crypto/tls"
 	"github.com/jordan-wright/email"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/tickstep/bolt"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"net/smtp"
 	"os"
 	"strings"
+	"sync"
+	"time"
+)
+
+type (
+	PersistenceItem struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+		Type  string `json:"type"`
+	}
+)
+
+var (
+	locker              = &sync.Mutex{}
+	PersistenceFilePath = ""
 )
 
 // HttpGet Http的get请求
@@ -82,4 +99,70 @@ func sendEmail(mailServer, userName, password, to, subject, body, mailType strin
 	} else {
 		return e.Send(mailServer, auth)
 	}
+}
+
+// GetString 获取值
+func GetString(key string) string {
+	locker.Lock()
+	defer locker.Unlock()
+	db, err := bolt.Open(PersistenceFilePath, 0755, &bolt.Options{Timeout: 5 * time.Second})
+	if err != nil {
+		return ""
+	}
+	defer db.Close()
+
+	tx, err := db.Begin(false)
+	if err != nil {
+		return ""
+	}
+	bkt := tx.Bucket([]byte("/"))
+	if bkt == nil {
+		return ""
+	}
+	data := bkt.Get([]byte(key))
+	item := PersistenceItem{}
+	if e := jsoniter.Unmarshal(data, &item); e == nil {
+		return item.Value
+	}
+	return ""
+}
+
+// PutString 存储KV键值对
+func PutString(key, value string) bool {
+	locker.Lock()
+	defer locker.Unlock()
+	db, err := bolt.Open(PersistenceFilePath, 0755, &bolt.Options{Timeout: 5 * time.Second})
+	if err != nil {
+		return false
+	}
+	defer db.Close()
+
+	// Start a writable transaction.
+	tx, err := db.Begin(true)
+	if err != nil {
+		return false
+	}
+	defer tx.Rollback()
+
+	rootBucket, er := tx.CreateBucketIfNotExists([]byte("/"))
+	if er != nil {
+		return false
+	}
+	data, ee := jsoniter.Marshal(&PersistenceItem{
+		Key:   key,
+		Value: value,
+		Type:  "string",
+	})
+	if ee != nil {
+		return false
+	}
+	if e := rootBucket.Put([]byte(key), data); e != nil {
+		return false
+	}
+
+	// Commit the transaction and check for error.
+	if err := tx.Commit(); err != nil {
+		return false
+	}
+	return true
 }

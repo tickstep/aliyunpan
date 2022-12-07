@@ -323,6 +323,11 @@ func GetPluginDir() string {
 	return strings.TrimSuffix(GetConfigDir(), "/") + "/plugin"
 }
 
+// GetPluginKvFile 获取插件KV键值对存储文件
+func GetPluginKvFile() string {
+	return GetPluginDir() + "/kv.bolt"
+}
+
 // GetSyncDriveDir 获取同步备份的文件夹路径
 func GetSyncDriveDir() string {
 	return strings.TrimSuffix(GetConfigDir(), "/") + "/sync_drive"
