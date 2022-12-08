@@ -1335,6 +1335,17 @@ function userTokenRefreshFinishCallback(context, params) {
     };
     try {
         if (params["result"] === "fail") {
+            // 避免频繁发送
+            var ONE_MINUTE = 60 * 1000;
+            var lastSendEmailTime = PluginUtil.KV.getString("email_last_send_time");
+            if (lastSendEmailTime != "") {
+                if ((Date.now() - lastSendEmailTime) < (10 * ONE_MINUTE)) {
+                    console.log("距离上次发送邮件小于10分钟，先不发送了");
+                    return
+                }
+            }
+            PluginUtil.KV.putString("email_last_send_time", Date.now());
+            
             var reqData = {
                 "text": "Token刷新失败",
                 "desp": params["message"]
@@ -1349,6 +1360,33 @@ function userTokenRefreshFinishCallback(context, params) {
 }
 ```
 
+或者发送邮件通知
+```js
+function userTokenRefreshFinishCallback(context, params) {
+    try {
+        if (params["result"] === "fail") {
+            // 避免频繁发送
+            var ONE_MINUTE = 60 * 1000;
+            var lastSendEmailTime = PluginUtil.KV.getString("email_last_send_time");
+            if (lastSendEmailTime != "") {
+                if ((Date.now() - lastSendEmailTime) < (10 * ONE_MINUTE)) {
+                    console.log("距离上次发送邮件小于10分钟，先不发送了");
+                    return
+                }
+            }
+            PluginUtil.KV.putString("email_last_send_time", Date.now());
+
+            // 发送通知邮件，请确保你的发送邮箱具备smtp发送权限，没有的需要找邮箱提供商配置开启
+            console.log("发送通知邮件");
+            PluginUtil.Email.sendTextMail("smtp.qq.com:465", "123xxx@qq.com", "pwdxxxxxx", "12545xxx@qq.com", "Token刷新失败了", "Token过期了，骚年快去手动恢复吧");
+        }
+    } catch (e) {
+        if (e !== "Error") {
+            throw e;
+        }
+    }
+}
+```
 
 ## 显示和修改程序配置项
 ```
