@@ -43,8 +43,8 @@ func CmdCd() cli.Command {
 	切换根目录:
 	aliyunpan cd /
 `,
-		Before: cmder.ReloadConfigFunc,
-		After:  cmder.SaveConfigFunc,
+		Before: ReloadConfigFunc,
+		After:  SaveConfigFunc,
 		Action: func(c *cli.Context) error {
 			if c.NArg() == 0 {
 				cli.ShowCommandHelp(c, c.Command.Name)
@@ -73,7 +73,7 @@ func CmdPwd() cli.Command {
 		Usage:     "输出工作目录",
 		UsageText: cmder.App().Name + " pwd",
 		Category:  "阿里云盘",
-		Before:    cmder.ReloadConfigFunc,
+		Before:    ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if config.Config.ActiveUser() == nil {
 				fmt.Println("未登录账号")

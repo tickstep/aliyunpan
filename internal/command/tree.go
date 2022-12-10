@@ -34,7 +34,7 @@ func CmdTree() cli.Command {
 	aliyunpan tree -fp /我的资源
 `,
 		Category: "阿里云盘",
-		Before:   cmder.ReloadConfigFunc,
+		Before:   ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if config.Config.ActiveUser() == nil {
 				fmt.Println("未登录账号")

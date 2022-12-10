@@ -64,7 +64,7 @@ func CmdImport() cli.Command {
     aliyunpan import -saveto=/ /Users/tickstep/Downloads/export_files.txt
 `,
 		Category: "阿里云盘",
-		Before:   cmder.ReloadConfigFunc,
+		Before:   ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if c.NArg() < 1 {
 				cli.ShowCommandHelp(c, c.Command.Name)

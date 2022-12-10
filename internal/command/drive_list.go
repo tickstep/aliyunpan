@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
-	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
@@ -38,8 +37,8 @@ func CmdDrive() cli.Command {
 	aliyunpan drive <driveId>
 `,
 		Category: "阿里云盘账号",
-		Before:   cmder.ReloadConfigFunc,
-		After:    cmder.SaveConfigFunc,
+		Before:   ReloadConfigFunc,
+		After:    SaveConfigFunc,
 		Action: func(c *cli.Context) error {
 			inputData := c.Args().Get(0)
 			targetDriveId := strings.TrimSpace(inputData)

@@ -30,8 +30,8 @@ func CmdWebdav() cli.Command {
 		Usage:       "在线网盘服务",
 		Description: "webdav在线网盘服务",
 		Category:    "阿里云盘",
-		Before:      cmder.ReloadConfigFunc,
-		After:       cmder.SaveConfigFunc,
+		Before:      ReloadConfigFunc,
+		After:       SaveConfigFunc,
 		Action: func(c *cli.Context) error {
 			fmt.Print(`
 本文命令可以让阿里云盘变身为webdav协议的文件服务器。这样你可以把阿里云盘挂载为Windows、Linux、Mac系统的磁盘，可以通过NAS系统做文件管理或文件同步等等。

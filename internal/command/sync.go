@@ -50,7 +50,7 @@ func CmdSync() cli.Command {
     aliyunpan sync start -h
 `,
 		Category: "阿里云盘",
-		Before:   cmder.ReloadConfigFunc,
+		Before:   ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			cli.ShowCommandHelp(c, c.Command.Name)
 			return nil

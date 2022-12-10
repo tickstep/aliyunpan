@@ -36,7 +36,7 @@ func CmdShare() cli.Command {
 		Usage:     "分享文件/目录",
 		UsageText: cmder.App().Name + " share",
 		Category:  "阿里云盘",
-		Before:    cmder.ReloadConfigFunc,
+		Before:    ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			cli.ShowCommandHelp(c, c.Command.Name)
 			return nil

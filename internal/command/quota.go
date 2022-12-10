@@ -15,7 +15,6 @@ package command
 
 import (
 	"fmt"
-	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/converter"
 	"github.com/urfave/cli"
@@ -34,7 +33,7 @@ func CmdQuota() cli.Command {
 		Usage:       "获取当前帐号空间配额",
 		Description: "获取网盘的总储存空间, 和已使用的储存空间",
 		Category:    "阿里云盘账号",
-		Before:      cmder.ReloadConfigFunc,
+		Before:      ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if config.Config.ActiveUser() == nil {
 				fmt.Println("未登录账号")
@@ -59,6 +58,6 @@ func RunGetQuotaInfo() (quotaInfo *QuotaInfo, error error) {
 	}
 	return &QuotaInfo{
 		UsedSize: int64(user.UsedSize),
-		Quota: int64(user.TotalSize),
+		Quota:    int64(user.TotalSize),
 	}, nil
 }

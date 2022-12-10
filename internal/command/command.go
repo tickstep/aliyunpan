@@ -97,7 +97,7 @@ func newRapidUploadItem(rapidUploadShareLink string) (*RapidUploadItem, error) {
 	item.FileSha1 = strings.TrimSpace(parts[1])
 
 	// size
-	if size,e := strconv.ParseInt(parts[2], 10, 64); e == nil{
+	if size, e := strconv.ParseInt(parts[2], 10, 64); e == nil {
 		item.FileSize = size
 	} else {
 		return nil, fmt.Errorf("文件大小错误: %s", rapidUploadShareLink)
@@ -131,7 +131,6 @@ func (r *RapidUploadItem) createRapidUploadLink(hideRelativePath bool) string {
 	p := r.FilePath
 	p = strings.ReplaceAll(p, "\\", "/")
 
-
 	fileName := path.Base(p)
 	dirPath := path.Dir(p)
 
@@ -160,8 +159,8 @@ func CmdConfig() cli.Command {
 		Usage:       "显示和修改程序配置项",
 		Description: "显示和修改程序配置项",
 		Category:    "配置",
-		Before:      cmder.ReloadConfigFunc,
-		After:       cmder.SaveConfigFunc,
+		Before:      ReloadConfigFunc,
+		After:       SaveConfigFunc,
 		Action: func(c *cli.Context) error {
 			fmt.Printf("----\n运行 %s config set 可进行设置配置\n\n当前配置:\n", cmder.App().Name)
 			config.Config.PrintTable()
@@ -282,7 +281,6 @@ func CmdConfig() cli.Command {
 		},
 	}
 }
-
 
 func CmdTool() cli.Command {
 	return cli.Command{

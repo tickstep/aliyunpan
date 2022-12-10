@@ -155,7 +155,7 @@ func CmdUpload() cli.Command {
     5)排除 myfile.txt 文件：-exn "^myfile.txt$"
 `,
 		Category: "阿里云盘",
-		Before:   cmder.ReloadConfigFunc,
+		Before:   ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if c.NArg() < 2 {
 				cli.ShowCommandHelp(c, c.Command.Name)
@@ -214,7 +214,7 @@ func CmdRapidUpload() cli.Command {
 	aliyunpan rapidupload "aliyunpan://file.dmg|752FCCBFB2436A6FFCA3B287831D4FAA5654B07E|7005440|pan_folder" "aliyunpan://file1.dmg|752FCCBFB2436A6FFCA3B287831D4FAA5654B07E|7005440|pan_folder"
 `,
 		Category: "阿里云盘",
-		Before:   cmder.ReloadConfigFunc,
+		Before:   ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if c.NArg() <= 0 {
 				cli.ShowCommandHelp(c, c.Command.Name)

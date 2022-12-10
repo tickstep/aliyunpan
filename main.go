@@ -75,16 +75,16 @@ func init() {
 }
 
 func checkLoginExpiredAndRelogin() {
-	cmder.ReloadConfigFunc(nil)
+	command.ReloadConfigFunc(nil)
 	activeUser := config.Config.ActiveUser()
 	if activeUser == nil || activeUser.UserId == "" {
 		// maybe expired, try to login
-		cmder.TryLogin()
+		command.TryLogin()
 	} else {
 		// 刷新过期Token并保存到配置文件
 		command.RefreshTokenInNeed(activeUser)
 	}
-	cmder.SaveConfigFunc(nil)
+	command.SaveConfigFunc(nil)
 }
 
 func main() {
@@ -301,7 +301,7 @@ func main() {
 		fmt.Printf("提示: 输入 help 获取帮助.\n")
 
 		// check update
-		cmder.ReloadConfigFunc(c)
+		command.ReloadConfigFunc(c)
 		if config.Config.UpdateCheckInfo.LatestVer != "" {
 			if utils.ParseVersionNum(config.Config.UpdateCheckInfo.LatestVer) > utils.ParseVersionNum(config.AppVersion) {
 				fmt.Printf("\n当前的软件版本为：%s， 现在有新版本 %s 可供更新，强烈推荐进行更新！（可以输入 update 命令进行更新）\n\n",
@@ -322,7 +322,7 @@ func main() {
 				config.Config.UpdateCheckInfo.CheckTime = nowTime
 
 				// save
-				cmder.SaveConfigFunc(c)
+				command.SaveConfigFunc(c)
 			}
 		}()
 
@@ -333,7 +333,7 @@ func main() {
 			)
 
 			if activeUser == nil {
-				activeUser = cmder.TryLogin()
+				activeUser = command.TryLogin()
 			}
 
 			if activeUser != nil && activeUser.Nickname != "" {

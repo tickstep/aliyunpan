@@ -49,7 +49,7 @@ func CmdRm() cli.Command {
 	aliyunpan rm /我的资源/*.zip
 `,
 		Category: "阿里云盘",
-		Before:   cmder.ReloadConfigFunc,
+		Before:   ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if c.NArg() == 0 {
 				cli.ShowCommandHelp(c, c.Command.Name)

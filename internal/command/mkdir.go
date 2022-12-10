@@ -29,7 +29,7 @@ func CmdMkdir() cli.Command {
 		Usage:     "创建目录",
 		UsageText: cmder.App().Name + " mkdir <目录>",
 		Category:  "阿里云盘",
-		Before:    cmder.ReloadConfigFunc,
+		Before:    ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if c.NArg() == 0 {
 				cli.ShowCommandHelp(c, c.Command.Name)
@@ -59,7 +59,7 @@ func RunMkdir(driveId, name string) {
 	rs := &aliyunpan.MkdirResult{}
 	err := apierror.NewFailedApiError("")
 
-	rs, err = activeUser.PanClient().MkdirRecursive(driveId,"", "", 0, pathSlice)
+	rs, err = activeUser.PanClient().MkdirRecursive(driveId, "", "", 0, pathSlice)
 
 	if err != nil {
 		fmt.Println("创建文件夹失败：" + err.Error())

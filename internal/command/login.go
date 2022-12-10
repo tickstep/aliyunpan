@@ -16,7 +16,6 @@ package command
 import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
-	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdliner"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/functions/panlogin"
@@ -42,8 +41,8 @@ func CmdLogin() cli.Command {
 		aliyunpan login -QrCode
 `,
 		Category: "阿里云盘账号",
-		Before:   cmder.ReloadConfigFunc, // 每次进行登录动作的时候需要调用刷新配置
-		After:    cmder.SaveConfigFunc,   // 登录完成需要调用保存配置
+		Before:   ReloadConfigFunc, // 每次进行登录动作的时候需要调用刷新配置
+		After:    SaveConfigFunc,   // 登录完成需要调用保存配置
 		Action: func(c *cli.Context) error {
 			refreshTokenStr := ""
 			if refreshTokenStr == "" {
@@ -93,8 +92,8 @@ func CmdLogout() cli.Command {
 		Usage:       "退出阿里帐号",
 		Description: "退出当前登录的帐号",
 		Category:    "阿里云盘账号",
-		Before:      cmder.ReloadConfigFunc,
-		After:       cmder.SaveConfigFunc,
+		Before:      ReloadConfigFunc,
+		After:       SaveConfigFunc,
 		Action: func(c *cli.Context) error {
 			if config.Config.NumLogins() == 0 {
 				fmt.Println("未设置任何帐号, 不能退出")
@@ -183,6 +182,6 @@ func RunLogin(useQrCodeLogin bool, refreshToken string) (tokenId, refreshTokenSt
 		tokenId = qrCodeUrlResult.TokenId
 	}
 
-	refreshTokenStr, webToken, error = cmder.DoLoginHelper(refreshToken)
+	refreshTokenStr, webToken, error = DoLoginHelper(refreshToken)
 	return
 }

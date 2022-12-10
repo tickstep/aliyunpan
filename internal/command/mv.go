@@ -16,7 +16,6 @@ package command
 import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
-	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
@@ -43,7 +42,7 @@ func CmdMv() cli.Command {
 	aliyunpan mv /我的资源/*.png /我的图片
 `,
 		Category: "阿里云盘",
-		Before:   cmder.ReloadConfigFunc,
+		Before:   ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if c.NArg() <= 1 {
 				cli.ShowCommandHelp(c, c.Command.Name)

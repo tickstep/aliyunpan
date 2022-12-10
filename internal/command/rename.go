@@ -16,7 +16,6 @@ package command
 import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apiutil"
-	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
 	"path"
@@ -40,7 +39,7 @@ func CmdRename() cli.Command {
 	aliyunpan rename /test/1.mp4 /test/2.mp4
 `,
 		Category: "阿里云盘",
-		Before:   cmder.ReloadConfigFunc,
+		Before:   ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if c.NArg() != 2 {
 				cli.ShowCommandHelp(c, c.Command.Name)

@@ -28,7 +28,6 @@ import (
 	"time"
 )
 
-
 func CmdExport() cli.Command {
 	return cli.Command{
 		Name:      "export",
@@ -50,7 +49,7 @@ func CmdExport() cli.Command {
 	aliyunpan export / /Users/tickstep/Downloads/export_files.txt
 `,
 		Category: "阿里云盘",
-		Before:   cmder.ReloadConfigFunc,
+		Before:   ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			if c.NArg() < 2 {
 				cli.ShowCommandHelp(c, c.Command.Name)
@@ -75,12 +74,11 @@ func CmdExport() cli.Command {
 	}
 }
 
-
 func RunExportFiles(driveId string, overwrite bool, panPaths []string, saveLocalFilePath string) {
 	activeUser := config.Config.ActiveUser()
 	panClient := activeUser.PanClient()
 
-	lfi,_ := os.Stat(saveLocalFilePath)
+	lfi, _ := os.Stat(saveLocalFilePath)
 	realSaveFilePath := saveLocalFilePath
 	if lfi != nil {
 		if lfi.IsDir() {
@@ -94,7 +92,7 @@ func RunExportFiles(driveId string, overwrite bool, panPaths []string, saveLocal
 	} else {
 		// create file
 		localDir := path.Dir(saveLocalFilePath)
-		dirFs,_ := os.Stat(localDir)
+		dirFs, _ := os.Stat(localDir)
 		if dirFs != nil {
 			if !dirFs.IsDir() {
 				fmt.Println("指定的保存文件路径不合法")
@@ -117,7 +115,7 @@ func RunExportFiles(driveId string, overwrite bool, panPaths []string, saveLocal
 		return
 	}
 
-	for _,panPath := range panPaths {
+	for _, panPath := range panPaths {
 		panPath = activeUser.PathJoin(driveId, panPath)
 		panClient.FilesDirectoriesRecurseList(driveId, panPath, func(depth int, _ string, fd *aliyunpan.FileEntity, apiError *apierror.ApiError) bool {
 			if apiError != nil {

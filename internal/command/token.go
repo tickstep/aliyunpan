@@ -30,7 +30,7 @@ func CmdToken() cli.Command {
 		Usage:     "Token相关操作",
 		UsageText: cmder.App().Name + " token",
 		Category:  "阿里云盘账号",
-		Before:    cmder.ReloadConfigFunc,
+		Before:    ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			cli.ShowCommandHelp(c, c.Command.Name)
 			return nil
@@ -76,7 +76,7 @@ func CmdToken() cli.Command {
 
 // RunTokenUpdate 执行Token更新
 func RunTokenUpdate(modeFlag string) {
-	cmder.ReloadConfigFunc(nil)
+	ReloadConfigFunc(nil)
 
 	// 获取当前插件
 	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
@@ -125,5 +125,5 @@ func RunTokenUpdate(modeFlag string) {
 			logger.Verbosef("UserTokenRefreshFinishCallback error: " + er.Error())
 		}
 	}
-	cmder.SaveConfigFunc(nil)
+	SaveConfigFunc(nil)
 }
