@@ -214,6 +214,17 @@ func DoLoginHelper(refreshToken string) (refreshTokenStr string, webToken aliyun
 
 // TryLogin 尝试登录，基础应用支持的各类登录方式进行尝试成功登录
 func TryLogin() *config.PanUser {
+	// 获取当前插件
+	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+	plugin, _ := pluginManger.GetPlugin()
+	params := &plugins.UserTokenRefreshFinishParams{
+		Result:    "success",
+		Message:   "",
+		OldToken:  "",
+		NewToken:  "",
+		UpdatedAt: utils.NowTimeStr(),
+	}
+
 	// can do automatically login?
 	for _, u := range config.Config.UserList {
 		if u.UserId == config.Config.ActiveUID {
@@ -227,6 +238,13 @@ func TryLogin() *config.PanUser {
 					r, e := h.GetRefreshToken(u.TokenId)
 					if e != nil {
 						logger.Verboseln("try to login use tokenId error", e)
+						// login fail plugin callback
+						params.Result = "fail"
+						params.OldToken = u.RefreshToken
+						params.NewToken = ""
+						if er := plugin.UserTokenRefreshFinishCallback(plugins.GetContext(u), params); er != nil {
+							logger.Verbosef("UserTokenRefreshFinishCallback error: " + er.Error())
+						}
 						break
 					}
 					refreshToken, e := h.ParseSecureRefreshToken("", r.SecureRefreshToken)
@@ -242,16 +260,36 @@ func TryLogin() *config.PanUser {
 					fmt.Println("Token重新自动登录成功")
 					// save new refresh token
 					u.RefreshToken = refreshToken
+				} else {
+					// login fail plugin callback
+					params.Result = "fail"
+					params.OldToken = u.RefreshToken
+					params.NewToken = ""
+					if er := plugin.UserTokenRefreshFinishCallback(plugins.GetContext(u), params); er != nil {
+						logger.Verbosef("UserTokenRefreshFinishCallback error: " + er.Error())
+					}
 				}
 				break
 			}
-			// success
+			// plugin param
+			params.Result = "success"
+			params.OldToken = u.RefreshToken
+			params.NewToken = webToken.RefreshToken
+
+			// success login, save new token and access token
+			u.RefreshToken = webToken.RefreshToken
 			u.WebToken = webToken
 
 			// save
 			SaveConfigFunc(nil)
 			// reload
 			ReloadConfigFunc(nil)
+
+			// do plugin callback
+			if er := plugin.UserTokenRefreshFinishCallback(plugins.GetContext(u), params); er != nil {
+				logger.Verbosef("UserTokenRefreshFinishCallback error: " + er.Error())
+			}
+
 			return config.Config.ActiveUser()
 		}
 	}
