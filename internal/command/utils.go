@@ -134,6 +134,16 @@ func RefreshTokenInNeed(activeUser *config.PanUser) bool {
 		return false
 	}
 
+	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+	plugin, _ := pluginManger.GetPlugin()
+	params := &plugins.UserTokenRefreshFinishParams{
+		Result:    "success",
+		Message:   "",
+		OldToken:  "",
+		NewToken:  "",
+		UpdatedAt: utils.NowTimeStr(),
+	}
+
 	// refresh expired token
 	if activeUser.PanClient() != nil {
 		if len(activeUser.WebToken.RefreshToken) > 0 {
@@ -144,24 +154,27 @@ func RefreshTokenInNeed(activeUser *config.PanUser) bool {
 				// need update refresh token
 				logger.Verboseln("access token expired, get new from refresh token")
 				if wt, er := aliyunpan.GetAccessTokenFromRefreshToken(activeUser.RefreshToken); er == nil {
+					params.Result = "success"
+					params.OldToken = activeUser.RefreshToken
+					params.NewToken = wt.RefreshToken
+
 					activeUser.RefreshToken = wt.RefreshToken
 					activeUser.WebToken = *wt
 					activeUser.PanClient().UpdateToken(*wt)
 					logger.Verboseln("get new access token success")
+
+					// plugin callback
+					if er1 := plugin.UserTokenRefreshFinishCallback(plugins.GetContext(activeUser), params); er1 != nil {
+						logger.Verbosef("UserTokenRefreshFinishCallback error: " + er1.Error())
+					}
 					return true
 				} else {
 					// token refresh error
 					// if token has expired, callback plugin api for notify
 					if now.Unix() >= expiredTime.Unix() {
-						pluginManger := plugins.NewPluginManager(config.GetPluginDir())
-						plugin, _ := pluginManger.GetPlugin()
-						params := &plugins.UserTokenRefreshFinishParams{
-							Result:    "fail",
-							Message:   er.Error(),
-							OldToken:  activeUser.RefreshToken,
-							NewToken:  "",
-							UpdatedAt: utils.NowTimeStr(),
-						}
+						params.Result = "fail"
+						params.Message = er.Error()
+						params.OldToken = activeUser.RefreshToken
 						if er1 := plugin.UserTokenRefreshFinishCallback(plugins.GetContext(activeUser), params); er1 != nil {
 							logger.Verbosef("UserTokenRefreshFinishCallback error: " + er1.Error())
 						}
