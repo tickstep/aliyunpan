@@ -256,7 +256,7 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 					},
 					cli.IntFlag{
 						Name:  "ubs",
-						Usage: "upload block size，上传分片大小，单位KB。推荐值：1024 ~ 10240",
+						Usage: "upload block size，上传分片大小，单位KB。推荐值：1024 ~ 10240。当上传极大单文件时候请适当调高该值",
 						Value: 10240,
 					},
 					cli.StringFlag{

@@ -106,7 +106,7 @@ var UploadFlags = []cli.Flag{
 	},
 	cli.IntFlag{
 		Name:  "bs",
-		Usage: "block size，上传分片大小，单位KB。推荐值：1024 ~ 10240",
+		Usage: "block size，上传分片大小，单位KB。推荐值：1024 ~ 10240。当上传极大单文件时候请适当调高该值",
 		Value: 10240,
 	},
 }
@@ -131,19 +131,22 @@ func CmdUpload() cli.Command {
     3. 将本地的 C:\Users\Administrator\Desktop 整个目录上传到网盘 /视频 目录
     aliyunpan upload C:/Users/Administrator/Desktop /视频
 
-    4. 使用相对路径
+    4. 将本地 200GB 极大文件 C:\Users\Administrator\Desktop\1.mp4 上传到网盘 /视频 目录，需要调高上传分片大小
+    aliyunpan upload -bs 30720 C:/Users/Administrator/Desktop/1.mp4 /视频
+
+    5. 使用相对路径
     aliyunpan upload 1.mp4 /视频
 
-    5. 覆盖上传，已存在的同名文件会被移到回收站
+    6. 覆盖上传，已存在的同名文件会被移到回收站
     aliyunpan upload -ow 1.mp4 /视频
 
-    6. 将本地的 C:\Users\Administrator\Video 整个目录上传到网盘 /视频 目录，但是排除所有的.jpg文件
+    7. 将本地的 C:\Users\Administrator\Video 整个目录上传到网盘 /视频 目录，但是排除所有的.jpg文件
     aliyunpan upload -exn "\.jpg$" C:/Users/Administrator/Video /视频
 
-    7. 将本地的 C:\Users\Administrator\Video 整个目录上传到网盘 /视频 目录，但是排除所有的.jpg文件和.mp3文件，每一个排除项就是一个exn参数
+    8. 将本地的 C:\Users\Administrator\Video 整个目录上传到网盘 /视频 目录，但是排除所有的.jpg文件和.mp3文件，每一个排除项就是一个exn参数
     aliyunpan upload -exn "\.jpg$" -exn "\.mp3$" C:/Users/Administrator/Video /视频
 
-    8. 将本地的 C:\Users\Administrator\Video 整个目录上传到网盘 /视频 目录，但是排除所有的 @eadir 文件夹
+    9. 将本地的 C:\Users\Administrator\Video 整个目录上传到网盘 /视频 目录，但是排除所有的 @eadir 文件夹
     aliyunpan upload -exn "^@eadir$" C:/Users/Administrator/Video /视频
 
   参考：
