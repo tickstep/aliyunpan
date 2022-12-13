@@ -134,16 +134,6 @@ func RefreshTokenInNeed(activeUser *config.PanUser) bool {
 		return false
 	}
 
-	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
-	plugin, _ := pluginManger.GetPlugin()
-	params := &plugins.UserTokenRefreshFinishParams{
-		Result:    "success",
-		Message:   "",
-		OldToken:  "",
-		NewToken:  "",
-		UpdatedAt: utils.NowTimeStr(),
-	}
-
 	// refresh expired token
 	if activeUser.PanClient() != nil {
 		if len(activeUser.WebToken.RefreshToken) > 0 {
@@ -151,6 +141,16 @@ func RefreshTokenInNeed(activeUser *config.PanUser) bool {
 			expiredTime, _ := time.ParseInLocation("2006-01-02 15:04:05", activeUser.WebToken.ExpireTime, cz)
 			now := time.Now()
 			if (expiredTime.Unix() - now.Unix()) <= (20 * 60) { // 20min
+				pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+				plugin, _ := pluginManger.GetPlugin()
+				params := &plugins.UserTokenRefreshFinishParams{
+					Result:    "success",
+					Message:   "",
+					OldToken:  "",
+					NewToken:  "",
+					UpdatedAt: utils.NowTimeStr(),
+				}
+
 				// need update refresh token
 				logger.Verboseln("access token expired, get new from refresh token")
 				if wt, er := aliyunpan.GetAccessTokenFromRefreshToken(activeUser.RefreshToken); er == nil {
