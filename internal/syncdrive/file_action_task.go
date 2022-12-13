@@ -11,6 +11,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/localfile"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
+	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio"
@@ -449,6 +450,15 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		localFileEntity, _ := os.Open(localFile.Path.RealPath)
 		localFileInfo, _ := localFileEntity.Stat()
 		proofCode = aliyunpan.CalcProofCode(f.panClient.GetAccessToken(), rio.NewFileReaderAtLen64(localFileEntity), localFileInfo.Size())
+
+		// 自动调整BlockSize大小
+		newBlockSize := utils.ResizeUploadBlockSize(localFile.Length, f.syncItem.UploadBlockSize)
+		if newBlockSize != f.syncItem.UploadBlockSize {
+			logger.Verboseln("resize upload block size to: " + converter.ConvertFileSize(newBlockSize, 2))
+			f.syncItem.UploadBlockSize = newBlockSize
+			// 存储状态
+			f.syncFileDb.Update(f.syncItem)
+		}
 
 		// 创建上传任务
 		appCreateUploadFileParam := &aliyunpan.CreateFileUploadParam{

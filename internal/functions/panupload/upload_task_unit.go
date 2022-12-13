@@ -320,6 +320,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	var proofCode = ""
 	var localFileInfo os.FileInfo
 	var localFile *os.File
+	var newBlockSize int64
 
 	switch utu.Step {
 	case StepUploadPrepareUpload:
@@ -411,6 +412,13 @@ StepUploadPrepareUpload:
 			time.Sleep(time.Duration(500) * time.Millisecond)
 			fmt.Printf("[%s] %s 检测到同名文件，已移动到回收站: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
 		}
+	}
+
+	// 自动调整BlockSize大小
+	newBlockSize = utils.ResizeUploadBlockSize(utu.LocalFileChecksum.Length, utu.BlockSize)
+	if newBlockSize != utu.BlockSize {
+		logger.Verboseln("resize upload block size to: " + converter.ConvertFileSize(newBlockSize, 2))
+		utu.BlockSize = newBlockSize
 	}
 
 	// 创建上传任务

@@ -20,9 +20,11 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	uuid "github.com/satori/go.uuid"
+	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/library-go/ids"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http/cookiejar"
 	"net/url"
 	"os"
@@ -269,4 +271,13 @@ func IsExcludeFile(filePath string, excludeNames *[]string) bool {
 		}
 	}
 	return false
+}
+
+// ResizeUploadBlockSize 自动调整分片大小，方便支持极大单文件上传。返回新的分片大小
+func ResizeUploadBlockSize(fileSize, defaultBlockSize int64) int64 {
+	if (aliyunpan.MaxPartNum * defaultBlockSize) > fileSize {
+		return defaultBlockSize
+	}
+	sizeOfMB := int64(math.Ceil(float64(fileSize) / float64(aliyunpan.MaxPartNum) / 1024.0))
+	return sizeOfMB * 1024
 }
