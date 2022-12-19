@@ -35,6 +35,8 @@ func NewFileRecorder(filePath string) *FileRecorder {
 
 // Append 增加数据记录
 func (f *FileRecorder) Append(item *FileRecordItem) error {
+	f.locker.Lock()
+	defer f.locker.Unlock()
 	savePath := f.Path
 	folder := filepath.Dir(savePath)
 	if b, err := utils.PathExists(folder); err == nil && !b {
