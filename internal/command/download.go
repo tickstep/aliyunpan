@@ -20,6 +20,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/functions/pandownload"
+	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
@@ -302,6 +303,9 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	// 全局速度统计
 	globalSpeedsStat := &speeds.Speeds{}
 
+	// 下载记录器
+	fileRecorder := log.NewFileRecorder(config.GetLogDir() + "/download_file_records.csv")
+
 	// 处理队列
 	for k := range paths {
 		// 使用通配符匹配
@@ -339,6 +343,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 				FilePanPath:          f.Path,
 				DriveId:              options.DriveId,
 				GlobalSpeedsStat:     globalSpeedsStat,
+				FileRecorder:         fileRecorder,
 			}
 
 			// 设置储存的路径

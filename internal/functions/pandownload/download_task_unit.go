@@ -23,6 +23,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/functions"
 	"github.com/tickstep/aliyunpan/internal/localfile"
+	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
 	"github.com/tickstep/aliyunpan/internal/utils"
@@ -67,6 +68,9 @@ type (
 		DriveId            string
 
 		fileInfo *aliyunpan.FileEntity // 文件或目录详情
+
+		// 下载文件记录器
+		FileRecorder *log.FileRecorder
 	}
 )
 
@@ -368,6 +372,18 @@ func (dtu *DownloadTaskUnit) OnRetry(lastRunResult *taskframework.TaskUnitRunRes
 func (dtu *DownloadTaskUnit) OnSuccess(lastRunResult *taskframework.TaskUnitRunResult) {
 	// 执行插件
 	dtu.pluginCallback("success")
+
+	// 下载文件数据记录
+	if config.Config.FileRecordConfig == "1" {
+		if dtu.fileInfo.IsFile() {
+			dtu.FileRecorder.Append(&log.FileRecordItem{
+				Status:   "成功",
+				TimeStr:  utils.NowTimeStr(),
+				FileSize: dtu.fileInfo.FileSize,
+				FilePath: dtu.fileInfo.Path,
+			})
+		}
+	}
 }
 
 func (dtu *DownloadTaskUnit) OnFailed(lastRunResult *taskframework.TaskUnitRunResult) {
