@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder"
+	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/requester/rio/speeds"
@@ -333,6 +334,9 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	// 获取当前插件
 	plugin, _ := pluginManger.GetPlugin()
 
+	// 上传记录器
+	fileRecorder := log.NewFileRecorder(config.GetLogDir() + "/upload_file_records.csv")
+
 	// 遍历指定的文件并创建上传任务
 	for _, curPath := range localPaths {
 		var walkFunc localfile.MyWalkFunc
@@ -420,6 +424,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 					IsOverwrite:       opt.IsOverwrite,
 					UseInternalUrl:    opt.UseInternalUrl,
 					GlobalSpeedsStat:  globalSpeedsStat,
+					FileRecorder:      fileRecorder,
 				}, opt.MaxRetry)
 				fmt.Printf("[%s] 加入上传队列: %s\n", taskinfo.Id(), file.LogicPath)
 			} else {

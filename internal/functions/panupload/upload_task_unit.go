@@ -15,6 +15,7 @@ package panupload
 
 import (
 	"fmt"
+	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/library-go/logger"
 	"os"
@@ -71,6 +72,9 @@ type (
 
 		// 全局速度统计
 		GlobalSpeedsStat *speeds.Speeds
+
+		// 上传文件记录器
+		FileRecorder *log.FileRecorder
 	}
 )
 
@@ -239,6 +243,16 @@ func (utu *UploadTaskUnit) OnRetry(lastRunResult *taskframework.TaskUnitRunResul
 func (utu *UploadTaskUnit) OnSuccess(lastRunResult *taskframework.TaskUnitRunResult) {
 	// 执行插件
 	utu.pluginCallback("success")
+
+	// 上传文件数据记录
+	if config.Config.FileRecordConfig == "1" {
+		utu.FileRecorder.Append(&log.FileRecordItem{
+			Status:   "成功",
+			TimeStr:  utils.NowTimeStr(),
+			FileSize: utu.LocalFileChecksum.LocalFileMeta.Length,
+			FilePath: utu.LocalFileChecksum.Path.LogicPath,
+		})
+	}
 }
 
 func (utu *UploadTaskUnit) OnFailed(lastRunResult *taskframework.TaskUnitRunResult) {
