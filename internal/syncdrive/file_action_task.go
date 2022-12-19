@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/file/uploader"
 	"github.com/tickstep/aliyunpan/internal/functions/panupload"
 	"github.com/tickstep/aliyunpan/internal/localfile"
+	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
@@ -39,6 +41,9 @@ type (
 
 		localFolderCreateMutex *sync.Mutex
 		panFolderCreateMutex   *sync.Mutex
+
+		// 文件记录器，存储同步文件记录
+		fileRecorder *log.FileRecorder
 	}
 )
 
@@ -68,12 +73,15 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 		} else {
 			// upload success, post operation
 			// save local file info into db
+			var actFile *aliyunpan.FileEntity
 			if f.syncItem.UploadEntity != nil && f.syncItem.UploadEntity.FileId != "" {
 				if file, er := f.panClient.FileInfoById(f.syncItem.DriveId, f.syncItem.UploadEntity.FileId); er == nil {
 					file.Path = f.syncItem.getPanFileFullPath()
 					fItem := NewPanFileItem(file)
 					fItem.ScanTimeAt = utils.NowTimeStr()
 					f.panFileDb.Add(fItem)
+
+					actFile = file
 				}
 			} else {
 				if file, er := f.panClient.FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
@@ -81,8 +89,18 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 					fItem := NewPanFileItem(file)
 					fItem.ScanTimeAt = utils.NowTimeStr()
 					f.panFileDb.Add(fItem)
+
+					actFile = file
 				}
 			}
+
+			// recorder
+			f.appendRecord(&log.FileRecordItem{
+				Status:   "成功-上传",
+				TimeStr:  utils.NowTimeStr(),
+				FileSize: actFile.FileSize,
+				FilePath: actFile.Path,
+			})
 		}
 	}
 
@@ -137,6 +155,14 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 					ScanStatus:    ScanStatusNormal,
 				})
 			}
+
+			// recorder
+			f.appendRecord(&log.FileRecordItem{
+				Status:   "成功-下载",
+				TimeStr:  utils.NowTimeStr(),
+				FileSize: f.syncItem.PanFile.FileSize,
+				FilePath: f.syncItem.PanFile.Path,
+			})
 		}
 	}
 
@@ -149,6 +175,14 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			// clear DB
 			f.localFileDb.Delete(f.syncItem.getLocalFileFullPath())
 			f.panFileDb.Delete(f.syncItem.getPanFileFullPath())
+
+			// recorder
+			f.appendRecord(&log.FileRecordItem{
+				Status:   "成功-删除本地文件",
+				TimeStr:  utils.NowTimeStr(),
+				FileSize: 0,
+				FilePath: f.syncItem.getLocalFileFullPath(),
+			})
 		}
 	}
 
@@ -161,6 +195,14 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			// clear DB
 			f.localFileDb.Delete(f.syncItem.getLocalFileFullPath())
 			f.panFileDb.Delete(f.syncItem.getPanFileFullPath())
+
+			// recorder
+			f.appendRecord(&log.FileRecordItem{
+				Status:   "成功-删除云盘文件",
+				TimeStr:  utils.NowTimeStr(),
+				FileSize: 0,
+				FilePath: f.syncItem.getPanFileFullPath(),
+			})
 		}
 	}
 
@@ -715,4 +757,14 @@ func (f *FileActionTask) createPanFolder(ctx context.Context) error {
 		f.syncFileDb.Update(f.syncItem)
 		return apierr1
 	}
+}
+
+func (f *FileActionTask) appendRecord(item *log.FileRecordItem) error {
+	if item == nil {
+		return nil
+	}
+	if config.Config.FileRecordConfig == "1" {
+		return f.fileRecorder.Append(item)
+	}
+	return nil
 }

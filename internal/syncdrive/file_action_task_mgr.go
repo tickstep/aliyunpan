@@ -729,6 +729,7 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						maxUploadRate:          f.syncOption.MaxUploadRate,
 						localFolderCreateMutex: f.localCreateMutex,
 						panFolderCreateMutex:   f.folderCreateMutex,
+						fileRecorder:           f.syncOption.FileRecorder,
 					}
 				}
 			}
@@ -747,6 +748,7 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						maxUploadRate:          f.syncOption.MaxUploadRate,
 						localFolderCreateMutex: f.localCreateMutex,
 						panFolderCreateMutex:   f.folderCreateMutex,
+						fileRecorder:           f.syncOption.FileRecorder,
 					}
 				}
 			}
@@ -767,6 +769,7 @@ func (f *FileActionTaskManager) getFromSyncDb(act SyncFileAction) *FileActionTas
 						maxUploadRate:          f.syncOption.MaxUploadRate,
 						localFolderCreateMutex: f.localCreateMutex,
 						panFolderCreateMutex:   f.folderCreateMutex,
+						fileRecorder:           f.syncOption.FileRecorder,
 					}
 				}
 			}

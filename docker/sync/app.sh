@@ -39,5 +39,13 @@ else
   ./aliyunpan login -RefreshToken=${ALIYUNPAN_REFRESH_TOKEN}
 fi
 
-./aliyunpan config set -transfer_url_type ${ALIYUNPAN_TRANSFER_URL_TYPE} 
+./aliyunpan config set -transfer_url_type ${ALIYUNPAN_TRANSFER_URL_TYPE}
+
+if [ "$ALIYUNPAN_SYNC_LOG" = "true" ]
+then
+  ./aliyunpan config set -file_record_config 1
+else
+  ./aliyunpan config set -file_record_config 2
+fi
+
 ./aliyunpan sync start -dp ${ALIYUNPAN_DOWNLOAD_PARALLEL} -up ${ALIYUNPAN_UPLOAD_PARALLEL} -dbs ${ALIYUNPAN_DOWNLOAD_BLOCK_SIZE} -ubs ${ALIYUNPAN_UPLOAD_BLOCK_SIZE} -log ${ALIYUNPAN_SYNC_LOG} -ldt ${ALIYUNPAN_LOCAL_DELAY_TIME} -step ${ALIYUNPAN_TASK_STEP}

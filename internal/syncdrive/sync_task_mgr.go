@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/logger"
 	"io/ioutil"
@@ -29,6 +30,9 @@ type (
 
 		// 本地文件修改检测间隔
 		LocalFileModifiedCheckIntervalSec int
+
+		// 文件记录器
+		FileRecorder *log.FileRecorder
 	}
 
 	// SyncTaskManager 同步任务管理器

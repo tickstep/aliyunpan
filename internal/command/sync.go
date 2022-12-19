@@ -18,6 +18,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/syncdrive"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/converter"
@@ -318,6 +319,10 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	if useInternalUrl {
 		typeUrlStr = "阿里ECS内部链接"
 	}
+
+	// 文件同步记录器
+	fileRecorder := log.NewFileRecorder(config.GetLogDir() + "/sync_file_records.csv")
+
 	option := syncdrive.SyncOption{
 		FileDownloadParallel:              fileDownloadParallel,
 		FileUploadParallel:                fileUploadParallel,
@@ -328,6 +333,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 		MaxUploadRate:                     maxUploadRate,
 		SyncPriority:                      flag,
 		LocalFileModifiedCheckIntervalSec: localDelayTime,
+		FileRecorder:                      fileRecorder,
 	}
 	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath, option)
 	syncConfigFile := syncMgr.ConfigFilePath()
