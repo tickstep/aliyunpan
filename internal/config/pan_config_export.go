@@ -66,8 +66,20 @@ func (c *PanConfig) SetMaxUploadRateByStr(sizeStr string) error {
 	return nil
 }
 
+// SetFileRecorderConfig 设置文件记录器
+func (c *PanConfig) SetFileRecorderConfig(config string) error {
+	if config == "1" || config == "2" {
+		c.FileRecordConfig = config
+	}
+	return nil
+}
+
 // PrintTable 输出表格
 func (c *PanConfig) PrintTable() {
+	fileRecorderLabel := "禁用"
+	if c.FileRecordConfig == "1" {
+		fileRecorderLabel = "开启"
+	}
 	tb := cmdtable.NewTable(os.Stdout)
 	tb.SetHeader([]string{"名称", "值", "建议值", "描述"})
 	tb.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
@@ -82,6 +94,7 @@ func (c *PanConfig) PrintTable() {
 		[]string{"savedir", c.SaveDir, "", "下载文件的储存目录"},
 		[]string{"proxy", c.Proxy, "", "设置代理, 支持 http/socks5 代理，例如：http://127.0.0.1:8888"},
 		[]string{"local_addrs", c.LocalAddrs, "", "设置本地网卡地址, 多个地址用逗号隔开，例如：127.0.0.1,192.168.100.126"},
+		[]string{"file_record_config", fileRecorderLabel, "1-开启记录，2-禁用记录", "设置是否开启上传、下载、同步文件的结果记录，开启后会把结果记录到CSV文件方便后期查看状态"},
 	})
 	tb.Render()
 }

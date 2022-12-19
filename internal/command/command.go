@@ -226,6 +226,9 @@ func CmdConfig() cli.Command {
 					if c.IsSet("local_addrs") {
 						config.Config.SetLocalAddrs(c.String("local_addrs"))
 					}
+					if c.IsSet("file_record_config") {
+						config.Config.SetFileRecorderConfig(c.String("file_record_config"))
+					}
 
 					err := config.Config.Save()
 					if err != nil {
@@ -275,6 +278,10 @@ func CmdConfig() cli.Command {
 					cli.StringFlag{
 						Name:  "local_addrs",
 						Usage: "设置本地网卡地址, 多个地址用逗号隔开",
+					},
+					cli.StringFlag{
+						Name:  "file_record_config",
+						Usage: "设置是否开启上传、下载、同步文件的结果记录功能",
 					},
 				},
 			},

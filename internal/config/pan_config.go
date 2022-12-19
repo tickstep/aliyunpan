@@ -101,6 +101,7 @@ type PanConfig struct {
 	UpdateCheckInfo UpdateCheckInfo `json:"updateCheckInfo"`
 
 	VideoFileExtensions string `json:"videoFileExtensions"`
+	FileRecordConfig    string `json:"fileRecordConfig"` // 上传、下载、同步文件的记录，包括失败和成功的
 
 	configFilePath string
 	configFile     *os.File
@@ -272,6 +273,7 @@ func (c *PanConfig) initDefaultConfig() {
 	}
 	c.ConfigVer = ConfigVersion
 	c.VideoFileExtensions = DefaultVideoFileExtensions
+	c.FileRecordConfig = "1" // 默认开启
 }
 
 // GetConfigDir 获取配置路径
