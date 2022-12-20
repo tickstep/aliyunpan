@@ -122,11 +122,11 @@ func (utu *UploadTaskUnit) prepareFile() {
 		return
 	}
 
-	if utu.LocalFileChecksum.Length > MaxRapidUploadSize {
-		fmt.Printf("[%s] 文件超过20GB, 无法使用秒传功能, 跳过秒传...\n", utu.taskInfo.Id())
-		utu.Step = StepUploadUpload
-		return
-	}
+	//if utu.LocalFileChecksum.Length > MaxRapidUploadSize {
+	//	fmt.Printf("[%s] 文件超过20GB, 无法使用秒传功能, 跳过秒传...\n", utu.taskInfo.Id())
+	//	utu.Step = StepUploadUpload
+	//	return
+	//}
 	// 下一步: 秒传
 	utu.Step = StepUploadRapidUpload
 }
