@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/tickstep/library-go/logger"
@@ -268,14 +269,19 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	activeUser.PanClient().ClearCache()
 	defer activeUser.PanClient().DisableCache()
 	// pan token expired checker
-	go func() {
-		for {
+	continueFlag := int32(0)
+	atomic.StoreInt32(&continueFlag, 0)
+	defer func() {
+		atomic.StoreInt32(&continueFlag, 1)
+	}()
+	go func(flag *int32) {
+		for atomic.LoadInt32(flag) == 0 {
 			time.Sleep(time.Duration(1) * time.Minute)
 			if RefreshTokenInNeed(activeUser) {
 				logger.Verboseln("update access token for upload task")
 			}
 		}
-	}()
+	}(&continueFlag)
 
 	if opt == nil {
 		opt = &UploadOptions{}

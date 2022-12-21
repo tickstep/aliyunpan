@@ -28,6 +28,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -305,15 +306,20 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	panClient.DisableCache()
 
 	// pan token expired checker
-	go func() {
-		for {
+	continueFlag := int32(0)
+	atomic.StoreInt32(&continueFlag, 0)
+	defer func() {
+		atomic.StoreInt32(&continueFlag, 1)
+	}()
+	go func(flag *int32) {
+		for atomic.LoadInt32(flag) == 0 {
 			time.Sleep(time.Duration(1) * time.Minute)
 			if RefreshTokenInNeed(activeUser) {
 				logger.Verboseln("update access token for sync task")
 				panClient.UpdateToken(activeUser.WebToken)
 			}
 		}
-	}()
+	}(&continueFlag)
 
 	syncFolderRootPath := config.GetSyncDriveDir()
 	if b, e := utils.PathExists(syncFolderRootPath); e == nil {

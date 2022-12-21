@@ -21,6 +21,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -72,8 +73,15 @@ aliyunpan webdav start -h
 						return nil
 					}
 					activeUser := GetActiveUser()
-					go func() {
-						for {
+
+					// pan token expired checker
+					continueFlag := int32(0)
+					atomic.StoreInt32(&continueFlag, 0)
+					defer func() {
+						atomic.StoreInt32(&continueFlag, 1)
+					}()
+					go func(flag *int32) {
+						for atomic.LoadInt32(flag) == 0 {
 							// token刷新
 							time.Sleep(time.Duration(1) * time.Minute)
 							//time.Sleep(time.Duration(5) * time.Second)
@@ -81,7 +89,7 @@ aliyunpan webdav start -h
 								logger.Verboseln("reload new access token for webdav")
 							}
 						}
-					}()
+					}(&continueFlag)
 
 					webdavServ := &webdav.WebdavConfig{
 						PanDriveId:      "",
