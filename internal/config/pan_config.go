@@ -351,6 +351,11 @@ func GetLogFilePath() string {
 	return dirPath + "/" + "aliyunpan_verbose.log"
 }
 
+// GetLockerDir 获取文件锁路径
+func GetLockerDir() string {
+	return strings.TrimSuffix(GetConfigDir(), "/")
+}
+
 func (c *PanConfig) ActiveUser() *PanUser {
 	if c.activeUser == nil {
 		if c.UserList == nil {

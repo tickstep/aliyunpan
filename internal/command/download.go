@@ -23,6 +23,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
 	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/aliyunpan/library/filelocker"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
@@ -143,7 +144,20 @@ func CmdDownload() cli.Command {
 				ExcludeNames:         c.StringSlice("exn"),
 			}
 
+			// 获取下载文件锁，保证下载操作单实例
+			locker := filelocker.NewFileLocker(config.GetLockerDir() + "/aliyunpan-download")
+			if e := filelocker.LockFile(locker, 0755, true, 5*time.Second); e != nil {
+				logger.Verboseln(e)
+				fmt.Println("本应用其他实例正在执行下载，请先停止或者等待其完成")
+				return nil
+			}
+
 			RunDownload(c.Args(), do)
+
+			// 释放文件锁
+			if locker != nil {
+				filelocker.UnlockFile(locker)
+			}
 			return nil
 		},
 		Flags: []cli.Flag{
