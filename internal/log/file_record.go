@@ -40,7 +40,7 @@ func (f *FileRecorder) Append(item *FileRecordItem) error {
 	savePath := f.Path
 	folder := filepath.Dir(savePath)
 	if b, err := utils.PathExists(folder); err == nil && !b {
-		os.MkdirAll(folder, os.ModePerm)
+		os.MkdirAll(folder, 0755)
 	}
 
 	var fp *os.File
