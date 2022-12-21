@@ -94,7 +94,7 @@ func (c *PanConfig) PrintTable() {
 		[]string{"savedir", c.SaveDir, "", "下载文件的储存目录"},
 		[]string{"proxy", c.Proxy, "", "设置代理, 支持 http/socks5 代理，例如：http://127.0.0.1:8888"},
 		[]string{"local_addrs", c.LocalAddrs, "", "设置本地网卡地址, 多个地址用逗号隔开，例如：127.0.0.1,192.168.100.126"},
-		[]string{"file_record_config", fileRecorderLabel, "1-开启记录，2-禁用记录", "设置是否开启上传、下载、同步文件的结果记录，开启后会把结果记录到CSV文件方便后期查看状态"},
+		[]string{"file_record_config", fileRecorderLabel, "1-开启，2-禁用", "设置是否开启上传、下载、同步文件的结果记录，开启后会把结果记录到CSV文件方便后期查看"},
 	})
 	tb.Render()
 }
