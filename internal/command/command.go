@@ -162,7 +162,7 @@ func CmdConfig() cli.Command {
 		Before:      ReloadConfigFunc,
 		After:       SaveConfigFunc,
 		Action: func(c *cli.Context) error {
-			fmt.Printf("----\n运行 %s config set 可进行设置配置\n\n当前配置:\n", cmder.App().Name)
+			fmt.Printf("----\n当前配置目录: %s\n运行 %s config set 可进行设置配置\n\n当前配置:\n", config.GetConfigDir(), cmder.App().Name)
 			config.Config.PrintTable()
 			return nil
 		},
