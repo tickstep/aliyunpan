@@ -21,7 +21,6 @@ import (
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/converter"
-	"github.com/tickstep/library-go/text"
 	"github.com/urfave/cli"
 	"os"
 	"strconv"
@@ -141,15 +140,6 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions,
 	orderBy aliyunpan.FileOrderBy, orderDirection aliyunpan.FileOrderDirection) {
 	activeUser := config.Config.ActiveUser()
 	targetPath = activeUser.PathJoin(driveId, targetPath)
-	if targetPath[len(targetPath)-1] == '/' {
-		targetPath = text.Substr(targetPath, 0, len(targetPath)-1)
-	}
-
-	//targetPathInfo, err := activeUser.PanClient().FileInfoByPath(driveId, targetPath)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
 
 	files, err := matchPathByShellPattern(driveId, targetPath)
 	if err != nil {
