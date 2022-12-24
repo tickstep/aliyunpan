@@ -65,16 +65,18 @@ func (muer *MultiUploader) upload() (uperr error) {
 	uploadClient.SetTimeout(0)
 	uploadClient.SetKeepAlive(true)
 
-	// 阿里云盘只支持分片按顺序上传，这里正常应该是parallel = 1
-	wg := waitgroup.NewWaitGroup(muer.config.Parallel)
 	for {
+		// 阿里云盘只支持分片按顺序上传，这里必须是parallel = 1
+		wg := waitgroup.NewWaitGroup(muer.config.Parallel)
+		wg.AddDelta()
+
+		uperr = nil
 		e := uploadDeque.Shift()
 		if e == nil { // 任务为空
 			break
 		}
 
 		wer := e.(*worker)
-		wg.AddDelta()
 		go func() { // 异步上传
 			defer wg.Done()
 
@@ -93,7 +95,7 @@ func (muer *MultiUploader) upload() (uperr error) {
 				}
 				close(doneChan)
 			}()
-			select { // 监听上传进程，循环
+			select { // 监听上传进程，循环阻塞
 			case <-muer.canceled:
 				cancel()
 				return
@@ -134,7 +136,12 @@ func (muer *MultiUploader) upload() (uperr error) {
 			}
 		}()
 		wg.Wait()
-
+		if uperr != nil {
+			if uperr == UploadPartNotSeq {
+				// 分片出现乱序，需要重新上传，取消本次所有剩余的分片的上传
+				break
+			}
+		}
 		// 没有任务了
 		if uploadDeque.Size() == 0 {
 			break

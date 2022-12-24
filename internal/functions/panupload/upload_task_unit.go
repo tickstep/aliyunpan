@@ -478,7 +478,7 @@ stepUploadUpload:
 	// 正常上传流程
 	uploadResult := utu.upload()
 	if uploadResult != nil && uploadResult.Err != nil {
-		if uploadResult.Err == uploadPartNotSeq {
+		if uploadResult.Err == uploader.UploadPartNotSeq {
 			fmt.Printf("[%s] %s 文件分片上传顺序错误，开始重新上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 			// 需要重新从0开始上传
 			uploadResult = nil

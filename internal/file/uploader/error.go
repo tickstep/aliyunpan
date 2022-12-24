@@ -13,12 +13,21 @@
 // limitations under the License.
 package uploader
 
+import "fmt"
+
+var (
+	UploadUrlExpired       = fmt.Errorf("UrlExpired")
+	UploadPartNotSeq       = fmt.Errorf("PartNotSequential")
+	UploadTerminate        = fmt.Errorf("UploadErrorTerminate")
+	UploadPartAlreadyExist = fmt.Errorf("PartAlreadyExist")
+)
+
 type (
 	// MultiError 多线程上传的错误
 	MultiError struct {
 		Err error
 		// IsRetry 是否重试,
-		Terminated bool
+		Terminated    bool
 		NeedStartOver bool // 是否从头开始上传
 	}
 )

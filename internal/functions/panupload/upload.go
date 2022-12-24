@@ -16,7 +16,6 @@ package panupload
 import (
 	"context"
 	"encoding/xml"
-	"fmt"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"io"
@@ -43,13 +42,6 @@ type (
 
 	EmptyReaderLen64 struct {
 	}
-)
-
-var (
-	uploadUrlExpired       = fmt.Errorf("UrlExpired")
-	uploadPartNotSeq       = fmt.Errorf("PartNotSequential")
-	uploadTerminate        = fmt.Errorf("UploadErrorTerminate")
-	uploadPartAlreadyExist = fmt.Errorf("PartAlreadyExist")
 )
 
 func (e EmptyReaderLen64) Read(p []byte) (n int, err error) {
@@ -105,7 +97,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 		newUploadInfo, err := pu.panClient.GetUploadUrl(refreshUploadParam)
 		if err != nil {
 			return false, &uploader.MultiError{
-				Err:        uploadUrlExpired,
+				Err:        uploader.UploadUrlExpired,
 				Terminated: false,
 			}
 		}
@@ -141,24 +133,24 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 					if err := xml.Unmarshal(buf, errResp); err == nil {
 						if errResp.Code != "" {
 							if "PartNotSequential" == errResp.Code || "NoSuchUpload" == errResp.Code {
-								respError = uploadPartNotSeq
+								respError = uploader.UploadPartNotSeq
 								respErr = &uploader.MultiError{
-									Err:           uploadPartNotSeq,
+									Err:           uploader.UploadPartNotSeq,
 									Terminated:    false,
 									NeedStartOver: true,
 								}
 								return resp, respError
 							} else if "AccessDenied" == errResp.Code && "Request has expired." == errResp.Message {
-								respError = uploadUrlExpired
+								respError = uploader.UploadUrlExpired
 								respErr = &uploader.MultiError{
-									Err:        uploadUrlExpired,
+									Err:        uploader.UploadUrlExpired,
 									Terminated: false,
 								}
 								return resp, respError
 							} else if "PartAlreadyExist" == errResp.Code {
-								respError = uploadPartAlreadyExist
+								respError = uploader.UploadPartAlreadyExist
 								respErr = &uploader.MultiError{
-									Err:        uploadPartAlreadyExist,
+									Err:        uploader.UploadPartAlreadyExist,
 									Terminated: false,
 								}
 								return resp, respError
@@ -173,13 +165,13 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 			// 不可恢复的错误
 			switch resp.StatusCode {
 			case 400, 401, 403, 413, 600:
-				respError = uploadTerminate
+				respError = uploader.UploadTerminate
 				respErr = &uploader.MultiError{
 					Terminated: true,
 				}
 			}
 		} else {
-			respError = uploadTerminate
+			respError = uploader.UploadTerminate
 			respErr = &uploader.MultiError{
 				Terminated: true,
 			}
@@ -195,7 +187,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 	apiError := pu.panClient.UploadFileData(uploadUrl, uploadFunc)
 
 	if respErr != nil {
-		if respErr.Err == uploadUrlExpired {
+		if respErr.Err == uploader.UploadUrlExpired {
 			// URL过期，获取新的URL
 			guur, er := pu.panClient.GetUploadUrl(&aliyunpan.GetUploadUrlParam{
 				DriveId:      pu.driveId,
@@ -216,11 +208,11 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 				uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].InternalUploadURL
 			}
 			apiError = pu.panClient.UploadFileData(uploadUrl, uploadFunc)
-		} else if respErr.Err == uploadPartAlreadyExist {
+		} else if respErr.Err == uploader.UploadPartAlreadyExist {
 			// already upload
 			// success
 			return true, nil
-		} else if respErr.Err == uploadPartNotSeq {
+		} else if respErr.Err == uploader.UploadPartNotSeq {
 			// 上传分片乱序了，需要重新从0分片开始上传
 			// 先直接返回，后续再优化
 			return false, respErr
