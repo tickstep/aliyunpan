@@ -14,10 +14,8 @@
 package uploader
 
 import (
-	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/converter"
-	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio"
 	"net/http"
@@ -49,10 +47,6 @@ type (
 		onExecute func()
 		onFinish  func()
 	}
-)
-
-var (
-	uploaderVerbose = logger.New("UPLOADER", config.EnvVerbose)
 )
 
 // NewUploader 返回 uploader 对象, url: 上传地址, readerlen64: 实现 rio.ReaderLen64 接口的对象, 例如文件

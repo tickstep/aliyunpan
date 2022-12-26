@@ -18,6 +18,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/converter"
+	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio"
 	"github.com/tickstep/library-go/requester/rio/speeds"
@@ -136,13 +137,13 @@ func (muer *MultiUploader) Execute() error {
 	// 分配任务
 	if muer.instanceState != nil {
 		muer.workers = muer.getWorkerListByInstanceState(muer.instanceState)
-		uploaderVerbose.Infof("upload task CREATED from instance state\n")
+		logger.Verboseln("upload task CREATED from instance state\n")
 	} else {
 		muer.workers = muer.getWorkerListByInstanceState(&InstanceState{
 			BlockList: SplitBlock(muer.file.Len(), muer.config.BlockSize),
 		})
 
-		uploaderVerbose.Infof("upload task CREATED: block size: %d, num: %d\n", muer.config.BlockSize, len(muer.workers))
+		logger.Verboseln("upload task CREATED: block size: %d, num: %d\n", muer.config.BlockSize, len(muer.workers))
 	}
 
 	// 开始上传

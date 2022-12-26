@@ -17,6 +17,7 @@ import (
 	"context"
 	"github.com/oleiade/lane"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
+	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"os"
 	"strconv"
@@ -88,7 +89,7 @@ func (muer *MultiUploader) upload() (uperr error) {
 			)
 			go func() {
 				if !wer.uploadDone {
-					uploaderVerbose.Info("begin to upload part: " + strconv.Itoa(wer.id))
+					logger.Verboseln("begin to upload part: " + strconv.Itoa(wer.id))
 					uploadDone, terr = muer.multiUpload.UploadFile(ctx, int(wer.id), wer.partOffset, wer.splitUnit.Range().End, wer.splitUnit, uploadClient)
 				} else {
 					uploadDone = true
@@ -101,10 +102,11 @@ func (muer *MultiUploader) upload() (uperr error) {
 				return
 			case <-doneChan:
 				// continue
-				uploaderVerbose.Info("multiUpload worker upload file done")
+				logger.Verboseln("multiUpload worker upload file done")
 			}
 			cancel()
 			if terr != nil {
+				logger.Verboseln("upload file part err: %+v", terr)
 				if me, ok := terr.(*MultiError); ok {
 					if me.Terminated { // 终止
 						muer.closeCanceledOnce.Do(func() { // 只关闭一次
@@ -113,7 +115,7 @@ func (muer *MultiUploader) upload() (uperr error) {
 						uperr = me.Err
 						return
 					} else if me.NeedStartOver {
-						uploaderVerbose.Warnf("upload start over: %d\n", wer.id)
+						logger.Verboseln("upload start over: %d\n", wer.id)
 						// 从头开始上传
 						muer.closeCanceledOnce.Do(func() { // 只关闭一次
 							close(muer.canceled)
@@ -123,9 +125,9 @@ func (muer *MultiUploader) upload() (uperr error) {
 					}
 				}
 
-				uploaderVerbose.Warnf("upload err: %s, id: %d\n", terr, wer.id)
+				logger.Verboseln("upload err: %s, id: %d\n", terr, wer.id)
 				wer.splitUnit.Seek(0, os.SEEK_SET)
-				uploadDeque.Append(wer)
+				uploadDeque.Prepend(wer) // 放回上传队列首位
 				return
 			}
 			wer.uploadDone = uploadDone
@@ -169,11 +171,11 @@ func (muer *MultiUploader) upload() (uperr error) {
 	if allSuccess {
 		e := muer.multiUpload.CommitFile()
 		if e != nil {
-			uploaderVerbose.Warn("upload file commit failed: " + e.Error())
+			logger.Verboseln("upload file commit failed: " + e.Error())
 			return e
 		}
 	} else {
-		uploaderVerbose.Warn("upload file not all success: " + muer.UploadOpEntity.FileId)
+		logger.Verboseln("upload file not all success: " + muer.UploadOpEntity.FileId)
 	}
 
 	return

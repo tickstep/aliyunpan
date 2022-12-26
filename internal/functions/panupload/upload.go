@@ -96,6 +96,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 		}
 		newUploadInfo, err := pu.panClient.GetUploadUrl(refreshUploadParam)
 		if err != nil {
+			logger.Verboseln(err)
 			return false, &uploader.MultiError{
 				Err:        uploader.UploadUrlExpired,
 				Terminated: false,
