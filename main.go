@@ -220,6 +220,10 @@ func main() {
 				targetPath string
 			)
 
+			if activeUser == nil {
+				return
+			}
+
 			if !closed {
 				targetPath = lineArgs[numArgs-1]
 				escaper.EscapeStringsByRuneFunc(lineArgs[:numArgs-1], runeFunc) // 转义
