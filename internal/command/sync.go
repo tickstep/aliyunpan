@@ -21,7 +21,6 @@ import (
 	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/syncdrive"
 	"github.com/tickstep/aliyunpan/internal/utils"
-	"github.com/tickstep/aliyunpan/library/filelocker"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
@@ -221,19 +220,19 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 					}
 
 					// 获取同步文件锁，保证同步操作单实例
-					locker := filelocker.NewFileLocker(config.GetLockerDir() + "/aliyunpan-sync")
-					if e := filelocker.LockFile(locker, 0755, true, 5*time.Second); e != nil {
-						logger.Verboseln(e)
-						fmt.Println("本应用其他实例正在执行同步，请先停止或者等待其完成")
-						return nil
-					}
+					//locker := filelocker.NewFileLocker(config.GetLockerDir() + "/aliyunpan-sync")
+					//if e := filelocker.LockFile(locker, 0755, true, 5*time.Second); e != nil {
+					//	logger.Verboseln(e)
+					//	fmt.Println("本应用其他实例正在执行同步，请先停止或者等待其完成")
+					//	return nil
+					//}
 
 					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"), step)
 
 					// 释放文件锁
-					if locker != nil {
-						filelocker.UnlockFile(locker)
-					}
+					//if locker != nil {
+					//	filelocker.UnlockFile(locker)
+					//}
 					return nil
 				},
 				Flags: []cli.Flag{

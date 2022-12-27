@@ -20,7 +20,6 @@ import (
 	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/utils"
-	"github.com/tickstep/aliyunpan/library/filelocker"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"os"
 	"path"
@@ -179,12 +178,12 @@ func CmdUpload() cli.Command {
 			}
 
 			// 获取上传文件锁，保证上传操作单实例
-			locker := filelocker.NewFileLocker(config.GetLockerDir() + "/aliyunpan-upload")
-			if e := filelocker.LockFile(locker, 0755, true, 5*time.Second); e != nil {
-				logger.Verboseln(e)
-				fmt.Println("本应用其他实例正在执行上传，请先停止或者等待其完成")
-				return nil
-			}
+			//locker := filelocker.NewFileLocker(config.GetLockerDir() + "/aliyunpan-upload")
+			//if e := filelocker.LockFile(locker, 0755, true, 5*time.Second); e != nil {
+			//	logger.Verboseln(e)
+			//	fmt.Println("本应用其他实例正在执行上传，请先停止或者等待其完成")
+			//	return nil
+			//}
 
 			RunUpload(subArgs[:c.NArg()-1], subArgs[c.NArg()-1], &UploadOptions{
 				AllParallel:   c.Int("p"), // 多文件上传的时候，允许同时并行上传的文件数量
@@ -200,9 +199,9 @@ func CmdUpload() cli.Command {
 			})
 
 			// 释放文件锁
-			if locker != nil {
-				filelocker.UnlockFile(locker)
-			}
+			//if locker != nil {
+			//	filelocker.UnlockFile(locker)
+			//}
 			return nil
 		},
 		Flags: UploadFlags,
