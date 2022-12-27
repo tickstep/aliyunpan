@@ -55,7 +55,7 @@ func IsUrlExpired(urlStr string) bool {
 	}
 	expiredTimeSecStr := u.Query().Get("x-oss-expires")
 	expiredTimeSec, _ := strconv.ParseInt(expiredTimeSecStr, 10, 64)
-	if (expiredTimeSec - time.Now().Unix()) <= 10 { // 小于10秒
+	if (expiredTimeSec - time.Now().Unix()) <= 300 { // 小于5分钟
 		// expired
 		return true
 	}
