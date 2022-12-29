@@ -92,8 +92,8 @@ func (c *PanConfig) PrintTable() {
 		[]string{"max_upload_rate", showMaxRate(c.MaxUploadRate), "", "限制单个文件最大上传速度, 0代表不限制"},
 		[]string{"transfer_url_type", strconv.Itoa(c.TransferUrlType), "1-默认，2-阿里云ECS", "上传下载URL类别。除非在阿里云ECS（暂只支持经典网络）服务器中使用，不然请设置1"},
 		[]string{"savedir", c.SaveDir, "", "下载文件的储存目录"},
-		[]string{"proxy", c.Proxy, "", "设置代理, 支持 http/socks5 代理，例如：http://127.0.0.1:8888"},
-		[]string{"local_addrs", c.LocalAddrs, "", "设置本地网卡地址, 多个地址用逗号隔开，例如：127.0.0.1,192.168.100.126"},
+		[]string{"proxy", c.Proxy, "", "设置代理, 支持 http/socks5 代理，例如: http://127.0.0.1:8888 或者 socks5://127.0.0.1:8889"},
+		[]string{"local_addrs", c.LocalAddrs, "", "设置本地网卡地址, 多个地址用逗号隔开，例如: 127.0.0.1,192.168.100.126"},
 		[]string{"file_record_config", fileRecorderLabel, "1-开启，2-禁用", "设置是否开启上传、下载、同步文件的结果记录，开启后会把结果记录到CSV文件方便后期查看"},
 	})
 	tb.Render()
