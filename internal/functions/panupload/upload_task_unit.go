@@ -350,6 +350,7 @@ StepUploadPrepareUpload:
 	// 创建云盘文件夹
 	saveFilePath = path.Dir(utu.SavePath)
 	if saveFilePath != "/" {
+		utu.FolderCreateMutex.Lock()
 		fmt.Printf("[%s] %s 正在检测和创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
 		fe, apierr1 := utu.PanClient.FileInfoByPath(utu.DriveId, saveFilePath)
 		time.Sleep(1 * time.Second)
@@ -361,6 +362,7 @@ StepUploadPrepareUpload:
 			if apierr != nil || rs.FileId == "" {
 				result.Err = apierr
 				result.ResultMessage = "创建云盘文件夹失败"
+				utu.FolderCreateMutex.Unlock()
 				return
 			}
 			logger.Verbosef("[%s] %s 创建云盘文件夹成功\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
@@ -368,6 +370,7 @@ StepUploadPrepareUpload:
 			rs = &aliyunpan.MkdirResult{}
 			rs.FileId = fe.FileId
 		}
+		utu.FolderCreateMutex.Unlock()
 	} else {
 		rs = &aliyunpan.MkdirResult{}
 		rs.FileId = ""

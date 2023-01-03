@@ -451,6 +451,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 				// 这样空文件夹也可以正确上传
 				saveFilePath := subSavePath
 				if saveFilePath != "/" {
+					folderCreateMutex.Lock()
 					fmt.Printf("正在检测和创建云盘文件夹: %s\n", saveFilePath)
 					_, apierr1 := activeUser.PanClient().FileInfoByPath(opt.DriveId, saveFilePath)
 					time.Sleep(1 * time.Second)
@@ -461,6 +462,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 							fmt.Printf("创建云盘文件夹失败: %s\n", saveFilePath)
 						}
 					}
+					folderCreateMutex.Unlock()
 				}
 			}
 			return nil
