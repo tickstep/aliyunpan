@@ -77,6 +77,9 @@ func CmdRename() cli.Command {
 
     4. 批量重命名，将当前目录下所有.mp4文件全部进行 "视频+编号.mp4" 的重命名操作，旧的名称全部去掉，即：视频001.mp4, 视频002.mp4, 视频003.mp4...
     aliyunpan rename * 视频###.mp4 *.mp4
+
+    5. 批量重命名，将当前目录下所有.mp4文件全部进行 "视频+编号.mp4" 的重命名操作，旧的名称全部去掉，直接重命名无需人工确认操作
+    aliyunpan rename -y * 视频###.mp4 *.mp4
 `,
 		Category: "阿里云盘",
 		Before:   ReloadConfigFunc,
@@ -93,7 +96,7 @@ func CmdRename() cli.Command {
 				RunRename(parseDriveId(c), c.Args().Get(0), c.Args().Get(1))
 			} else if c.NArg() == 3 {
 				// 批量重命名
-				RunRenameBatch(parseDriveId(c), c.Args().Get(0), c.Args().Get(1), c.Args().Get(2))
+				RunRenameBatch(c.Bool("y"), parseDriveId(c), c.Args().Get(0), c.Args().Get(1), c.Args().Get(2))
 			}
 			return nil
 		},
@@ -102,6 +105,10 @@ func CmdRename() cli.Command {
 				Name:  "driveId",
 				Usage: "网盘ID",
 				Value: "",
+			},
+			cli.BoolFlag{
+				Name:  "y",
+				Usage: "跳过人工确认，对批量操作有效",
 			},
 		},
 	}
@@ -150,7 +157,7 @@ func RunRename(driveId string, oldName string, newName string) {
 }
 
 // RunRenameBatch 批量重命名文件
-func RunRenameBatch(driveId string, expression, replacement, filePattern string) {
+func RunRenameBatch(skipConfirm bool, driveId string, expression, replacement, filePattern string) {
 	if len(expression) == 0 {
 		fmt.Println("旧文件名不能为空")
 		return
@@ -209,18 +216,20 @@ func RunRenameBatch(driveId string, expression, replacement, filePattern string)
 	}
 
 	// 确认
-	fmt.Printf("以下文件将进行对应的重命名\n\n")
-	idx := 1
-	for _, file := range files {
-		fmt.Printf("%d) %s -> %s\n", idx, file.file.FileName, file.newFileName)
-		idx += 1
-	}
-	fmt.Printf("\n是否进行批量重命名，该操作不可逆(y/n): ")
-	confirm := ""
-	_, err := fmt.Scanln(&confirm)
-	if err != nil || (confirm != "y" && confirm != "Y") {
-		fmt.Println("用户取消了操作")
-		return
+	if !skipConfirm {
+		fmt.Printf("以下文件将进行对应的重命名\n\n")
+		idx := 1
+		for _, file := range files {
+			fmt.Printf("%d) %s -> %s\n", idx, file.file.FileName, file.newFileName)
+			idx += 1
+		}
+		fmt.Printf("\n是否进行批量重命名，该操作不可逆(y/n): ")
+		confirm := ""
+		_, err := fmt.Scanln(&confirm)
+		if err != nil || (confirm != "y" && confirm != "Y") {
+			fmt.Println("用户取消了操作")
+			return
+		}
 	}
 
 	// 重命名
