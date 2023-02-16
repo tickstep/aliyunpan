@@ -229,6 +229,9 @@ func CmdConfig() cli.Command {
 					if c.IsSet("file_record_config") {
 						config.Config.SetFileRecorderConfig(c.String("file_record_config"))
 					}
+					if c.IsSet("device_id") {
+						config.Config.SetDeviceId(c.String("device_id"))
+					}
 
 					err := config.Config.Save()
 					if err != nil {
@@ -282,6 +285,10 @@ func CmdConfig() cli.Command {
 					cli.StringFlag{
 						Name:  "file_record_config",
 						Usage: "设置是否开启上传、下载、同步文件的结果记录功能",
+					},
+					cli.StringFlag{
+						Name:  "device_id",
+						Usage: "设置客户端ID，24位的字符串",
 					},
 				},
 			},

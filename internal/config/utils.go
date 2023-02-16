@@ -21,9 +21,11 @@ import (
 	"github.com/tickstep/library-go/crypto"
 	"github.com/tickstep/library-go/ids"
 	"github.com/tickstep/library-go/logger"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func (pl *PanUserList) String() string {
@@ -120,4 +122,16 @@ func IsFolderExist(pathStr string) bool {
 		return false
 	}
 	return fi.IsDir()
+}
+
+// RandomDeviceId 随机生成device-id
+func RandomDeviceId() string {
+	count := 24
+	STR_SET := "abcdefjhijklmnopqrstuvwxyzABCDEFJHIJKLMNOPQRSTUVWXYZ1234567890"
+	rand.Seed(time.Now().UnixNano())
+	str := strings.Builder{}
+	for i := 0; i < count; i++ {
+		str.WriteByte(byte(STR_SET[rand.Intn(len(STR_SET))]))
+	}
+	return str.String()
 }

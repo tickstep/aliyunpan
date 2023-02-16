@@ -85,7 +85,7 @@ aliyunpan webdav start -h
 							// token刷新
 							time.Sleep(time.Duration(1) * time.Minute)
 							//time.Sleep(time.Duration(5) * time.Second)
-							if RefreshTokenInNeed(activeUser) {
+							if RefreshTokenInNeed(activeUser, config.Config.DeviceName) {
 								logger.Verboseln("reload new access token for webdav")
 							}
 						}

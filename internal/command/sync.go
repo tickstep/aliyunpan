@@ -313,7 +313,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	go func(flag *int32) {
 		for atomic.LoadInt32(flag) == 0 {
 			time.Sleep(time.Duration(1) * time.Minute)
-			if RefreshTokenInNeed(activeUser) {
+			if RefreshTokenInNeed(activeUser, config.Config.DeviceName) {
 				logger.Verboseln("update access token for sync task")
 				panClient.UpdateToken(activeUser.WebToken)
 			}

@@ -72,7 +72,7 @@ type PanUser struct {
 
 type PanUserList []*PanUser
 
-func SetupUserByCookie(webToken *aliyunpan.WebLoginToken) (user *PanUser, err *apierror.ApiError) {
+func SetupUserByCookie(webToken *aliyunpan.WebLoginToken, deviceId, deviceName string) (user *PanUser, err *apierror.ApiError) {
 	tryRefreshWebToken := true
 
 	if webToken == nil {
@@ -80,7 +80,14 @@ func SetupUserByCookie(webToken *aliyunpan.WebLoginToken) (user *PanUser, err *a
 	}
 
 doLoginAct:
-	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{})
+	appConfig := aliyunpan.AppConfig{
+		AppId:     "25dzX3vbYqktVxyX",
+		DeviceId:  deviceId,
+		UserId:    "",
+		Nonce:     0,
+		PublicKey: "",
+	}
+	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{}, appConfig)
 	u := &PanUser{
 		WebToken:          *webToken,
 		panClient:         panClient,
@@ -126,6 +133,22 @@ doLoginAct:
 		// error, maybe the token has expired
 		return nil, apierror.NewFailedApiError("cannot get user info, the token has expired")
 	}
+
+	// create session
+	appConfig.UserId = u.UserId
+	panClient.UpdateAppConfig(appConfig)
+	panClient.CalcSignature()
+	r, e := panClient.CreateSession(&aliyunpan.CreateSessionParam{
+		DeviceName: deviceName,
+		ModelName:  "Windows网页版",
+	})
+	if e != nil {
+		logger.Verboseln("call CreateSession error in SetupUserByCookie: " + e.Error())
+	}
+	if r != nil && !r.Result {
+		logger.Verboseln("上传签名秘钥失败，可能是你账号登录的设备已超最大数量")
+	}
+
 	return u, nil
 }
 

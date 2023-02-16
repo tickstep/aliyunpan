@@ -129,7 +129,7 @@ func UnescapeStr(s string) string {
 }
 
 // RefreshTokenInNeed 刷新refresh token
-func RefreshTokenInNeed(activeUser *config.PanUser) bool {
+func RefreshTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 	if activeUser == nil {
 		return false
 	}
@@ -166,6 +166,16 @@ func RefreshTokenInNeed(activeUser *config.PanUser) bool {
 					// plugin callback
 					if er1 := plugin.UserTokenRefreshFinishCallback(plugins.GetContext(activeUser), params); er1 != nil {
 						logger.Verbosef("UserTokenRefreshFinishCallback error: " + er1.Error())
+					}
+
+					// update signature
+					activeUser.PanClient().CalcNextSignature()
+					_, e := activeUser.PanClient().CreateSession(&aliyunpan.CreateSessionParam{
+						DeviceName: deviceName,
+						ModelName:  "Windows网页版",
+					})
+					if e != nil {
+						logger.Verboseln("call CreateSession error in RefreshTokenInNeed: " + e.Error())
 					}
 					return true
 				} else {

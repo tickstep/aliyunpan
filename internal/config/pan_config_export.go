@@ -74,6 +74,15 @@ func (c *PanConfig) SetFileRecorderConfig(config string) error {
 	return nil
 }
 
+// SetDeviceId 设置客户端ID
+func (c *PanConfig) SetDeviceId(deviceId string) error {
+	if deviceId == "" {
+		return nil
+	}
+	c.DeviceId = deviceId
+	return nil
+}
+
 // PrintTable 输出表格
 func (c *PanConfig) PrintTable() {
 	fileRecorderLabel := "禁用"
@@ -95,6 +104,7 @@ func (c *PanConfig) PrintTable() {
 		[]string{"proxy", c.Proxy, "", "设置代理, 支持 http/socks5 代理，例如: http://127.0.0.1:8888 或者 socks5://127.0.0.1:8889"},
 		[]string{"local_addrs", c.LocalAddrs, "", "设置本地网卡地址, 多个地址用逗号隔开，例如: 127.0.0.1,192.168.100.126"},
 		[]string{"file_record_config", fileRecorderLabel, "1-开启，2-禁用", "设置是否开启上传、下载、同步文件的结果记录，开启后会把结果记录到CSV文件方便后期查看"},
+		[]string{"device_id", c.DeviceId, "", "客户端ID，用于标识登录客户端，阿里单个账号最多允许10个客户端同时在线。修改后需要重启应用生效"},
 	})
 	tb.Render()
 }

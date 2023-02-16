@@ -60,7 +60,7 @@ func CmdLogin() cli.Command {
 				return err
 			}
 
-			cloudUser, err := config.SetupUserByCookie(&webToken)
+			cloudUser, err := config.SetupUserByCookie(&webToken, config.Config.DeviceId, config.Config.DeviceName)
 			if cloudUser == nil {
 				fmt.Println("登录失败: ", err)
 				return nil
@@ -141,7 +141,7 @@ func RunLogin(useQrCodeLogin bool, refreshToken string) (tokenId, refreshTokenSt
 			fmt.Println("二维码登录错误：", err)
 			return "", "", aliyunpan.WebLoginToken{}, err
 		}
-		fmt.Printf("请在浏览器打开以下链接进行扫码登录，链接有效时间为5分钟\n%s\n\n", qrCodeUrlResult.TokenUrl)
+		fmt.Printf("请在浏览器打开以下链接进行扫码登录，链接有效时间为5分钟\n%s\n\n", qrCodeUrlResult.TokenUrl+"&deviceId="+config.Config.DeviceId)
 
 		// handler waiting
 		line := cmdliner.NewLiner()

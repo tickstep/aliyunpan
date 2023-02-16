@@ -58,6 +58,9 @@ const (
 
 	// DefaultVideoFileExtensions 默认的视频文件后缀
 	DefaultVideoFileExtensions = "mp4,flv,mkv,mov,rm,rmvb,wmv,wma,mv,asf,asx,mpg,mpeg,mpe,3gp,m4v,avi,vob"
+
+	// DefaultDeviceName 默认客户端名称
+	DefaultDeviceName = "Chrome浏览器"
 )
 
 var (
@@ -102,6 +105,9 @@ type PanConfig struct {
 
 	VideoFileExtensions string `json:"videoFileExtensions"`
 	FileRecordConfig    string `json:"fileRecordConfig"` // 上传、下载、同步文件的记录，包括失败和成功的
+
+	DeviceId   string `json:"deviceId"`   // 客户端ID，用于标识登录客户端，阿里单个账号最多允许10个客户端同时登录
+	DeviceName string `json:"deviceName"` // 客户端名称，默认为：Chrome浏览器
 
 	configFilePath string
 	configFile     *os.File
@@ -251,6 +257,9 @@ func (c *PanConfig) loadConfigFromFile() (err error) {
 	if err != nil {
 		return ErrConfigContentsParseError
 	}
+	if c.DeviceName == "" {
+		c.DeviceName = DefaultDeviceName
+	}
 	return nil
 }
 
@@ -273,6 +282,8 @@ func (c *PanConfig) initDefaultConfig() {
 	}
 	c.ConfigVer = ConfigVersion
 	c.VideoFileExtensions = DefaultVideoFileExtensions
+	c.DeviceId = RandomDeviceId() // 生成默认客户端ID
+	c.DeviceName = DefaultDeviceName
 	c.FileRecordConfig = "1" // 默认开启
 }
 
@@ -368,7 +379,7 @@ func (c *PanConfig) ActiveUser() *PanUser {
 			if u.UserId == c.ActiveUID {
 				if u.PanClient() == nil {
 					// restore client
-					user, err := SetupUserByCookie(&u.WebToken)
+					user, err := SetupUserByCookie(&u.WebToken, c.DeviceId, c.DeviceName)
 					if err != nil {
 						logger.Verboseln("setup user error")
 						return nil
