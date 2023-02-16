@@ -307,6 +307,15 @@ Windows
 打开aliyunpan命令行程序，任何云盘命令都有类似如下日志输出
 ![](./assets/images/debug-log-screenshot.png)
 
+## 如何登出和下线客户端
+阿里云盘单账户最多只允许同时登录 10 台设备   
+当出现这个提示：你账号已超出最大登录设备数量，请先下线一台设备，然后重启本应用，才可以继续使用   
+说明你的账号登录客户端已经超过数量，你需要先登出其他客户端才能继续使用，如下所示   
+APP手机端   
+![](./assets/images/app-deregister-device.png)
+Web网页端   
+![](./assets/images/web-deregister-device.png)
+
 # 交流反馈
 提交issue: [issues页面](https://github.com/tickstep/aliyunpan/issues)   
 联系邮箱: tickstep@outlook.com
