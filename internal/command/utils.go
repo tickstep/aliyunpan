@@ -168,8 +168,8 @@ func RefreshTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 						logger.Verbosef("UserTokenRefreshFinishCallback error: " + er1.Error())
 					}
 
-					// update signature
-					activeUser.PanClient().CalcNextSignature()
+					// create new signature
+					activeUser.PanClient().CalcSignature()
 					_, e := activeUser.PanClient().CreateSession(&aliyunpan.CreateSessionParam{
 						DeviceName: deviceName,
 						ModelName:  "Windows网页版",
