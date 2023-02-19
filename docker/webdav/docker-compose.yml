@@ -25,7 +25,8 @@ services:
       - ALIYUNPAN_TRANSFER_URL_TYPE=1
       # 上传数据块大小，单位为KB，默认为10240KB，建议范围1024KB~10240KB
       - ALIYUNPAN_BLOCK_SIZE=10240
-
+      # 登录设备的ID，默认为空，程序会自动生成一个ID
+      - ALIYUNPAN_DEVICE_ID=
 
 
 

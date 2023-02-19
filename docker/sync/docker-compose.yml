@@ -37,3 +37,5 @@ services:
       - ALIYUNPAN_LOCAL_DELAY_TIME=3
       # 任务步骤, 支持两种: scan(只扫描并建立同步数据库),sync(正常启动同步任务)
       - ALIYUNPAN_TASK_STEP=sync
+      # 登录设备的ID，默认为空，程序会自动生成一个ID
+      - ALIYUNPAN_DEVICE_ID=

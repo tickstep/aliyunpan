@@ -2,6 +2,15 @@
 cd /home/app
 chmod +x ./aliyunpan
 
+# device-id
+if [[ -z $ALIYUNPAN_DEVICE_ID ]];
+then
+  echo "the program use random device id"
+else
+  echo "set device id"
+  ./aliyunpan config set -device_id ${ALIYUNPAN_DEVICE_ID}
+fi
+
 # check login already or not
 ./aliyunpan who
 if [ $? -eq 0 ]
