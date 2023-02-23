@@ -116,6 +116,13 @@ func CmdLogout() cli.Command {
 				}
 			}
 
+			// 云端注销登录
+			if _, e := activeUser.PanClient().DeviceLogout(); e != nil {
+				fmt.Printf("登出设备失败，请稍后重试: %s\n", e.String())
+				return nil
+			}
+
+			// 删除用户信息
 			deletedUser, err := config.Config.DeleteUser(activeUser.UserId)
 			if err != nil {
 				fmt.Printf("退出用户 %s, 失败, 错误: %s\n", activeUser.Nickname, err)
