@@ -95,12 +95,14 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			}
 
 			// recorder
-			f.appendRecord(&log.FileRecordItem{
-				Status:   "成功-上传",
-				TimeStr:  utils.NowTimeStr(),
-				FileSize: actFile.FileSize,
-				FilePath: actFile.Path,
-			})
+			if actFile != nil {
+				f.appendRecord(&log.FileRecordItem{
+					Status:   "成功-上传",
+					TimeStr:  utils.NowTimeStr(),
+					FileSize: actFile.FileSize,
+					FilePath: actFile.Path,
+				})
+			}
 		}
 	}
 
