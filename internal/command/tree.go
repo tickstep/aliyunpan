@@ -32,6 +32,12 @@ func CmdTree() cli.Command {
 
 	列出 /我的资源 内的文件和目录的树形图，并且显示文件对应的完整绝对路径
 	aliyunpan tree -fp /我的资源
+
+	列出 /我的资源 内的文件和目录的树形图，并且显示文件对应的文件大小
+	aliyunpan tree -fs /我的资源
+
+	列出 /我的资源 内的文件和目录的树形图，过滤大于等于 10kb 并且小于等于 10mb 的文件，同时显示文件对应的文件大小
+	aliyunpan tree -fs -minSize=1kb -maxSize=10mb /我的资源
 `,
 		Category: "阿里云盘",
 		Before:   ReloadConfigFunc,
@@ -40,7 +46,19 @@ func CmdTree() cli.Command {
 				fmt.Println("未登录账号")
 				return nil
 			}
-			RunTree(parseDriveId(c), c.Args().Get(0), c.Bool("fp"))
+			minSize := int64(0)
+			if c.IsSet("minSize") {
+				if s, e := converter.ParseFileSizeStr(c.String("minSize")); e == nil {
+					minSize = s
+				}
+			}
+			maxSize := int64(0)
+			if c.IsSet("maxSize") {
+				if s, e := converter.ParseFileSizeStr(c.String("maxSize")); e == nil {
+					maxSize = s
+				}
+			}
+			RunTree(parseDriveId(c), c.Args().Get(0), c.Bool("fp"), c.Bool("fs"), minSize, maxSize)
 			return nil
 		},
 		Flags: []cli.Flag{
@@ -51,7 +69,19 @@ func CmdTree() cli.Command {
 			},
 			cli.BoolFlag{
 				Name:  "fp",
-				Usage: "full path， 树形图是否显示文件完整路径",
+				Usage: "full path， 树形图显示文件的完整路径",
+			},
+			cli.BoolFlag{
+				Name:  "fs",
+				Usage: "file size， 树形图显示文件的文件大小",
+			},
+			cli.StringFlag{
+				Name:  "minSize",
+				Usage: "min size， 过滤大于等于指定大小的文件，例如：100mb",
+			},
+			cli.StringFlag{
+				Name:  "maxSize",
+				Usage: "max size， 过滤小于等于指定大小的文件，例如：1gb",
 			},
 		},
 	}
@@ -69,9 +99,16 @@ type (
 		CountOfFile int64
 		SizeOfFile  int64
 	}
+
+	treeConfig struct {
+		showFullPath bool
+		showFileSize bool
+		minFileSize  int64
+		maxFileSize  int64
+	}
 )
 
-func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, showFullPath bool) {
+func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, setting *treeConfig) {
 	activeUser := config.Config.ActiveUser()
 	pathStr = activeUser.PathJoin(driveId, pathStr)
 	pathStr = path.Clean(pathStr)
@@ -127,14 +164,27 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, showF
 	for i, file := range fileList {
 		if file.IsFolder() {
 			statistic.CountOfDir += 1
-			if showFullPath {
+			if setting.showFullPath {
 				fmt.Printf("%v%v %v/ -> %s\n", indentPrefixStr, pathPrefix, file.FileName, targetPathInfo.Path+"/"+file.FileName)
 			} else {
 				fmt.Printf("%v%v %v/\n", indentPrefixStr, pathPrefix, file.FileName)
 			}
-			getTree(driveId, targetPathInfo.Path+"/"+file.Path, depth+1, statistic, showFullPath)
+			getTree(driveId, targetPathInfo.Path+"/"+file.Path, depth+1, statistic, setting)
 			continue
 		}
+
+		// filter file size
+		if setting.minFileSize > 0 {
+			if file.FileSize < setting.minFileSize {
+				continue
+			}
+		}
+		if setting.maxFileSize > 0 {
+			if file.FileSize > setting.maxFileSize {
+				continue
+			}
+		}
+
 		statistic.CountOfFile += 1
 		statistic.SizeOfFile += file.FileSize
 
@@ -142,10 +192,19 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, showF
 			prefix = lastFilePrefix
 		}
 
-		if showFullPath {
-			fmt.Printf("%v%v %v -> %s\n", indentPrefixStr, prefix, file.FileName, targetPathInfo.Path+"/"+file.FileName)
+		// 文件大小
+		fileName := &strings.Builder{}
+		if setting.showFileSize {
+			fmt.Fprintf(fileName, "%s (%s)", file.FileName, converter.ConvertFileSize(file.FileSize, 2))
 		} else {
-			fmt.Printf("%v%v %v\n", indentPrefixStr, prefix, file.FileName)
+			fmt.Fprintf(fileName, "%s", file.FileName)
+		}
+
+		// 文件完整路径
+		if setting.showFullPath {
+			fmt.Printf("%v%v %v -> %s\n", indentPrefixStr, prefix, fileName.String(), targetPathInfo.Path+"/"+file.FileName)
+		} else {
+			fmt.Printf("%v%v %v\n", indentPrefixStr, prefix, fileName.String())
 		}
 	}
 
@@ -153,7 +212,7 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, showF
 }
 
 // RunTree 列出树形图
-func RunTree(driveId, pathStr string, showFullPath bool) {
+func RunTree(driveId, pathStr string, showFullPath, showFileSize bool, minSize, maxSize int64) {
 	activeUser := config.Config.ActiveUser()
 	activeUser.PanClient().ClearCache()
 	activeUser.PanClient().EnableCache()
@@ -164,6 +223,12 @@ func RunTree(driveId, pathStr string, showFullPath bool) {
 		CountOfFile: 0,
 		SizeOfFile:  0,
 	}
-	getTree(driveId, pathStr, 0, statistic, showFullPath)
+	setting := &treeConfig{
+		showFullPath: showFullPath,
+		showFileSize: showFileSize,
+		minFileSize:  minSize,
+		maxFileSize:  maxSize,
+	}
+	getTree(driveId, pathStr, 0, statistic, setting)
 	fmt.Printf("\n%d 个文件夹, %d 个文件, %s 总大小\n", statistic.CountOfDir, statistic.CountOfFile, converter.ConvertFileSize(statistic.SizeOfFile, 2))
 }
