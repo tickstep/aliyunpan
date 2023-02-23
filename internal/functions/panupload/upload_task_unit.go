@@ -179,9 +179,11 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 		}
 
 		if utu.ShowProgress {
-			fmt.Printf("\r[%s] ↑ %s/%s %s/s(%s/s) in %s ............", utu.taskInfo.Id(),
+			uploadedPercentage := fmt.Sprintf("%.2f%%", float64(status.Uploaded())/float64(status.TotalSize())*100)
+			fmt.Printf("\r[%s] ↑ %s/%s(%s) %s/s(%s/s) in %s ............", utu.taskInfo.Id(),
 				converter.ConvertFileSize(status.Uploaded(), 2),
 				converter.ConvertFileSize(status.TotalSize(), 2),
+				uploadedPercentage,
 				converter.ConvertFileSize(status.SpeedsPerSecond(), 2),
 				converter.ConvertFileSize(utu.GlobalSpeedsStat.GetSpeeds(), 2),
 				status.TimeElapsed(),

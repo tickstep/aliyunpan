@@ -209,9 +209,11 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 		}
 
 		if dtu.Cfg.ShowProgress {
-			fmt.Fprintf(builder, "\r[%s] ↓ %s/%s %s/s(%s/s) in %s, left %s ............", dtu.taskInfo.Id(),
+			downloadedPercentage := fmt.Sprintf("%.2f%%", float64(status.Downloaded())/float64(status.TotalSize())*100)
+			fmt.Fprintf(builder, "\r[%s] ↓ %s/%s(%s) %s/s(%s/s) in %s, left %s ............", dtu.taskInfo.Id(),
 				converter.ConvertFileSize(status.Downloaded(), 2),
 				converter.ConvertFileSize(status.TotalSize(), 2),
+				downloadedPercentage,
 				converter.ConvertFileSize(status.SpeedsPerSecond(), 2),
 				converter.ConvertFileSize(dtu.GlobalSpeedsStat.GetSpeeds(), 2),
 				status.TimeElapsed()/1e7*1e7, leftStr,
