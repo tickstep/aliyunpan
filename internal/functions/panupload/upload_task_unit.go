@@ -356,7 +356,18 @@ StepUploadPrepareUpload:
 		fmt.Printf("[%s] %s 正在检测和创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
 		fe, apierr1 := utu.PanClient.FileInfoByPath(utu.DriveId, saveFilePath)
 		time.Sleep(1 * time.Second)
+		needToCreateFolder := false
 		if apierr1 != nil && apierr1.Code == apierror.ApiCodeFileNotFoundCode {
+			needToCreateFolder = true
+		} else {
+			if fe == nil {
+				needToCreateFolder = true
+			} else {
+				rs = &aliyunpan.MkdirResult{}
+				rs.FileId = fe.FileId
+			}
+		}
+		if needToCreateFolder {
 			logger.Verbosef("[%s] %s 创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
 			// rs, apierr = utu.PanClient.MkdirRecursive(utu.DriveId, "", "", 0, strings.Split(path.Clean(saveFilePath), "/"))
 			// 可以直接创建的，不用循环创建
@@ -368,9 +379,6 @@ StepUploadPrepareUpload:
 				return
 			}
 			logger.Verbosef("[%s] %s 创建云盘文件夹成功\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
-		} else {
-			rs = &aliyunpan.MkdirResult{}
-			rs.FileId = fe.FileId
 		}
 		utu.FolderCreateMutex.Unlock()
 	} else {
