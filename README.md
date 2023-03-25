@@ -14,28 +14,34 @@
 10. 支持[JavaScript插件](docs/manual.md#JavaScript插件)，你可以按照自己的需要定制上传/下载中关键步骤的行为，最大程度满足自己的个性化需求
 
 # 目录
+- [关于](#关于)
+- [特色](#特色)
+- [目录](#目录)
 - [如何安装](#如何安装)
-    * [直接下载安装](#直接下载安装)
-    * [apt安装](#apt安装)
-    * [yum安装](#yum安装)
-    * [docker安装](#docker安装)
-        + [sync同步盘](#sync同步盘)
-        + [webdav共享盘](#webdav共享盘)
+  - [直接下载安装](#直接下载安装)
+  - [apt安装](#apt安装)
+  - [yum安装](#yum安装)
+  - [winget安装](#winget安装)
+  - [docker安装](#docker安装)
+    - [sync同步盘](#sync同步盘)
+    - [webdav共享盘](#webdav共享盘)
 - [如何使用](#如何使用)
-    * [基本使用](#基本使用)
-        + [修改配置目录](#修改配置目录)
-        + [启动程序](#启动程序)
-        + [查看帮助](#查看帮助)
-        + [登录](#登录)
-        + [查看文件列表](#查看文件列表)
-        + [下载文件](#下载文件)
-        + [上传文件](#上传文件)
-        + [同步备份文件](#同步备份文件)
-    * [更多命令](#更多命令)
+  - [基本使用](#基本使用)
+    - [修改配置目录](#修改配置目录)
+    - [启动程序](#启动程序)
+    - [查看帮助](#查看帮助)
+    - [登录](#登录)
+    - [查看文件列表](#查看文件列表)
+    - [下载文件](#下载文件)
+    - [上传文件](#上传文件)
+    - [同步备份文件](#同步备份文件)
+  - [更多命令](#更多命令)
 - [常见问题](#常见问题)
-    * [如何获取RefreshToken](#如何获取RefreshToken)
-    * [如何开启Debug调试日志](#如何开启Debug调试日志)
-    * [如何登出和下线客户端](#如何登出和下线客户端)
+  - [如何获取RefreshToken](#如何获取refreshtoken)
+  - [如何开启Debug调试日志](#如何开启debug调试日志)
+    - [第一步](#第一步)
+    - [第二步](#第二步)
+  - [如何登出和下线客户端](#如何登出和下线客户端)
 - [交流反馈](#交流反馈)
 - [鸣谢](#鸣谢)
 
@@ -71,6 +77,20 @@ sudo curl -fsSL http://file.tickstep.com/apt/pgp | gpg --dearmor | sudo tee /etc
 适用于yum包管理器的系统，例如CentOS、RockyLinux等。目前只支持amd64和arm64架构的机器。
 ```shell
 sudo curl -fsSL http://file.tickstep.com/rpm/aliyunpan/aliyunpan.repo | sudo tee /etc/yum.repos.d/tickstep-aliyunpan.repo > /dev/null && sudo yum install aliyunpan -y
+ 
+```
+
+## winget安装
+适用于Windows系统的winget包管理器。目前只支持x86和x64架构的机器。  
+    
+更新源
+```powershell
+winget source update
+ 
+```
+安装
+```powershell
+winget install tickstep.aliyunpan --silent
  
 ```
 
