@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/cachepool"
@@ -383,6 +384,21 @@ func (der *Downloader) Execute() error {
 		DriveId: der.driveId,
 		FileId:  der.fileInfo.FileId,
 	})
+	if apierr != nil && apierr.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
+		_, e := der.panClient.CreateSession(&aliyunpan.CreateSessionParam{
+			DeviceName: config.Config.DeviceName,
+			ModelName:  "Windows网页版",
+		})
+		if e == nil {
+			// retry
+			durl, apierr = der.panClient.GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+				DriveId: der.driveId,
+				FileId:  der.fileInfo.FileId,
+			})
+		} else {
+			logger.Verboseln("CreateSession failed")
+		}
+	}
 	time.Sleep(time.Duration(200) * time.Millisecond)
 	if apierr != nil {
 		logger.Verbosef("ERROR: get download url error: %s\n", der.fileInfo.FileId)
