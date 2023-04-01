@@ -355,6 +355,18 @@ StepUploadPrepareUpload:
 		utu.FolderCreateMutex.Lock()
 		fmt.Printf("[%s] %s 正在检测和创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
 		fe, apierr1 := utu.PanClient.FileInfoByPath(utu.DriveId, saveFilePath)
+		if apierr1 != nil && apierr1.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
+			_, e := utu.PanClient.CreateSession(&aliyunpan.CreateSessionParam{
+				DeviceName: config.Config.DeviceName,
+				ModelName:  "Windows网页版",
+			})
+			if e == nil {
+				// retry
+				fe, apierr1 = utu.PanClient.FileInfoByPath(utu.DriveId, saveFilePath)
+			} else {
+				logger.Verboseln("CreateSession failed")
+			}
+		}
 		time.Sleep(1 * time.Second)
 		needToCreateFolder := false
 		if apierr1 != nil && apierr1.Code == apierror.ApiCodeFileNotFoundCode {
@@ -369,9 +381,19 @@ StepUploadPrepareUpload:
 		}
 		if needToCreateFolder {
 			logger.Verbosef("[%s] %s 创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
-			// rs, apierr = utu.PanClient.MkdirRecursive(utu.DriveId, "", "", 0, strings.Split(path.Clean(saveFilePath), "/"))
-			// 可以直接创建的，不用循环创建
 			rs, apierr = utu.PanClient.Mkdir(utu.DriveId, "root", saveFilePath)
+			if apierr != nil && apierr.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
+				_, e := utu.PanClient.CreateSession(&aliyunpan.CreateSessionParam{
+					DeviceName: config.Config.DeviceName,
+					ModelName:  "Windows网页版",
+				})
+				if e == nil {
+					// retry
+					rs, apierr = utu.PanClient.Mkdir(utu.DriveId, "root", saveFilePath)
+				} else {
+					logger.Verboseln("CreateSession failed")
+				}
+			}
 			if apierr != nil || rs.FileId == "" {
 				result.Err = apierr
 				result.ResultMessage = "创建云盘文件夹失败"
@@ -415,6 +437,18 @@ StepUploadPrepareUpload:
 		// 标记覆盖旧同名文件
 		// 检查同名文件是否存在
 		efi, apierr := utu.PanClient.FileInfoByPath(utu.DriveId, utu.SavePath)
+		if apierr != nil && apierr.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
+			_, e := utu.PanClient.CreateSession(&aliyunpan.CreateSessionParam{
+				DeviceName: config.Config.DeviceName,
+				ModelName:  "Windows网页版",
+			})
+			if e == nil {
+				// retry
+				efi, apierr = utu.PanClient.FileInfoByPath(utu.DriveId, utu.SavePath)
+			} else {
+				logger.Verboseln("CreateSession failed")
+			}
+		}
 		if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
 			result.Err = apierr
 			result.ResultMessage = "检测同名文件失败"
@@ -431,6 +465,18 @@ StepUploadPrepareUpload:
 			var fileDeleteResult []*aliyunpan.FileBatchActionResult
 			var err *apierror.ApiError
 			fileDeleteResult, err = utu.PanClient.FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: efi.DriveId, FileId: efi.FileId}})
+			if err != nil && err.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
+				_, e := utu.PanClient.CreateSession(&aliyunpan.CreateSessionParam{
+					DeviceName: config.Config.DeviceName,
+					ModelName:  "Windows网页版",
+				})
+				if e == nil {
+					// retry
+					fileDeleteResult, err = utu.PanClient.FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: efi.DriveId, FileId: efi.FileId}})
+				} else {
+					logger.Verboseln("CreateSession failed")
+				}
+			}
 			if err != nil || len(fileDeleteResult) == 0 {
 				result.Err = err
 				result.ResultMessage = "无法删除文件，请稍后重试"
@@ -463,6 +509,18 @@ StepUploadPrepareUpload:
 	}
 
 	uploadOpEntity, apierr = utu.PanClient.CreateUploadFile(appCreateUploadFileParam)
+	if apierr != nil && apierr.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
+		_, e := utu.PanClient.CreateSession(&aliyunpan.CreateSessionParam{
+			DeviceName: config.Config.DeviceName,
+			ModelName:  "Windows网页版",
+		})
+		if e == nil {
+			// retry
+			uploadOpEntity, apierr = utu.PanClient.CreateUploadFile(appCreateUploadFileParam)
+		} else {
+			logger.Verboseln("CreateSession failed")
+		}
+	}
 	if apierr != nil {
 		result.Err = apierr
 		result.ResultMessage = "创建上传任务失败：" + apierr.Error()

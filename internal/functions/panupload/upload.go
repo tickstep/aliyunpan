@@ -16,6 +16,7 @@ package panupload
 import (
 	"context"
 	"encoding/xml"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"io"
@@ -238,6 +239,22 @@ func (pu *PanUpload) CommitFile() (cerr error) {
 		FileId:   pu.uploadOpEntity.FileId,
 		UploadId: pu.uploadOpEntity.UploadId,
 	})
+	if er != nil && er.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
+		_, e := pu.panClient.CreateSession(&aliyunpan.CreateSessionParam{
+			DeviceName: config.Config.DeviceName,
+			ModelName:  "Windows网页版",
+		})
+		if e == nil {
+			// retry
+			_, er = pu.panClient.CompleteUploadFile(&aliyunpan.CompleteUploadFileParam{
+				DriveId:  pu.driveId,
+				FileId:   pu.uploadOpEntity.FileId,
+				UploadId: pu.uploadOpEntity.UploadId,
+			})
+		} else {
+			logger.Verboseln("CreateSession failed")
+		}
+	}
 	if er != nil {
 		return er
 	}
