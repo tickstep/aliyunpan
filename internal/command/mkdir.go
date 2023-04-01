@@ -20,7 +20,6 @@ import (
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
-	"strings"
 )
 
 func CmdMkdir() cli.Command {
@@ -44,8 +43,8 @@ func CmdMkdir() cli.Command {
 		},
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  "familyId",
-				Usage: "家庭云ID",
+				Name:  "driveId",
+				Usage: "网盘ID",
 				Value: "",
 			},
 		},
@@ -55,11 +54,9 @@ func CmdMkdir() cli.Command {
 func RunMkdir(driveId, name string) {
 	activeUser := GetActiveUser()
 	fullpath := activeUser.PathJoin(driveId, name)
-	pathSlice := strings.Split(fullpath, "/")
 	rs := &aliyunpan.MkdirResult{}
 	err := apierror.NewFailedApiError("")
-
-	rs, err = activeUser.PanClient().MkdirRecursive(driveId, "", "", 0, pathSlice)
+	rs, err = activeUser.PanClient().Mkdir(driveId, "", fullpath)
 
 	if err != nil {
 		fmt.Println("创建文件夹失败：" + err.Error())
