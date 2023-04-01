@@ -137,7 +137,6 @@ doLoginAct:
 	// create session
 	appConfig.UserId = u.UserId
 	panClient.UpdateAppConfig(appConfig)
-	panClient.CalcSignature()
 	r, e := panClient.CreateSession(&aliyunpan.CreateSessionParam{
 		DeviceName: deviceName,
 		ModelName:  "Windows网页版",

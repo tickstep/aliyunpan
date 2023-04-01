@@ -169,7 +169,6 @@ func RefreshTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 					}
 
 					// create new signature
-					activeUser.PanClient().CalcSignature()
 					_, e := activeUser.PanClient().CreateSession(&aliyunpan.CreateSessionParam{
 						DeviceName: deviceName,
 						ModelName:  "Windows网页版",
