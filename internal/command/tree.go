@@ -146,7 +146,7 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, setti
 	fileListParam.OrderBy = aliyunpan.FileOrderByName
 	fileListParam.OrderDirection = aliyunpan.FileOrderDirectionAsc
 	if targetPathInfo.IsFolder() {
-		fileResult, err := activeUser.PanClient().FileListGetAll(fileListParam, 100)
+		fileResult, err := activeUser.PanClient().FileListGetAll(fileListParam, 500)
 		if err != nil {
 			fmt.Println(err)
 			return
