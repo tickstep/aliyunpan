@@ -87,7 +87,10 @@ doLoginAct:
 		Nonce:     0,
 		PublicKey: "",
 	}
-	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{}, appConfig)
+	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{}, appConfig, aliyunpan.SessionConfig{
+		DeviceName: deviceName,
+		ModelName:  "Windows网页版",
+	})
 	u := &PanUser{
 		WebToken:          *webToken,
 		panClient:         panClient,
@@ -137,10 +140,7 @@ doLoginAct:
 	// create session
 	appConfig.UserId = u.UserId
 	panClient.UpdateAppConfig(appConfig)
-	r, e := panClient.CreateSession(&aliyunpan.CreateSessionParam{
-		DeviceName: deviceName,
-		ModelName:  "Windows网页版",
-	})
+	r, e := panClient.CreateSession(nil)
 	if e != nil {
 		logger.Verboseln("call CreateSession error in SetupUserByCookie: " + e.Error())
 	}

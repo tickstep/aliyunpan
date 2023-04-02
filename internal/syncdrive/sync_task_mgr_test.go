@@ -16,7 +16,16 @@ func TestStart(t *testing.T) {
 	}
 
 	// pan client
-	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{})
+	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{}, aliyunpan.AppConfig{
+		AppId:     "25dzX3vbYqktVxyX",
+		DeviceId:  "E75459EXhOTkI5ZI6S3qDHA3",
+		UserId:    "",
+		Nonce:     0,
+		PublicKey: "",
+	}, aliyunpan.SessionConfig{
+		DeviceName: "Chrome浏览器",
+		ModelName:  "Windows网页版",
+	})
 	user, _ := panClient.GetUserInfo()
 
 	manager := NewSyncTaskManager(
@@ -27,7 +36,7 @@ func TestStart(t *testing.T) {
 		SyncOption{},
 	)
 
-	manager.Start(nil)
+	manager.Start(nil, StepSyncFile)
 	time.Sleep(30 * time.Minute)
-	manager.Stop()
+	manager.Stop(StepSyncFile)
 }

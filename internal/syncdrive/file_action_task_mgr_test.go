@@ -19,7 +19,16 @@ func TestFileActionMgrStart(t *testing.T) {
 	}
 
 	// pan client
-	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{})
+	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{}, aliyunpan.AppConfig{
+		AppId:     "25dzX3vbYqktVxyX",
+		DeviceId:  "E75459EXhOTkI5ZI6S3qDHA3",
+		UserId:    "",
+		Nonce:     0,
+		PublicKey: "",
+	}, aliyunpan.SessionConfig{
+		DeviceName: "Chrome浏览器",
+		ModelName:  "Windows网页版",
+	})
 	user, _ := panClient.GetUserInfo()
 	task := &SyncTask{
 		Id:              "5b2d7c10-e927-4e72-8f9d-5abb3bb04814",
