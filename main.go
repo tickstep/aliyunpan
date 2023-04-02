@@ -69,7 +69,7 @@ func init() {
 	case nil:
 	case config.ErrConfigFileNoPermission, config.ErrConfigContentsParseError:
 		fmt.Fprintf(os.Stderr, "FATAL ERROR: config file error: %s\n", err)
-		os.Exit(1)
+		//os.Exit(1)
 	default:
 		fmt.Printf("WARNING: config init error: %s\n", err)
 	}
