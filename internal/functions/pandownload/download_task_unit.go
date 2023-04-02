@@ -445,18 +445,6 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		// 如果是动态添加的下载任务, 是会写入文件信息的
 		// 如果该任务重试过, 则应该再获取一次文件信息
 		dtu.fileInfo, apierr = dtu.PanClient.FileInfoByPath(dtu.DriveId, dtu.FilePanPath)
-		if apierr != nil && apierr.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
-			_, e := dtu.PanClient.CreateSession(&aliyunpan.CreateSessionParam{
-				DeviceName: config.Config.DeviceName,
-				ModelName:  "Windows网页版",
-			})
-			if e == nil {
-				// retry
-				dtu.fileInfo, apierr = dtu.PanClient.FileInfoByPath(dtu.DriveId, dtu.FilePanPath)
-			} else {
-				logger.Verboseln("CreateSession failed")
-			}
-		}
 		if apierr != nil {
 			// 如果不是未登录或文件不存在, 则不重试
 			result.ResultMessage = "获取下载路径信息错误"
