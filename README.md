@@ -21,6 +21,7 @@
   - [直接下载安装](#直接下载安装)
   - [apt安装](#apt安装)
   - [yum安装](#yum安装)
+  - [brew安装](#brew安装)
   - [winget安装](#winget安装)
   - [docker安装](#docker安装)
     - [sync同步盘](#sync同步盘)
@@ -80,10 +81,21 @@ sudo curl -fsSL http://file.tickstep.com/rpm/aliyunpan/aliyunpan.repo | sudo tee
  
 ```
 
+## brew安装
+适用于brew包管理器的系统，主要是苹果macOS系统。目前只支持amd64和arm64架构(Apple Silicon)的机器。
+```shell
+brew install aliyunpan
+    
+```
+由于brew默认安装在系统目录下面，这样配置文件也默认存放在系统目录里了，建议设置系统变量进行配置文件的单独存储，例如
+```shell
+export ALIYUNPAN_CONFIG_DIR=/Users/tickstep/Applications/adrive/config
+```
+
 ## winget安装
 适用于Windows系统的winget包管理器。目前只支持x86和x64架构的机器。  
     
-更新源
+更新源（可选）
 ```powershell
 winget source update
  
