@@ -316,17 +316,22 @@ func RunShareList() {
 			et = record.Expiration
 		}
 		status := "有效"
-		if record.FirstFile == nil {
-			status = "已删除"
-		} else {
-			cz := time.FixedZone("CST", 8*3600)
-			if len(record.Expiration) > 0 {
-				expiredTime, _ := time.ParseInLocation("2006-01-02 15:04:05", record.Expiration, cz)
-				if expiredTime.Unix() < now.Unix() {
-					status = "已过期"
+		if record.Status == "enabled" {
+			if record.FirstFile == nil {
+				status = "已删除"
+			} else {
+				cz := time.FixedZone("CST", 8*3600)
+				if len(record.Expiration) > 0 {
+					expiredTime, _ := time.ParseInLocation("2006-01-02 15:04:05", record.Expiration, cz)
+					if expiredTime.Unix() < now.Unix() {
+						status = "已过期"
+					}
 				}
 			}
+		} else if record.Status == "forbidden" {
+			status = "违规"
 		}
+
 		tb.Append([]string{strconv.Itoa(k + 1), record.ShareId, record.ShareUrl, record.SharePwd,
 			record.ShareName,
 			//record.FileIdList[0],
