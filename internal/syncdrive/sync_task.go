@@ -3,6 +3,13 @@ package syncdrive
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/internal/config"
@@ -11,12 +18,6 @@ import (
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/aliyunpan/library/collection"
 	"github.com/tickstep/library-go/logger"
-	"io/ioutil"
-	"os"
-	"path"
-	"strings"
-	"sync"
-	"time"
 )
 
 type (
@@ -369,12 +370,18 @@ func (t *SyncTask) scanLocalFile(ctx context.Context, scanFileOnly bool) {
 			// may be permission deny
 			continue
 		}
+		if fi.Mode()&os.ModeSymlink != 0 {
+			continue
+		}
 		t.localFileDb.Add(newLocalFileItem(fi, fullPath))
 	}
 
 	folderQueue := collection.NewFifoQueue()
 	rootFolder, err := os.Stat(t.LocalFolderPath)
 	if err != nil {
+		return
+	}
+	if rootFolder.Mode()&os.ModeSymlink != 0 {
 		return
 	}
 	folderQueue.Push(&folderItem{
