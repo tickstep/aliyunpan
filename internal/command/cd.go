@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -82,6 +82,8 @@ func CmdPwd() cli.Command {
 			activeUser := config.Config.ActiveUser()
 			if activeUser.IsFileDriveActive() {
 				fmt.Println(activeUser.Workdir)
+			} else if activeUser.IsResourceDriveActive() {
+				fmt.Println(activeUser.ResourceWorkdir)
 			} else if activeUser.IsAlbumDriveActive() {
 				fmt.Println(activeUser.AlbumWorkdir)
 			}
@@ -125,6 +127,9 @@ func RunChangeDirectory(driveId, targetPath string) {
 	if user.IsFileDriveActive() {
 		user.Workdir = targetPathInfo.Path
 		user.WorkdirFileEntity = *targetPathInfo
+	} else if user.IsResourceDriveActive() {
+		user.ResourceWorkdir = targetPathInfo.Path
+		user.ResourceWorkdirFileEntity = *targetPathInfo
 	} else if user.IsAlbumDriveActive() {
 		user.AlbumWorkdir = targetPathInfo.Path
 		user.AlbumWorkdirFileEntity = *targetPathInfo

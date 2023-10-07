@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -48,14 +48,29 @@ func (d DriveInfoList) GetAlbumDriveId() string {
 	return ""
 }
 
+func (d DriveInfoList) GetResourceDriveId() string {
+	for _, drive := range d {
+		if drive.DriveTag == "Resource" {
+			return drive.DriveId
+		}
+	}
+	return ""
+}
+
 type PanUser struct {
 	UserId      string `json:"userId"`
 	Nickname    string `json:"nickname"`
 	AccountName string `json:"accountName"`
 
+	// 文件/备份盘
 	Workdir           string               `json:"workdir"`
 	WorkdirFileEntity aliyunpan.FileEntity `json:"workdirFileEntity"`
 
+	// 资源库
+	ResourceWorkdir           string               `json:"resourceWorkdir"`
+	ResourceWorkdirFileEntity aliyunpan.FileEntity `json:"resourceWorkdirFileEntity"`
+
+	// 相册
 	AlbumWorkdir           string               `json:"albumWorkdir"`
 	AlbumWorkdirFileEntity aliyunpan.FileEntity `json:"albumWorkdirFileEntity"`
 
@@ -129,7 +144,8 @@ doLoginAct:
 
 		// drive list
 		u.DriveList = DriveInfoList{
-			{DriveId: userInfo.FileDriveId, DriveTag: "File", DriveName: "文件"},
+			{DriveId: userInfo.FileDriveId, DriveTag: "File", DriveName: "备份盘"},
+			{DriveId: userInfo.ResourceDriveId, DriveTag: "Resource", DriveName: "资源库"},
 			{DriveId: userInfo.AlbumDriveId, DriveTag: "Album", DriveName: "相册"},
 		}
 	} else {
@@ -165,6 +181,8 @@ func (pu *PanUser) PathJoin(driveId, p string) string {
 	if di != nil {
 		if di.IsFileDrive() {
 			wd = pu.Workdir
+		} else if di.IsResourceDrive() {
+			wd = pu.ResourceWorkdir
 		} else if di.IsAlbumDrive() {
 			wd = pu.AlbumWorkdir
 		}
@@ -239,10 +257,19 @@ func (pu *PanUser) IsAlbumDriveActive() bool {
 	return d != nil && d.IsAlbumDrive()
 }
 
+func (pu *PanUser) IsResourceDriveActive() bool {
+	d := pu.GetActiveDriveInfo()
+	return d != nil && d.IsResourceDrive()
+}
+
 func (di *DriveInfo) IsFileDrive() bool {
 	return di.DriveTag == "File"
 }
 
 func (di *DriveInfo) IsAlbumDrive() bool {
 	return di.DriveTag == "Album"
+}
+
+func (di *DriveInfo) IsResourceDrive() bool {
+	return di.DriveTag == "Resource"
 }

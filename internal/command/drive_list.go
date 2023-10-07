@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -99,6 +99,11 @@ func RunSwitchDriveList(targetDriveId string) {
 			if activeUser.Workdir == "" {
 				config.Config.ActiveUser().Workdir = "/"
 				config.Config.ActiveUser().WorkdirFileEntity = *aliyunpan.NewFileEntityForRootDir()
+			}
+		} else if activeUser.IsResourceDriveActive() {
+			if activeUser.ResourceWorkdir == "" {
+				config.Config.ActiveUser().ResourceWorkdir = "/"
+				config.Config.ActiveUser().ResourceWorkdirFileEntity = *aliyunpan.NewFileEntityForRootDir()
 			}
 		} else if activeUser.IsAlbumDriveActive() {
 			if activeUser.AlbumWorkdir == "" {

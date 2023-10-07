@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -253,6 +253,8 @@ func main() {
 				wd := "/"
 				if activeUser.IsFileDriveActive() {
 					wd = activeUser.Workdir
+				} else if activeUser.IsResourceDriveActive() {
+					wd = activeUser.ResourceWorkdir
 				} else if activeUser.IsAlbumDriveActive() {
 					wd = activeUser.AlbumWorkdir
 				}
@@ -347,7 +349,10 @@ func main() {
 				wd := "/"
 				if activeUser.IsFileDriveActive() {
 					wd = activeUser.Workdir
-					prompt = app.Name + ":" + converter.ShortDisplay(path.Base(wd), NameShortDisplayNum) + " " + activeUser.Nickname + "$ "
+					prompt = app.Name + ":" + converter.ShortDisplay(path.Base(wd), NameShortDisplayNum) + " " + activeUser.Nickname + "(备份盘)$ "
+				} else if activeUser.IsResourceDriveActive() {
+					wd = activeUser.ResourceWorkdir
+					prompt = app.Name + ":" + converter.ShortDisplay(path.Base(wd), NameShortDisplayNum) + " " + activeUser.Nickname + "(资源库)$ "
 				} else if activeUser.IsAlbumDriveActive() {
 					wd = activeUser.AlbumWorkdir
 					prompt = app.Name + ":" + converter.ShortDisplay(path.Base(wd), NameShortDisplayNum) + " " + activeUser.Nickname + "(相册)$ "
