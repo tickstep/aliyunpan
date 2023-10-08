@@ -119,6 +119,9 @@ Build $name-$version"-windows-arm" windows arm
 Build $name-$version"-linux-386" linux 386
 Build $name-$version"-linux-amd64" linux amd64
 
+# 龙芯 LoongArch
+Build $name-$version"-linux-loong64" linux loong64
+
 # arm
 Build $name-$version"-linux-armv5" linux arm 5
 Build $name-$version"-linux-armv7" linux arm 7
