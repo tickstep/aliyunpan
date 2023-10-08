@@ -1,17 +1,16 @@
 # 关于
-阿里云盘CLI。仿 Linux shell 文件处理命令的阿里云盘命令行客户端，支持JavaScript插件，支持webdav文件协议，支持同步备份功能。
+阿里云盘CLI。仿 Linux shell 文件处理命令的阿里云盘命令行客户端，支持JavaScript插件，支持同步备份功能。
 
 # 特色
 1. 多平台支持, 支持 Windows, macOS, linux(x86/x64/arm), android, iOS 等
 2. 阿里云盘多用户支持
-3. 支持文件网盘，相册网盘无缝切换
+3. 支持同步盘，资源库，相册网盘无缝切换
 4. [下载](docs/manual.md#下载文件目录)网盘内文件, 支持多个文件或目录下载, 支持断点续传和单文件并行下载。支持软链接(符号链接)文件。
 5. [上传](docs/manual.md#上传文件目录)本地文件, 支持多个文件或目录上传，支持排除指定文件夹/文件（正则表达式）功能。支持软链接(符号链接)文件。
 6. [同步备份功能](docs/manual.md#同步备份功能)支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份保持本地文件和网盘文件同步。常用于嵌入式或者NAS等设备，支持docker镜像部署。
 7. 命令和文件路径输入支持Tab键自动补全，路径支持通配符匹配模式
 8. 支持阿里云ECS环境下使用内网链接上传/下载，速度更快(只支持阿里经典网络，最高可达100MB/s)，还可以节省公网带宽流量(配置transfer_url_type=2即可)
-9. 支持[webdav文件服务](docs/manual.md#webdav文件服务)，可以将阿里云盘当做webdav文件网盘挂载到Windows, macOS, linux的磁盘中进行使用。webdav部署支持docker镜像，镜像只有不到10MB非常小巧。
-10. 支持[JavaScript插件](docs/manual.md#JavaScript插件)，你可以按照自己的需要定制上传/下载中关键步骤的行为，最大程度满足自己的个性化需求
+9. 支持[JavaScript插件](docs/manual.md#JavaScript插件)，你可以按照自己的需要定制上传/下载中关键步骤的行为，最大程度满足自己的个性化需求
 
 # 目录
 - [关于](#关于)
@@ -25,7 +24,6 @@
   - [winget安装](#winget安装)
   - [docker安装](#docker安装)
     - [sync同步盘](#sync同步盘)
-    - [webdav共享盘](#webdav共享盘)
 - [如何使用](#如何使用)
   - [基本使用](#基本使用)
     - [修改配置目录](#修改配置目录)
@@ -125,21 +123,6 @@ ALIYUNPAN_TASK_STEP：任务步骤, 支持两种: scan(只扫描并建立同步�
 ```
 更详情文档请参考dockerhub网址：[tickstep/aliyunpan-sync](https://hub.docker.com/r/tickstep/aliyunpan-sync)
 
-### webdav共享盘
-让阿里云盘变身为webdav协议的文件服务器。这样使用webdav客户端软件，你可以把阿里云盘挂载为Windows、Linux、Mac系统的磁盘，可以通过NAS系统做文件管理或文件同步等等。
-```
-docker run -d --name=aliyunpan-webdav --restart=always -p 23077:23077 -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_AUTH_USER="admin" -e ALIYUNPAN_AUTH_PASSWORD="admin" -e ALIYUNPAN_WEBDAV_MODE="rw" -e ALIYUNPAN_PAN_DRIVE="File" -e ALIYUNPAN_PAN_DIR="/" tickstep/aliyunpan-webdav:v0.2.7
- 
- 
-ALIYUNPAN_REFRESH_TOKEN RefreshToken
-ALIYUNPAN_AUTH_USER webdav登录用户名
-ALIYUNPAN_AUTH_PASSWORD webdav登录密码
-ALIYUNPAN_WEBDAV_MODE webdav模式，支持：rw-读写，ro-只读
-ALIYUNPAN_PAN_DRIVE 网盘类型，可选： File-文件 Album-相册
-ALIYUNPAN_PAN_DIR 网盘文件夹的webdav服务根目录
-```
-更详情文档请参考dockerhub网址：[tickstep/aliyunpan-webdav](https://hub.docker.com/r/tickstep/aliyunpan-webdav)
-
 # 如何使用
 完整和详细的命令说明请查看手册：[命令手册](docs/manual.md)   
 
@@ -197,7 +180,6 @@ aliyunpan > help
      share        分享文件/目录
      sync         同步备份功能
      upload, u    上传文件/目录
-     webdav       在线网盘服务
 ...
 ```
 

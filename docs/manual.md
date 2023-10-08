@@ -10,22 +10,18 @@
     * [切换阿里云盘帐号](#切换阿里云盘帐号)
     * [退出阿里云盘帐号](#退出阿里云盘帐号)
     * [刷新Token](#刷新Token)
-    * [切换网盘(文件/相册)](#切换网盘)
+    * [切换网盘(备份盘/资源库/相册)](#切换网盘)
     * [获取网盘配额](#获取网盘配额)
     * [切换工作目录](#切换工作目录)
     * [输出工作目录](#输出工作目录)
     * [列出目录](#列出目录)
     * [下载文件/目录](#下载文件目录)
-    * [获取文件下载直链](#获取文件下载直链)
     * [上传文件/目录](#上传文件目录)
-    * [手动秒传文件](#手动秒传文件)
     * [创建目录](#创建目录)
     * [删除文件/目录](#删除文件目录)
     * [移动文件/目录](#移动文件目录)
     * [备份盘和资源库之间转存文件](#备份盘和资源库之间转存文件)
     * [重命名文件/目录](#重命名文件目录)
-    * [导出文件](#导出文件)
-    * [导入文件](#导入文件)
     * [分享文件/目录](#分享文件目录)
         + [设置分享文件/目录](#设置分享文件目录)
         + [列出已分享文件/目录](#列出已分享文件目录)
@@ -38,12 +34,6 @@
         + [Linux后台启动](#Linux后台启动)
         + [Windows后台启动](#Windows后台启动)
         + [Docker运行](#Docker运行)
-    * [webdav文件服务](#webdav文件服务)
-        + [常用命令说明](#常用命令说明)
-        + [命令行启动](#命令行启动)
-        + [Linux后台启动](#Linux后台启动)
-        + [Docker运行](#Docker运行)
-        + [HTTPS配置](#HTTPS配置)
     * [JavaScript插件](#JavaScript插件)
         + [如何使用](#如何使用)
         + [JS中内置的函数](#JS中内置的函数)
@@ -57,8 +47,7 @@
 - [常见问题Q&A](#常见问题Q&A)
     * [1. 如何获取RefreshToken](#1-如何获取RefreshToken)
     * [2. 如何开启Debug调试日志](#2-如何开启Debug调试日志)
-    * [3. 解决 time: missing Location in call to Date 问题](#3-解决-missing-Location-in-call-to-Date-问题)
-    
+
 # 命令列表及说明
 ## 注意
 
@@ -283,25 +272,6 @@ aliyunpan d /我的文档
 
 自动跳过下载重名的文件!
 
-## 获取文件下载直链
-你可以通过本命令获取文件下载直链，这样你就可以使用其他支持的工具进行下载了。
-   
-***注意***
-1. 必须二维码登录！必须二维码登录！必须二维码登录！你必须使用手机扫码二维码方式登录(命令：login -QrCode)，否则获取的直链无法正常下载，会提示 403 Forbidden 下载被禁止
-2. 下载链接有效时间为4个小时，当然过期后你可以重新运行命令生成一个新的下载链接
-3. 暂只支持文件，不支持文件夹
-
-```
-aliyunpan locate <文件1> <文件2> <文件3> ...
-```
-
-### 例子
-```
-获取 /我的资源/1.mp4 下载直链
-aliyunpan locate /我的资源/1.mp4
-```
-
-
 ## 上传文件/目录
 上传支持两种链接类型：1-默认类型 2-阿里ECS环境类型   
 在阿里ECS（必须是"经典网络"类型的机器）环境下，上传速度单文件可以轻松达到30MB/s，多文件可以达到100MB/s   
@@ -431,46 +401,6 @@ aliyunpan rename <旧文件/目录名> <新文件/目录名>
 ```
 # 将 /我的文档/1.mp4 重命名为 /我的文档/2.mp4
 aliyunpan rename /我的文档/1.mp4 /我的文档/2.mp4
-```
-
-## 导出文件
-导出文件主要是用于备份网盘的文件。通过该命令将网盘的文件元数据信息导出并保存到本地文件中，等到以后需要的时候再通过import命令导入到网盘中。
-```
-aliyunpan export <网盘文件/目录的路径1> <文件/目录2> <文件/目录3> ... <本地保存文件路径>
-```
-导出指定文件/目录下面的所有文件的元数据信息，并保存到指定的本地文件里面。导出的文件元信息可以使用 import 命令（秒传文件功能）导入到网盘中。
-
-### 例子
-```
-导出 /我的资源 整个目录 元数据到文件 /Users/tickstep/Downloads/export_files.txt
-aliyunpan export /我的资源 /Users/tickstep/Downloads/export_files.txt
-
-导出 网盘 整个目录 元数据到文件 /Users/tickstep/Downloads/export_files.txt
-aliyunpan export / /Users/tickstep/Downloads/export_files.txt
-```
-
-## 导入文件
-```
-aliyunpan export <本地元数据文件路径>
-```
-导入文件中记录的元数据文件到网盘。保存到网盘的文件会使用文件元数据记录的路径位置，如果没有指定云盘目录(saveto)则默认导入到目录 aliyunpan 中。
-导入的文件可以使用 export 命令获得。
-
-导入文件每一行是一个文件元数据，样例如下：
-```
-aliyunpan://file.dmg|752FCCBFB2436A6FFCA3B287831D4FAA5654B07E|7005440|
-```
-
-### 例子
-```
-导入文件 /Users/tickstep/Downloads/export_files.txt 存储的所有文件元数据项
-aliyunpan import /Users/tickstep/Downloads/export_files.txt
-
-导入文件 /Users/tickstep/Downloads/export_files.txt 存储的所有文件元数据项并保存到目录 /my2020 中
-aliyunpan import -saveto=/my2020 /Users/tickstep/Downloads/export_files.txt
-
-导入文件 /Users/tickstep/Downloads/export_files.txt 存储的所有文件元数据项并保存到网盘根目录 / 中
-aliyunpan import -saveto=/ /Users/tickstep/Downloads/export_files.txt
 ```
 
 ## 分享文件/目录
@@ -910,154 +840,6 @@ function syncScanPanFilePrepareCallback(context, params) {
 }
 ```
 
-## webdav文件服务
-本文命令可以让阿里云盘变身为webdav协议的文件服务器。这样你可以把阿里云盘挂载为Windows、Linux、Mac系统的磁盘，可以通过NAS系统做文件管理或文件同步等等。
-当把阿里云盘作为webdav文件服务器进行使用的时候，上传文件是不支持秒传的，所以当你挂载为网络磁盘使用的时候，不建议在webdav挂载目录中上传、下载过大的文件，不然体验会非常差。
-建议作为文档，图片等小文件的同步网盘。   
-效果图如下所示：   
-![](../assets/images/webdav-screenshot.png)
-
-### 常用命令说明
-```
-查看webdav说明
-aliyunpan webdav
-
-查看webdav如何启动说明
-aliyunpan webdav start -h
-
-使用默认配置启动webdav服务。
-aliyunpan webdav start
-
-启动webdav服务，并配置IP为127.0.0.1，端口为23077，登录用户名为admin，登录密码为admin123，文件网盘目录 /webdav_folder 作为服务的根目录
-aliyunpan webdav start -ip "127.0.0.1" -port 23077 -webdav_user "admin" -webdav_password "admin123" -pan_drive "File" -pan_dir_path "/webdav_folder"
-
-正常启动后会打印出webdav链接参数，然后使用支持webdav的客户端填入下面对应的参数进行链接即可
-----------------------------------------
-webdav网盘信息：
-链接：http://localhost:23077
-用户名：admin
-密码：admin123
-网盘服务类型：文件
-网盘服务目录：/webdav_folder
-----------------------------------------
-```
-
-### 命令行启动
-需要先进行登录。然后使用以下命令运行即可，该命令是阻塞的不会退出，除非停止webdav服务。
-
-```
-./aliyunpan webdav start -port 23077 -webdav_user "admin" -webdav_password "admin123" -pan_dir_path "/webdav_folder"
-
-参数说明
-port：绑定端口
-webdav_user： webdav客户端登录用户名
-webdav_password： webdav客户端登录密码
-pan_dir_path：指定webdav使用那个阿里云盘目录作为服务根目录
-```
-
-### Linux后台启动
-建议结合nohup进行启动。
-
-先创建webdav.sh脚本，内容如下
-```
-# 请更改成你自己的目录
-cd /path/to/aliyunpan/folder
-
-chmod +x ./aliyunpan
-
-# 指定refresh token用于登录
-./aliyunpan login -RefreshToken=9078907....adg9087
-
-# 上传下载链接类型：1-默认 2-阿里ECS环境
-./aliyunpan config set -transfer_url_type 1
-
-# 指定webdav启动参数并进行启动
-./aliyunpan webdav start -ip "0.0.0.0" -port 23077 -webdav_user "admin" -webdav_password "admin" -pan_dir_path "/" -bs 1024
-```
-
-增加脚本执行权限
-```
-$ chmod +x webdav.sh
-```
-
-然后启动该脚本进行后台运行
-```
-$ nohup ./webdav.sh >/dev/null 2>&1 &
-```
-
-### Docker运行
-详情文档请参考dockerhub网址：[tickstep/aliyunpan-webdav](https://hub.docker.com/r/tickstep/aliyunpan-webdav)
-
-1. 直接运行
-```
-docker run -d --name=aliyunpan-webdav --restart=always -p 23077:23077 -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_AUTH_USER="admin" -e ALIYUNPAN_AUTH_PASSWORD="admin" -e ALIYUNPAN_PAN_DRIVE="File" -e ALIYUNPAN_PAN_DIR="/" tickstep/aliyunpan-webdav
-
-# ALIYUNPAN_REFRESH_TOKEN RefreshToken
-# ALIYUNPAN_AUTH_USER webdav登录用户名
-# ALIYUNPAN_AUTH_PASSWORD webdav登录密码
-# ALIYUNPAN_PAN_DRIVE 网盘类型，可选： File-文件 Album-相册
-# ALIYUNPAN_PAN_DIR 网盘文件夹的webdav服务根目录
-```
-
-2. docker-compose运行   
-   docker-compose.yml 文件如下所示，为了方便说明增加了相关的注释，部署的时候可以去掉注释。
-```
-version: '3'
-services:
-  webdav:
-    image: tickstep/aliyunpan-webdav
-    container_name: aliyunpan-webdav
-    restart: always
-    ports:
-      - 23077:23077
-    environment:
-      - TZ=Asia/Shanghai
-      # refresh token用于登录
-      - ALIYUNPAN_REFRESH_TOKEN=b9123...13e66a1
-      # webdav 登录用户名
-      - ALIYUNPAN_AUTH_USER=admin
-      # webdav 登录密码
-      - ALIYUNPAN_AUTH_PASSWORD=admin
-      # 指定网盘类型为文件，可选： File-文件 Album-相册
-      - ALIYUNPAN_PAN_DRIVE=File
-      # 指定网盘文件夹作为webdav服务根目录
-      - ALIYUNPAN_PAN_DIR=/
-      # 上传下载链接类型：1-默认 2-阿里ECS环境
-      - ALIYUNPAN_TRANSFER_URL_TYPE=1
-      # 上传数据块大小，单位为KB，默认为10240KB，建议范围1024KB~10240KB
-      - ALIYUNPAN_BLOCK_SIZE=10240
-```
-
-### HTTPS配置
-建议使用nginx进行https的配置。样例如下：
-```
-server {
-       listen 443;
-       server_name your.host.com;
-       ssl on;
-       root html;
-       index index.html index.htm;
-       ssl_certificate /path/to/your/file.pem;
-       ssl_certificate_key /path/to/your/file.key;
-
-       ssl_session_timeout 5m;
-       ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
-       ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
-       ssl_prefer_server_ciphers on;
-
-       # webdav server
-       location /{
-          root html;
-          proxy_pass http://127.0.0.1:23077;
-          proxy_set_header X-Real-IP $remote_addr;
-          proxy_set_header REMOTE-HOST $remote_addr;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-          proxy_set_header Host $http_host;
-          proxy_redirect off;
-        }
-   }
-```
-
 ## JavaScript插件
 支持javascript插件，你可以按照自己的需要定制上传/下载中关键步骤的行为，最大程度满足自己的个性化需求。   
 例如：   
@@ -1468,14 +1250,3 @@ Windows
 ### 第二步
 打开aliyunpan命令行程序，任何云盘命令都有类似如下日志输出
 ![](../assets/images/debug-log-screenshot.png)
-
-## 3 解决 missing Location in call to Date 问题
-在使用webdav文件服务的过程中可能会出现该问题。   
-原因是golang中的time.LoadLocation()依赖于 IANA Time Zone Database，一般linux系统都带了，但是有部分系统没有带有这个数据文件则出现该问题。   
-解决方法：
-1. 下载文件 ./assets/binary/tzdata.zip 文件并保存到系统中，记下保存的文件路径
-2. 设置环境变量 ZONEINFO
-```
-export ZONEINFO=/path/to/tzdata.zip
-```
-然后启动aliyunpan服务即可。
