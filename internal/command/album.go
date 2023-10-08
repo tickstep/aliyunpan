@@ -52,7 +52,7 @@ func CmdAlbum() cli.Command {
 	return cli.Command{
 		Name:      "album",
 		Aliases:   []string{"abm"},
-		Usage:     "相簿(Beta)",
+		Usage:     "个人相册(Beta)",
 		UsageText: cmder.App().Name + " album",
 		Category:  "阿里云盘",
 		Before:    ReloadConfigFunc,
