@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,10 +21,19 @@ import (
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/file/downloader"
+	"github.com/tickstep/aliyunpan/internal/functions/pandownload"
+	"github.com/tickstep/aliyunpan/internal/taskframework"
+	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/aliyunpan/library/requester/transfer"
+	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
+	"github.com/tickstep/library-go/requester/rio/speeds"
 	"github.com/urfave/cli"
 	"os"
+	"path/filepath"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
 
@@ -223,6 +232,70 @@ func CmdAlbum() cli.Command {
 					return nil
 				},
 				Flags: []cli.Flag{},
+			},
+			{
+				Name:      "download-file",
+				Aliases:   []string{"df"},
+				Usage:     "下载相簿中的所有文件到本地",
+				UsageText: cmder.App().Name + " album download-file",
+				Description: `
+下载相簿中的所有文件
+示例:
+
+    下载相簿 "我的相簿2022" 里面的所有文件
+    aliyunpan album download-file 我的相簿2022
+
+`,
+				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					subArgs := c.Args()
+					if len(subArgs) == 0 {
+						fmt.Println("请指定下载的相簿名称")
+						return nil
+					}
+
+					// 处理saveTo
+					var (
+						saveTo string
+					)
+					if c.String("saveto") != "" {
+						saveTo = filepath.Clean(c.String("saveto"))
+					}
+
+					do := &DownloadOptions{
+						IsPrintStatus:        false,
+						IsExecutedPermission: false,
+						IsOverwrite:          c.Bool("ow"),
+						SaveTo:               saveTo,
+						Parallel:             0,
+						Load:                 0,
+						MaxRetry:             pandownload.DefaultDownloadMaxRetry,
+						NoCheck:              false,
+						ShowProgress:         !c.Bool("np"),
+						DriveId:              parseDriveId(c),
+						ExcludeNames:         []string{},
+					}
+
+					RunAlbumDownloadFile(c.Args(), do)
+					return nil
+				},
+				Flags: []cli.Flag{
+					cli.BoolFlag{
+						Name:  "ow",
+						Usage: "overwrite, 覆盖已存在的文件",
+					},
+					cli.StringFlag{
+						Name:  "saveto",
+						Usage: "将下载的文件直接保存到指定的目录",
+					},
+					cli.BoolFlag{
+						Name:  "np",
+						Usage: "no progress 不展示下载进度条",
+					},
+				},
 			},
 		},
 	}
@@ -502,4 +575,179 @@ func isFileMatchCondition(fileInfo *aliyunpan.FileEntity, filterOption AlbumFile
 		return true
 	}
 	return false
+}
+
+func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
+	if len(albumNames) == 0 {
+		fmt.Printf("相簿名称不能为空\n")
+		return
+	}
+
+	activeUser := GetActiveUser()
+	activeUser.PanClient().EnableCache()
+	activeUser.PanClient().ClearCache()
+	defer activeUser.PanClient().DisableCache()
+	// pan token expired checker
+	continueFlag := int32(0)
+	atomic.StoreInt32(&continueFlag, 0)
+	defer func() {
+		atomic.StoreInt32(&continueFlag, 1)
+	}()
+	go func(flag *int32) {
+		for atomic.LoadInt32(flag) == 0 {
+			time.Sleep(time.Duration(1) * time.Minute)
+			if RefreshTokenInNeed(activeUser, config.Config.DeviceName) {
+				logger.Verboseln("update access token for download task")
+			}
+		}
+	}(&continueFlag)
+
+	if options == nil {
+		options = &DownloadOptions{}
+	}
+
+	if options.MaxRetry < 0 {
+		options.MaxRetry = pandownload.DefaultDownloadMaxRetry
+	}
+	options.IsExecutedPermission = false
+
+	// 设置下载配置
+	cfg := &downloader.Config{
+		Mode:                       transfer.RangeGenMode_BlockSize,
+		CacheSize:                  config.Config.CacheSize,
+		BlockSize:                  MaxDownloadRangeSize,
+		MaxRate:                    config.Config.MaxDownloadRate,
+		InstanceStateStorageFormat: downloader.InstanceStateStorageFormatJSON,
+		ShowProgress:               options.ShowProgress,
+		UseInternalUrl:             config.Config.TransferUrlType == 2,
+		ExcludeNames:               options.ExcludeNames,
+	}
+	if cfg.CacheSize == 0 {
+		cfg.CacheSize = int(DownloadCacheSize)
+	}
+
+	// 设置下载最大并发量
+	if options.Parallel < 1 {
+		options.Parallel = config.Config.MaxDownloadParallel
+		if options.Parallel == 0 {
+			options.Parallel = config.DefaultFileDownloadParallelNum
+		}
+	}
+	if options.Parallel > config.MaxFileDownloadParallelNum {
+		options.Parallel = config.MaxFileDownloadParallelNum
+	}
+
+	// 保存文件的本地根文件夹
+	originSaveRootPath := ""
+	if options.SaveTo != "" {
+		originSaveRootPath = options.SaveTo
+	} else {
+		// 使用默认的保存路径
+		originSaveRootPath = GetActiveUser().GetSavePath("")
+	}
+	fi, err1 := os.Stat(originSaveRootPath)
+	if err1 != nil && !os.IsExist(err1) {
+		os.MkdirAll(originSaveRootPath, 0777) // 首先在本地创建目录
+	} else {
+		if !fi.IsDir() {
+			fmt.Println("本地保存路径不是文件夹，请删除或者创建对应的文件夹：", originSaveRootPath)
+			return
+		}
+	}
+
+	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s\n\n", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
+
+	var (
+		panClient = activeUser.PanClient()
+	)
+	cfg.MaxParallel = options.Parallel
+
+	var (
+		executor = taskframework.TaskExecutor{
+			IsFailedDeque: true, // 统计失败的列表
+		}
+		statistic = &pandownload.DownloadStatistic{}
+	)
+	// 配置执行器任务并发数，即同时下载文件并发数
+	executor.SetParallel(cfg.MaxParallel)
+
+	// 全局速度统计
+	globalSpeedsStat := &speeds.Speeds{}
+
+	// 处理队列
+	for k := range albumNames {
+		record := getAlbumFromName(activeUser, albumNames[k])
+		if record == nil {
+			continue
+		}
+		// 获取相簿下的所有文件
+		fileList, er := activeUser.PanClient().AlbumListFileGetAll(&aliyunpan.AlbumListFileParam{
+			AlbumId: record.AlbumId,
+		})
+		if er != nil {
+			fmt.Printf("获取相簿文件出错，请稍后重试: %s\n", albumNames[k])
+			continue
+		}
+		if fileList == nil || len(fileList) == 0 {
+			fmt.Printf("相簿里面没有文件: %s\n", albumNames[k])
+			continue
+		}
+		for _, f := range fileList {
+			// 补全虚拟网盘路径，规则：/<相簿名称>/文件名称
+			f.Path = "/" + albumNames[k] + "/" + f.FileName
+
+			// 生成下载项
+			newCfg := *cfg
+			unit := pandownload.DownloadTaskUnit{
+				Cfg:                  &newCfg, // 复制一份新的cfg
+				PanClient:            panClient,
+				VerbosePrinter:       panCommandVerbose,
+				PrintFormat:          downloadPrintFormat(options.Load),
+				ParentTaskExecutor:   &executor,
+				DownloadStatistic:    statistic,
+				IsPrintStatus:        options.IsPrintStatus,
+				IsExecutedPermission: options.IsExecutedPermission,
+				IsOverwrite:          options.IsOverwrite,
+				NoCheck:              options.NoCheck,
+				FilePanPath:          f.Path,
+				DriveId:              f.DriveId, // 必须使用文件的DriveId,因为一个相簿的文件会来自多个网盘（资源库/备份盘）
+				GlobalSpeedsStat:     globalSpeedsStat,
+				FileRecorder:         nil,
+			}
+			// 设置相簿文件信息
+			unit.SetFileInfo(pandownload.AlbumFileSource, f)
+
+			// 设置储存的路径
+			if options.SaveTo != "" {
+				unit.OriginSaveRootPath = options.SaveTo
+				unit.SavePath = filepath.Join(options.SaveTo, f.Path)
+			} else {
+				// 使用默认的保存路径
+				unit.OriginSaveRootPath = GetActiveUser().GetSavePath("")
+				unit.SavePath = GetActiveUser().GetSavePath(f.Path)
+			}
+			info := executor.Append(&unit, options.MaxRetry)
+			fmt.Printf("[%s] 加入下载队列: %s\n", info.Id(), f.Path)
+		}
+	}
+
+	// 开始计时
+	statistic.StartTimer()
+
+	// 开始执行
+	executor.Execute()
+
+	fmt.Printf("\n下载结束, 时间: %s, 数据总量: %s\n", utils.ConvertTime(statistic.Elapsed()), converter.ConvertFileSize(statistic.TotalSize(), 2))
+
+	// 输出失败的文件列表
+	failedList := executor.FailedDeque()
+	if failedList.Size() != 0 {
+		fmt.Printf("以下文件下载失败: \n")
+		tb := cmdtable.NewTable(os.Stdout)
+		for e := failedList.Shift(); e != nil; e = failedList.Shift() {
+			item := e.(*taskframework.TaskInfoItem)
+			tb.Append([]string{item.Info.Id(), item.Unit.(*pandownload.DownloadTaskUnit).FilePanPath})
+		}
+		tb.Render()
+	}
 }
