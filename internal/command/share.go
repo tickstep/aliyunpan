@@ -93,10 +93,18 @@ func CmdShare() cli.Command {
 						sharePwd = c.String("sharePwd")
 					}
 
-					modeFlag := "1"
+					modeFlag := "3"
 					if c.IsSet("mode") {
 						modeFlag = c.String("mode")
 					}
+					if modeFlag == "1" || modeFlag == "2" {
+						if config.Config.ActiveUser().ActiveDriveId != config.Config.ActiveUser().DriveList.GetResourceDriveId() {
+							// 只有资源库才支持私有、公开分享
+							fmt.Println("只有资源库才支持分享链接，其他请使用快传链接")
+							return nil
+						}
+					}
+
 					if modeFlag == "1" {
 						if sharePwd == "" {
 							sharePwd = RandomStr(4)
@@ -121,7 +129,7 @@ func CmdShare() cli.Command {
 					cli.StringFlag{
 						Name:  "mode",
 						Usage: "模式，1-私密分享，2-公开分享，3-快传",
-						Value: "1",
+						Value: "3",
 					},
 					cli.StringFlag{
 						Name:  "sharePwd",
