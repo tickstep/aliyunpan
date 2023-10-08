@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -41,7 +41,7 @@ func CmdQuota() cli.Command {
 			}
 			q, err := RunGetQuotaInfo()
 			if err == nil {
-				fmt.Printf("账号: %s, uid: %s, 个人空间总额: %s, 个人空间已使用: %s, 比率: %f%%\n",
+				fmt.Printf("账号: %s, uid: %s, 个人空间总额: %s, 个人空间已使用: %s, 比率: %.2f%%\n",
 					config.Config.ActiveUser().Nickname, config.Config.ActiveUser().UserId,
 					converter.ConvertFileSize(q.Quota, 2), converter.ConvertFileSize(q.UsedSize, 2),
 					100*float64(q.UsedSize)/float64(q.Quota))
