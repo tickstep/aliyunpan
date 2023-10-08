@@ -14,7 +14,7 @@ require (
 	github.com/peterh/liner v1.2.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/tickstep/aliyunpan-api v0.1.7
-	github.com/tickstep/bolt v1.3.3
+	github.com/tickstep/bolt v1.3.4
 	github.com/tickstep/library-go v0.1.0
 	github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
@@ -36,6 +36,7 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 )
 
+//replace github.com/boltdb/bolt => github.com/tickstep/bolt v1.3.4
 //replace github.com/tickstep/bolt => /Users/tickstep/Documents/Workspace/go/projects/bolt
 //replace github.com/tickstep/library-go => /Users/tickstep/Documents/Workspace/go/projects/library-go
 //replace github.com/tickstep/aliyunpan-api => /Users/tickstep/Documents/Workspace/go/projects/aliyunpan-api
