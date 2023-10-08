@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,7 +28,7 @@ func CmdMv() cli.Command {
 	return cli.Command{
 		Name:  "mv",
 		Usage: "移动文件/目录",
-		UsageText: `移动:
+		UsageText: `
 	aliyunpan mv <文件/目录1> <文件/目录2> <文件/目录3> ... <目标目录>`,
 		Description: `
 	注意: 移动多个文件和目录时, 请确保每一个文件和目录都存在, 否则移动操作会失败。支持通配符匹配移动文件，通配符当前只能匹配文件名，不能匹配文件路径。

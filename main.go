@@ -438,6 +438,9 @@ func main() {
 		//// 拷贝文件/目录 cp
 		//command.CmdCp(),
 
+		// 备份盘和资源库之间拷贝文件 xcp
+		command.CmdXcp(),
+
 		// 移动文件/目录 mv
 		command.CmdMv(),
 
