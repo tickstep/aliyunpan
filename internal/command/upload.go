@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -294,7 +294,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		}
 	}
 	if opt.AllParallel > config.MaxFileUploadParallelNum {
-		opt.AllParallel = config.MaxFileUploadParallelNum
+		fmt.Printf("警告: 当前上传文件并发数过大，可能会被阿里风控导致上传失败，建议调小。\n")
 	}
 
 	if opt.Parallel <= 0 {
