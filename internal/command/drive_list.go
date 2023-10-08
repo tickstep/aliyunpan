@@ -27,9 +27,9 @@ import (
 func CmdDrive() cli.Command {
 	return cli.Command{
 		Name:  "drive",
-		Usage: "切换网盘（文件网盘/相册网盘）",
+		Usage: "切换网盘（备份盘/资源库/相册）",
 		Description: `
-	切换已登录的阿里云盘的云工作网盘（文件网盘/相册网盘）
+	切换已登录账号的阿里云盘的工作网盘（备份盘/资源库/相册）
 	如果运行该条命令没有提供参数, 程序将会列出所有的网盘列表, 供选择切换.
 
 	示例:
