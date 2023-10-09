@@ -15,7 +15,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/tickstep/aliyunpan-api v0.1.7
 	github.com/tickstep/bolt v1.3.4
-	github.com/tickstep/library-go v0.1.0
+	github.com/tickstep/library-go v0.1.1
 	github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e

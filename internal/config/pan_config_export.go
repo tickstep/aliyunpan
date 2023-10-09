@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,6 +34,17 @@ func (c *PanConfig) SetProxy(proxy string) {
 func (c *PanConfig) SetLocalAddrs(localAddrs string) {
 	c.LocalAddrs = localAddrs
 	requester.SetLocalTCPAddrList(strings.Split(localAddrs, ",")...)
+}
+
+func (c *PanConfig) SetPreferIPType(ipType string) {
+	c.PreferIPType = ipType
+	t := requester.IPAny
+	if strings.ToLower(ipType) == "ipv4" {
+		t = requester.IPv4
+	} else if strings.ToLower(ipType) == "ipv6" {
+		t = requester.IPv6
+	}
+	requester.SetPreferIPType(t)
 }
 
 // SetCacheSizeByStr 设置cache_size
@@ -103,6 +114,7 @@ func (c *PanConfig) PrintTable() {
 		[]string{"savedir", c.SaveDir, "", "下载文件的储存目录"},
 		[]string{"proxy", c.Proxy, "", "设置代理, 支持 http/socks5 代理，例如: http://127.0.0.1:8888 或者 socks5://127.0.0.1:8889"},
 		[]string{"local_addrs", c.LocalAddrs, "", "设置本地网卡地址, 多个地址用逗号隔开，例如: 127.0.0.1,192.168.100.126"},
+		[]string{"ip_type", c.PreferIPType, "ipv4-优先IPv4，ipv6-优先IPv6", "设置域名解析IP优先类型。修改后需要重启应用生效"},
 		[]string{"file_record_config", fileRecorderLabel, "1-开启，2-禁用", "设置是否开启上传、下载、同步文件的结果记录，开启后会把结果记录到CSV文件方便后期查看"},
 		[]string{"device_id", c.DeviceId, "", "客户端ID，用于标识登录客户端，阿里单个账号最多允许10个客户端同时在线。修改后需要重启应用生效"},
 	})

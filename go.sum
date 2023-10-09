@@ -102,8 +102,9 @@ github.com/tickstep/aliyunpan-api v0.1.7 h1:YaKDT7AnYR7f0YM8zC4QE7sL6xljBFRz7BOj
 github.com/tickstep/aliyunpan-api v0.1.7/go.mod h1:SN+N5Vh3lLq3dVimlxKxviCl50gLGXZO96nHHc3qd2o=
 github.com/tickstep/bolt v1.3.4 h1:UN1txRsauOfR8a5mUWm5So0ng233PsIMVR5/+3WowCE=
 github.com/tickstep/bolt v1.3.4/go.mod h1:Y24RwCywbOsKAyHiVcJ4K2QQfED+q67x7PEOH9OG7Q4=
-github.com/tickstep/library-go v0.1.0 h1:lzz6wpYCeliSzmVISa7rp9bGB4r+uIa9/VUTtk87DFU=
 github.com/tickstep/library-go v0.1.0/go.mod h1:uAHeNOIpoywCzlaeLrWmmRSupn03m9kJVZKOEmuarmA=
+github.com/tickstep/library-go v0.1.1 h1:xPAyddCJkZy5S3qUxCg0hoEG9PR8/rdIQiLMrt2OtWI=
+github.com/tickstep/library-go v0.1.1/go.mod h1:uAHeNOIpoywCzlaeLrWmmRSupn03m9kJVZKOEmuarmA=
 github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f h1:xKDKjIsL76VUyHcA0G4Qe1cIAUB/nrq6Pt8D411bd1g=
 github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f/go.mod h1:qXyCeJubPqsgeiLd3kvHOGHHSrQcNdjZ2ScXIcVZK/I=
 golang.org/x/crypto v0.0.0-20170930174604-9419663f5a44/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=

@@ -99,8 +99,9 @@ type PanConfig struct {
 
 	SaveDir string `json:"saveDir"` // 下载储存路径
 
-	Proxy           string          `json:"proxy"`      // 代理
-	LocalAddrs      string          `json:"localAddrs"` // 本地网卡地址
+	Proxy           string          `json:"proxy"`        // 代理
+	LocalAddrs      string          `json:"localAddrs"`   // 本地网卡地址
+	PreferIPType    string          `json:"preferIPType"` // 优先IP类型，IPv4或者IPv6
 	UpdateCheckInfo UpdateCheckInfo `json:"updateCheckInfo"`
 
 	VideoFileExtensions string `json:"videoFileExtensions"`
@@ -201,6 +202,15 @@ func (c *PanConfig) init() error {
 		requester.SetLocalTCPAddrList(strings.Split(c.LocalAddrs, ",")...)
 	}
 
+	// 设置域名解析策略 IPv4 or IPv6
+	t := requester.IPAny
+	if strings.ToLower(c.PreferIPType) == "ipv4" {
+		t = requester.IPv4
+	} else if strings.ToLower(c.PreferIPType) == "ipv6" {
+		t = requester.IPv6
+	}
+	requester.SetPreferIPType(t)
+
 	return nil
 }
 
@@ -285,6 +295,7 @@ func (c *PanConfig) initDefaultConfig() {
 	c.DeviceId = RandomDeviceId() // 生成默认客户端ID
 	c.DeviceName = DefaultDeviceName
 	c.FileRecordConfig = "1" // 默认开启
+	c.PreferIPType = "ipv4"  // 默认优先IPv4
 }
 
 // GetConfigDir 获取配置路径

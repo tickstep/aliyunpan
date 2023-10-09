@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -226,6 +226,9 @@ func CmdConfig() cli.Command {
 					if c.IsSet("local_addrs") {
 						config.Config.SetLocalAddrs(c.String("local_addrs"))
 					}
+					if c.IsSet("ip_type") {
+						config.Config.SetPreferIPType(c.String("ip_type"))
+					}
 					if c.IsSet("file_record_config") {
 						config.Config.SetFileRecorderConfig(c.String("file_record_config"))
 					}
@@ -281,6 +284,10 @@ func CmdConfig() cli.Command {
 					cli.StringFlag{
 						Name:  "local_addrs",
 						Usage: "设置本地网卡地址, 多个地址用逗号隔开",
+					},
+					cli.StringFlag{
+						Name:  "ip_type",
+						Usage: "设置域名解析IP优先类型",
 					},
 					cli.StringFlag{
 						Name:  "file_record_config",
