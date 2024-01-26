@@ -64,8 +64,9 @@ type (
 		panFile  string
 		state    *uploader.InstanceState
 
-		ShowProgress bool
-		IsOverwrite  bool // 覆盖已存在的文件，如果同名文件已存在则移到回收站里
+		ShowProgress   bool
+		IsOverwrite    bool // 覆盖已存在的文件，如果同名文件已存在则移到回收站里
+		IsSkipSameName bool // 跳过已存在的文件，即使文件内容不一致(不检查SHA1)
 
 		// 是否使用内置链接
 		UseInternalUrl bool
@@ -327,6 +328,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 
 	var apierr *apierror.ApiError
 	var rs *aliyunpan.MkdirResult
+	var efi *aliyunpan.FileEntity
 	var appCreateUploadFileParam *aliyunpan.CreateFileUploadParam
 	var sha1Str string
 	var contentHashName string
@@ -398,6 +400,23 @@ StepUploadPrepareUpload:
 	proofCode = ""
 	contentHashName = "sha1"
 	checkNameMode = "auto_rename"
+	// 如果启用了 覆盖/跳过 已存在的文件,则需要提前检查文件是否存在
+	if utu.IsOverwrite || utu.IsSkipSameName {
+		efi, apierr = utu.PanClient.FileInfoByPath(utu.DriveId, utu.SavePath)
+		if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
+			result.Err = apierr
+			result.ResultMessage = "检测同名文件失败"
+			return
+		}
+	}
+	if utu.IsSkipSameName {
+		if efi != nil && efi.FileId != "" {
+			result.Succeed = true
+			result.Extra = efi
+			fmt.Printf("[%s] %s 检测到同名文件，跳过上传: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
+			return
+		}
+	}
 	if !utu.NoRapidUpload {
 		// 计算文件SHA1
 		fmt.Printf("[%s] %s 正在计算文件SHA1: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path.LogicPath)
@@ -421,12 +440,6 @@ StepUploadPrepareUpload:
 	if utu.IsOverwrite {
 		// 标记覆盖旧同名文件
 		// 检查同名文件是否存在
-		efi, apierr := utu.PanClient.FileInfoByPath(utu.DriveId, utu.SavePath)
-		if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
-			result.Err = apierr
-			result.ResultMessage = "检测同名文件失败"
-			return
-		}
 		if efi != nil && efi.FileId != "" {
 			if strings.ToUpper(efi.ContentHash) == strings.ToUpper(sha1Str) {
 				result.Succeed = true
