@@ -457,7 +457,7 @@ StepUploadPrepareUpload:
 				return
 			}
 			time.Sleep(time.Duration(500) * time.Millisecond)
-			fmt.Printf("[%s] %s 检测到同名文件，已移动到回收站: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
+			fmt.Printf("[%s] %s 检测到同名文件，文件内容不一致，已将旧文件移动到回收站: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
 		}
 	}
 
