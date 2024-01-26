@@ -156,6 +156,9 @@ func CmdUpload() cli.Command {
     9. 将本地的 C:\Users\Administrator\Video 整个目录上传到网盘 /视频 目录，但是排除所有的 @eadir 文件夹
     aliyunpan upload -exn "^@eadir$" C:/Users/Administrator/Video /视频
 
+    10. 跳过已存在的同名文件，即使文件内容不一致(不检查SHA1)
+    aliyunpan upload -skip 1.mp4 /视频
+
   参考：
     以下是典型的排除特定文件或者文件夹的例子，注意：参数值必须是正则表达式。在正则表达式中，^表示匹配开头，$表示匹配结尾。
     1)排除@eadir文件或者文件夹：-exn "^@eadir$"
