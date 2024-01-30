@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -117,10 +117,9 @@ func CmdLogout() cli.Command {
 			}
 
 			// 云端注销登录
-			if _, e := activeUser.PanClient().DeviceLogout(); e != nil {
-				fmt.Printf("登出设备失败，请稍后重试: %s\n", e.String())
-				return nil
-			}
+			//if _, e := activeUser.PanClient().DeviceLogout(); e != nil {
+			//	fmt.Printf("登出设备失败，请手动在网页端进行登出: %s\n", e.String())
+			//}
 
 			// 删除用户信息
 			deletedUser, err := config.Config.DeleteUser(activeUser.UserId)
