@@ -3,13 +3,13 @@
         "FileVersion": {
             "Major": 0,
             "Minor": 2,
-            "Patch": 8,
+            "Patch": 9,
             "Build": 0
         },
         "ProductVersion": {
             "Major": 0,
             "Minor": 2,
-            "Patch": 8,
+            "Patch": 9,
             "Build": 0
         },
         "FileFlagsMask": "3f",
@@ -22,14 +22,14 @@
         "Comments": "",
         "CompanyName": "tickstep",
         "FileDescription": "阿里云盘客户端",
-        "FileVersion": "v0.2.8",
+        "FileVersion": "v0.2.9",
         "InternalName": "",
-        "LegalCopyright": "© 2021-2023 tickstep.",
+        "LegalCopyright": "© 2021-2024 tickstep.",
         "LegalTrademarks": "",
         "OriginalFilename": "",
         "PrivateBuild": "",
         "ProductName": "aliyunpan",
-        "ProductVersion": "v0.2.8",
+        "ProductVersion": "v0.2.9",
         "SpecialBuild": ""
     },
     "VarFileInfo": {
