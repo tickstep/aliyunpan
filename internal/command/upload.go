@@ -62,6 +62,7 @@ type (
 		NoRapidUpload  bool
 		ShowProgress   bool
 		IsOverwrite    bool // 覆盖已存在的文件，如果同名文件已存在则移到回收站里
+		IsSkipSameName bool // 跳过已存在的文件，即使文件内容不一致(不检查SHA1)
 		DriveId        string
 		ExcludeNames   []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行上传，支持正则表达式
 		BlockSize      int64    // 分片大小
@@ -91,6 +92,10 @@ var UploadFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "ow",
 		Usage: "overwrite, 覆盖已存在的同名文件，注意已存在的文件会被移到回收站",
+	},
+	cli.BoolFlag{
+		Name:  "skip",
+		Usage: "skip same name, 跳过已存在的同名文件，即使文件内容不一致(不检查SHA1)",
 	},
 	cli.BoolFlag{
 		Name:  "norapid",
@@ -151,6 +156,9 @@ func CmdUpload() cli.Command {
     9. 将本地的 C:\Users\Administrator\Video 整个目录上传到网盘 /视频 目录，但是排除所有的 @eadir 文件夹
     aliyunpan upload -exn "^@eadir$" C:/Users/Administrator/Video /视频
 
+    10. 跳过已存在的同名文件，即使文件内容不一致(不检查SHA1)
+    aliyunpan upload -skip 1.mp4 /视频
+
   参考：
     以下是典型的排除特定文件或者文件夹的例子，注意：参数值必须是正则表达式。在正则表达式中，^表示匹配开头，$表示匹配结尾。
     1)排除@eadir文件或者文件夹：-exn "^@eadir$"
@@ -186,16 +194,17 @@ func CmdUpload() cli.Command {
 			//}
 
 			RunUpload(subArgs[:c.NArg()-1], subArgs[c.NArg()-1], &UploadOptions{
-				AllParallel:   c.Int("p"), // 多文件上传的时候，允许同时并行上传的文件数量
-				Parallel:      1,          // 一个文件同时多少个线程并发上传的数量。阿里云盘只支持单线程按顺序进行文件part数据上传，所以只能是1
-				MaxRetry:      c.Int("retry"),
-				MaxTimeoutSec: timeout,
-				NoRapidUpload: c.Bool("norapid"),
-				ShowProgress:  !c.Bool("np"),
-				IsOverwrite:   c.Bool("ow"),
-				DriveId:       parseDriveId(c),
-				ExcludeNames:  c.StringSlice("exn"),
-				BlockSize:     int64(c.Int("bs") * 1024),
+				AllParallel:    c.Int("p"), // 多文件上传的时候，允许同时并行上传的文件数量
+				Parallel:       1,          // 一个文件同时多少个线程并发上传的数量。阿里云盘只支持单线程按顺序进行文件part数据上传，所以只能是1
+				MaxRetry:       c.Int("retry"),
+				MaxTimeoutSec:  timeout,
+				NoRapidUpload:  c.Bool("norapid"),
+				ShowProgress:   !c.Bool("np"),
+				IsOverwrite:    c.Bool("ow"),
+				IsSkipSameName: c.Bool("skip"),
+				DriveId:        parseDriveId(c),
+				ExcludeNames:   c.StringSlice("exn"),
+				BlockSize:      int64(c.Int("bs") * 1024),
 			})
 
 			// 释放文件锁
@@ -441,6 +450,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 					UploadStatistic:   statistic,
 					ShowProgress:      opt.ShowProgress,
 					IsOverwrite:       opt.IsOverwrite,
+					IsSkipSameName:    opt.IsSkipSameName,
 					UseInternalUrl:    opt.UseInternalUrl,
 					GlobalSpeedsStat:  globalSpeedsStat,
 					FileRecorder:      fileRecorder,
