@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,6 +24,7 @@ import (
 	"github.com/urfave/cli"
 	"os"
 	"strconv"
+	"time"
 )
 
 func CmdRecycle() cli.Command {
@@ -218,39 +219,30 @@ func RunRecycleDelete(driveId string, fidStrList ...string) {
 func RunRecycleClear(driveId string) {
 	panClient := GetActivePanClient()
 
-	for {
-		// get file list
-		fdl, err := panClient.RecycleBinFileListGetAll(&aliyunpan.RecycleBinFileListParam{
-			DriveId: driveId,
-			Limit:   100,
-		})
-		if err != nil {
-			logger.Verboseln(err)
-			break
-		}
-		if fdl == nil || len(fdl) == 0 {
-			break
-		}
-
-		// delete
-		deleteFileList := []*aliyunpan.FileBatchActionParam{}
-		for _, f := range fdl {
-			deleteFileList = append(deleteFileList, &aliyunpan.FileBatchActionParam{
-				DriveId: driveId,
-				FileId:  f.FileId,
-			})
-		}
-
-		if len(deleteFileList) == 0 {
-			logger.Verboseln("没有需要删除的文件")
-			break
-		}
-
-		rbfr, err := panClient.RecycleBinFileDelete(deleteFileList)
-		if rbfr != nil && len(rbfr) > 0 {
-			logger.Verboseln("彻底删除文件成功")
-		}
+	// 提交清空回收站异步任务
+	r, err := panClient.RecycleBinFileClear(&aliyunpan.RecycleBinFileClearParam{
+		DriveId: driveId,
+	})
+	if err != nil {
+		logger.Verboseln(err)
+		fmt.Printf("当前无法清空回收站，请稍后重试\n")
 	}
 
-	fmt.Printf("清空回收站成功\n")
+	for i := 0; i < 10; i++ {
+		ar, err1 := panClient.AsyncTaskQueryStatus(&aliyunpan.AsyncTaskQueryStatusParam{
+			AsyncTaskId: r.AsyncTaskId,
+		})
+		if err1 != nil {
+			logger.Verboseln(err1)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		if ar.Status == "Succeed" {
+			fmt.Printf("清空回收站成功\n")
+			return
+		} else {
+			time.Sleep(1 * time.Second)
+		}
+	}
+	fmt.Printf("清空回收站失败，请稍后重试\n")
 }
