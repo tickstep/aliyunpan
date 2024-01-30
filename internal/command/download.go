@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -75,12 +75,9 @@ func CmdDownload() cli.Command {
 		UsageText: cmder.App().Name + " download <文件/目录路径1> <文件/目录2> <文件/目录3> ...",
 		Description: `
 	下载的文件默认保存到, 程序所在目录的 download/ 目录。支持软链接文件，包括Linux/macOS(ln命令)和Windows(mklink命令)创建的符号链接文件。
-	通过 aliyunpan config set -savedir <savedir>, 自定义保存的目录。
-	支持多个文件或目录下载.
-	自动跳过下载重名的文件!
+	通过 aliyunpan config set -savedir <savedir>, 自定义保存的目录。支持多个文件或目录下载，支持自动跳过下载重名的文件!
 
 	示例:
-
 	设置保存目录, 保存到 D:\Downloads
 	注意区别反斜杠 "\" 和 斜杠 "/" !!!
 	aliyunpan config set -savedir D:\\Downloads
@@ -302,7 +299,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		fmt.Println(err)
 		return
 	}
-
+	fmt.Printf("\n[*] 注意：由于阿里云盘接口的限制，当前不支持>100M单个文件的下载。")
 	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s\n\n", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
 
 	var (
