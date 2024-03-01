@@ -286,7 +286,7 @@ func RunShareSet(modeFlag, driveId string, paths []string, expiredTime string, s
 
 	if modeFlag == "3" {
 		// 快传
-		r, err1 := panClient.FastShareLinkCreate(aliyunpan.FastShareCreateParam{
+		r, err1 := panClient.WebapiPanClient().FastShareLinkCreate(aliyunpan.FastShareCreateParam{
 			DriveId:    driveId,
 			FileIdList: fidList,
 		})
@@ -303,7 +303,7 @@ func RunShareSet(modeFlag, driveId string, paths []string, expiredTime string, s
 		fmt.Printf("链接：%s\n", r.ShareUrl)
 	} else {
 		// 分享
-		r, err1 := panClient.ShareLinkCreate(aliyunpan.ShareCreateParam{
+		r, err1 := panClient.WebapiPanClient().ShareLinkCreate(aliyunpan.ShareCreateParam{
 			DriveId:    driveId,
 			SharePwd:   sharePwd,
 			Expiration: expiredTime,
@@ -330,7 +330,7 @@ func RunShareSet(modeFlag, driveId string, paths []string, expiredTime string, s
 // RunShareList 执行列出分享列表
 func RunShareList() {
 	activeUser := GetActiveUser()
-	records, err := activeUser.PanClient().ShareLinkList(activeUser.UserId)
+	records, err := activeUser.PanClient().WebapiPanClient().ShareLinkList(activeUser.UserId)
 	if err != nil {
 		fmt.Printf("获取分享列表失败: %s\n", err)
 		return
@@ -378,7 +378,7 @@ func RunShareCancel(shareIdList []string) {
 	}
 
 	activeUser := GetActiveUser()
-	r, err := activeUser.PanClient().ShareLinkCancel(shareIdList)
+	r, err := activeUser.PanClient().WebapiPanClient().ShareLinkCancel(shareIdList)
 	if err != nil {
 		fmt.Printf("取消分享操作失败: %s\n", err)
 		return
@@ -393,7 +393,7 @@ func RunShareCancel(shareIdList []string) {
 
 func RunShareExport(option, saveFilePath string) {
 	activeUser := GetActiveUser()
-	records, err := activeUser.PanClient().ShareLinkList(activeUser.UserId)
+	records, err := activeUser.PanClient().WebapiPanClient().ShareLinkList(activeUser.UserId)
 	if err != nil {
 		fmt.Printf("获取分享列表失败: %s\n", err)
 		return
@@ -467,7 +467,7 @@ func RunShareMc(driveId string, hideRelativePath bool, panPaths []string) {
 	totalCount := 0
 	for _, panPath := range panPaths {
 		panPath = activeUser.PathJoin(driveId, panPath)
-		panClient.FilesDirectoriesRecurseList(driveId, panPath, func(depth int, _ string, fd *aliyunpan.FileEntity, apiError *apierror.ApiError) bool {
+		panClient.WebapiPanClient().FilesDirectoriesRecurseList(driveId, panPath, func(depth int, _ string, fd *aliyunpan.FileEntity, apiError *apierror.ApiError) bool {
 			if apiError != nil {
 				logger.Verbosef("%s\n", apiError)
 				return true

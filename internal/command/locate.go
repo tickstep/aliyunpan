@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -80,9 +80,9 @@ func CmdLocateUrl() cli.Command {
 func RunLocateUrl(driveId string, paths []string, saveFilePath string) {
 	useInternalUrl := config.Config.TransferUrlType == 2
 	activeUser := GetActiveUser()
-	activeUser.PanClient().EnableCache()
-	activeUser.PanClient().ClearCache()
-	defer activeUser.PanClient().DisableCache()
+	activeUser.PanClient().WebapiPanClient().EnableCache()
+	activeUser.PanClient().WebapiPanClient().ClearCache()
+	defer activeUser.PanClient().WebapiPanClient().DisableCache()
 
 	paths, err := makePathAbsolute(driveId, paths...)
 	if err != nil {
@@ -116,7 +116,7 @@ func RunLocateUrl(driveId string, paths []string, saveFilePath string) {
 		}
 		fileInfo := item.(*aliyunpan.FileEntity)
 		if fileInfo.IsFolder() { // 文件夹，获取下面所有文件
-			allFilesInFolder, er := activeUser.PanClient().FileListGetAll(&aliyunpan.FileListParam{
+			allFilesInFolder, er := activeUser.PanClient().WebapiPanClient().FileListGetAll(&aliyunpan.FileListParam{
 				DriveId:      driveId,
 				ParentFileId: fileInfo.FileId,
 			}, 300)
@@ -131,7 +131,7 @@ func RunLocateUrl(driveId string, paths []string, saveFilePath string) {
 					fileEntityQueue.Push(f)
 					continue
 				}
-				durl, apierr := activeUser.PanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+				durl, apierr := activeUser.PanClient().WebapiPanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
 					DriveId: driveId,
 					FileId:  f.FileId,
 				})
@@ -151,7 +151,7 @@ func RunLocateUrl(driveId string, paths []string, saveFilePath string) {
 				}
 			}
 		} else { // 文件
-			durl, apierr := activeUser.PanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+			durl, apierr := activeUser.PanClient().WebapiPanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
 				DriveId: driveId,
 				FileId:  fileInfo.FileId,
 			})

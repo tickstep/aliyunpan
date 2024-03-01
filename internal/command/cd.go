@@ -96,7 +96,7 @@ func RunChangeDirectory(driveId, targetPath string) {
 	user := config.Config.ActiveUser()
 	targetPath = user.PathJoin(driveId, targetPath)
 
-	//targetPathInfo, err := user.PanClient().FileInfoByPath(driveId, targetPath)
+	//targetPathInfo, err := user.PanClient().WebapiPanClient().FileInfoByPath(driveId, targetPath)
 	files, err := matchPathByShellPattern(driveId, targetPath)
 	if err != nil {
 		fmt.Println(err)

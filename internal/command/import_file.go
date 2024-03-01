@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -199,7 +199,7 @@ func processOneImport(driveId string, isOverwrite bool, dirMap map[string]*dirFi
 		}
 		if efi != nil && efi.FileId != "" {
 			// existed, delete it
-			fdr, err := panClient.FileDelete([]*aliyunpan.FileBatchActionParam{
+			fdr, err := panClient.WebapiPanClient().FileDelete([]*aliyunpan.FileBatchActionParam{
 				{
 					DriveId: driveId,
 					FileId:  efi.FileId,
@@ -221,7 +221,7 @@ func processOneImport(driveId string, isOverwrite bool, dirMap map[string]*dirFi
 		ContentHash:  item.FileSha1,
 		ParentFileId: dataItem.Dir.FileId,
 	}
-	uploadOpEntity, apierr := panClient.CreateUploadFile(appCreateUploadFileParam)
+	uploadOpEntity, apierr := panClient.WebapiPanClient().CreateUploadFile(appCreateUploadFileParam)
 	if apierr != nil {
 		fmt.Println("创建秒传任务失败：" + apierr.Error())
 		return false, true
@@ -247,7 +247,7 @@ func prepareMkdir(driveId string, importFileItems []RapidUploadItem) map[string]
 			continue
 		}
 		if panDir != "/" {
-			rs, apierr = panClient.MkdirRecursive(driveId, "", "", 0, strings.Split(path.Clean(panDir), "/"))
+			rs, apierr = panClient.WebapiPanClient().MkdirRecursive(driveId, "", "", 0, strings.Split(path.Clean(panDir), "/"))
 			if apierr != nil || rs.FileId == "" {
 				logger.Verboseln("创建云盘文件夹失败")
 				continue
@@ -263,7 +263,7 @@ func prepareMkdir(driveId string, importFileItems []RapidUploadItem) map[string]
 		param := &aliyunpan.FileListParam{}
 		param.DriveId = driveId
 		param.ParentFileId = rs.FileId
-		allFileInfo, err1 := panClient.FileListGetAll(param, 0)
+		allFileInfo, err1 := panClient.WebapiPanClient().FileListGetAll(param, 0)
 		if err1 != nil {
 			logger.Verboseln("获取文件信息出错")
 			continue

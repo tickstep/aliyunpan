@@ -15,6 +15,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/tickstep/aliyunpan/internal/global"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -61,7 +62,7 @@ var (
 )
 
 func init() {
-	config.AppVersion = Version
+	global.AppVersion = Version
 	cmdutil.ChWorkDir()
 
 	err := config.Config.Init()
@@ -147,7 +148,7 @@ func main() {
 
 		os.Setenv(config.EnvVerbose, c.String("verbose"))
 		isCli = true
-		config.IsAppInCliMode = true
+		global.IsAppInCliMode = true
 		logger.Verbosef("提示: 你已经开启VERBOSE调试日志\n\n")
 
 		var (
@@ -309,9 +310,9 @@ func main() {
 		// check update
 		command.ReloadConfigFunc(c)
 		if config.Config.UpdateCheckInfo.LatestVer != "" {
-			if utils.ParseVersionNum(config.Config.UpdateCheckInfo.LatestVer) > utils.ParseVersionNum(config.AppVersion) {
+			if utils.ParseVersionNum(config.Config.UpdateCheckInfo.LatestVer) > utils.ParseVersionNum(global.AppVersion) {
 				fmt.Printf("\n当前的软件版本为：%s， 现在有新版本 %s 可供更新，强烈推荐进行更新！（可以输入 update 命令进行更新）\n\n",
-					config.AppVersion, config.Config.UpdateCheckInfo.LatestVer)
+					global.AppVersion, config.Config.UpdateCheckInfo.LatestVer)
 			}
 		}
 		go func() {
@@ -415,7 +416,7 @@ func main() {
 		command.CmdQuota(),
 
 		// Token操作
-		command.CmdToken(),
+		//command.CmdToken(),
 
 		// 切换工作目录 cd
 		command.CmdCd(),

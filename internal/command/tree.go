@@ -146,7 +146,7 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, setti
 	fileListParam.OrderBy = aliyunpan.FileOrderByName
 	fileListParam.OrderDirection = aliyunpan.FileOrderDirectionAsc
 	if targetPathInfo.IsFolder() {
-		fileResult, err := activeUser.PanClient().FileListGetAll(fileListParam, 500)
+		fileResult, err := activeUser.PanClient().WebapiPanClient().FileListGetAll(fileListParam, 500)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -214,9 +214,9 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, setti
 // RunTree 列出树形图
 func RunTree(driveId, pathStr string, showFullPath, showFileSize bool, minSize, maxSize int64) {
 	activeUser := config.Config.ActiveUser()
-	activeUser.PanClient().ClearCache()
-	activeUser.PanClient().EnableCache()
-	defer activeUser.PanClient().DisableCache()
+	activeUser.PanClient().WebapiPanClient().ClearCache()
+	activeUser.PanClient().WebapiPanClient().EnableCache()
+	defer activeUser.PanClient().WebapiPanClient().DisableCache()
 	pathStr = activeUser.PathJoin(driveId, pathStr)
 	statistic := &treeStatistic{
 		CountOfDir:  0,

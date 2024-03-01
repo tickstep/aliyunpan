@@ -61,6 +61,9 @@ const (
 
 	// DefaultDeviceName 默认客户端名称
 	DefaultDeviceName = "Chrome浏览器"
+
+	// DefaultClientId 默认的clientId
+	DefaultClientId = "cf9f70e8fc61430f8ec5ab5cadf31375"
 )
 
 var (
@@ -69,11 +72,6 @@ var (
 
 	// Config 配置信息, 由外部调用
 	Config = NewConfig(configFilePath)
-
-	AppVersion string
-
-	// IsAppInCliMode 是否在交互模式
-	IsAppInCliMode = false
 )
 
 type UpdateCheckInfo struct {
@@ -109,6 +107,10 @@ type PanConfig struct {
 
 	DeviceId   string `json:"deviceId"`   // 客户端ID，用于标识登录客户端，阿里单个账号最多允许10个客户端同时登录
 	DeviceName string `json:"deviceName"` // 客户端名称，默认为：Chrome浏览器
+
+	// Openapi客户端信息
+	ClientId     string `json:"clientId"`
+	ClientSecret string `json:"clientSecret"`
 
 	configFilePath string
 	configFile     *os.File
@@ -270,6 +272,9 @@ func (c *PanConfig) loadConfigFromFile() (err error) {
 	if c.DeviceName == "" {
 		c.DeviceName = DefaultDeviceName
 	}
+	if c.ClientId == "" {
+		c.ClientId = DefaultClientId
+	}
 	return nil
 }
 
@@ -294,6 +299,7 @@ func (c *PanConfig) initDefaultConfig() {
 	c.VideoFileExtensions = DefaultVideoFileExtensions
 	c.DeviceId = RandomDeviceId() // 生成默认客户端ID
 	c.DeviceName = DefaultDeviceName
+	c.ClientId = DefaultClientId
 	c.FileRecordConfig = "1" // 默认开启
 	c.PreferIPType = "ipv4"  // 默认优先IPv4
 }
@@ -390,7 +396,10 @@ func (c *PanConfig) ActiveUser() *PanUser {
 			if u.UserId == c.ActiveUID {
 				if u.PanClient() == nil {
 					// restore client
-					user, err := SetupUserByCookie(&u.WebToken, c.DeviceId, c.DeviceName)
+					user, err := SetupUserByCookie(u.OpenapiToken, u.WebapiToken,
+						u.TicketId, u.UserId,
+						c.DeviceId, c.DeviceName,
+						c.ClientId, c.ClientSecret)
 					if err != nil {
 						logger.Verboseln("setup user error")
 						return nil
@@ -401,7 +410,7 @@ func (c *PanConfig) ActiveUser() *PanUser {
 					u.DriveList = user.DriveList
 					// check workdir valid or not
 					if user.IsFileDriveActive() {
-						fe, err1 := u.PanClient().FileInfoByPath(u.ActiveDriveId, u.Workdir)
+						fe, err1 := u.PanClient().WebapiPanClient().FileInfoByPath(u.ActiveDriveId, u.Workdir)
 						if err1 != nil {
 							// default to root
 							u.Workdir = "/"
@@ -410,7 +419,7 @@ func (c *PanConfig) ActiveUser() *PanUser {
 							u.WorkdirFileEntity = *fe
 						}
 					} else if user.IsResourceDriveActive() {
-						fe, err1 := u.PanClient().FileInfoByPath(u.ActiveDriveId, u.ResourceWorkdir)
+						fe, err1 := u.PanClient().WebapiPanClient().FileInfoByPath(u.ActiveDriveId, u.ResourceWorkdir)
 						if err1 != nil {
 							// default to root
 							u.ResourceWorkdir = "/"
@@ -419,7 +428,7 @@ func (c *PanConfig) ActiveUser() *PanUser {
 							u.ResourceWorkdirFileEntity = *fe
 						}
 					} else if user.IsAlbumDriveActive() {
-						fe, err1 := u.PanClient().FileInfoByPath(u.ActiveDriveId, u.AlbumWorkdir)
+						fe, err1 := u.PanClient().WebapiPanClient().FileInfoByPath(u.ActiveDriveId, u.AlbumWorkdir)
 						if err1 != nil {
 							// default to root
 							u.AlbumWorkdir = "/"
@@ -444,9 +453,9 @@ func (c *PanConfig) SetActiveUser(user *PanUser) *PanUser {
 		if u.UserId == user.UserId {
 			// update user info
 			u.Nickname = user.Nickname
-			u.WebToken = user.WebToken
-			u.RefreshToken = user.RefreshToken
-			u.TokenId = user.TokenId
+			u.WebapiToken = user.WebapiToken
+			u.OpenapiToken = user.OpenapiToken
+			u.TicketId = user.TicketId
 			needToInsert = false
 			break
 		}

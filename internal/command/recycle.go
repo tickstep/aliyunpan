@@ -132,7 +132,7 @@ func CmdRecycle() cli.Command {
 // RunRecycleList 执行列出回收站文件列表
 func RunRecycleList(driveId string) {
 	panClient := GetActivePanClient()
-	fdl, err := panClient.RecycleBinFileListGetAll(&aliyunpan.RecycleBinFileListParam{
+	fdl, err := panClient.WebapiPanClient().RecycleBinFileListGetAll(&aliyunpan.RecycleBinFileListParam{
 		DriveId: driveId,
 		Limit:   100,
 	})
@@ -174,7 +174,7 @@ func RunRecycleRestore(driveId string, fidStrList ...string) {
 		return
 	}
 
-	rbfr, err := panClient.RecycleBinFileRestore(restoreFileList)
+	rbfr, err := panClient.WebapiPanClient().RecycleBinFileRestore(restoreFileList)
 	if rbfr != nil && len(rbfr) > 0 {
 		fmt.Printf("还原文件成功\n")
 		return
@@ -203,7 +203,7 @@ func RunRecycleDelete(driveId string, fidStrList ...string) {
 		return
 	}
 
-	rbfr, err := panClient.RecycleBinFileDelete(deleteFileList)
+	rbfr, err := panClient.WebapiPanClient().RecycleBinFileDelete(deleteFileList)
 	if rbfr != nil && len(rbfr) > 0 {
 		fmt.Printf("彻底删除文件成功\n")
 		return
@@ -220,7 +220,7 @@ func RunRecycleClear(driveId string) {
 	panClient := GetActivePanClient()
 
 	// 提交清空回收站异步任务
-	r, err := panClient.RecycleBinFileClear(&aliyunpan.RecycleBinFileClearParam{
+	r, err := panClient.WebapiPanClient().RecycleBinFileClear(&aliyunpan.RecycleBinFileClearParam{
 		DriveId: driveId,
 	})
 	if err != nil {
@@ -229,7 +229,7 @@ func RunRecycleClear(driveId string) {
 	}
 
 	for i := 0; i < 10; i++ {
-		ar, err1 := panClient.AsyncTaskQueryStatus(&aliyunpan.AsyncTaskQueryStatusParam{
+		ar, err1 := panClient.WebapiPanClient().AsyncTaskQueryStatus(&aliyunpan.AsyncTaskQueryStatusParam{
 			AsyncTaskId: r.AsyncTaskId,
 		})
 		if err1 != nil {

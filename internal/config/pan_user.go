@@ -17,10 +17,14 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
+	"github.com/tickstep/aliyunpan-api/aliyunpan_open"
+	"github.com/tickstep/aliyunpan-api/aliyunpan_open/openapi"
+	"github.com/tickstep/aliyunpan/internal/functions/panlogin"
 	"github.com/tickstep/library-go/expires/cachemap"
 	"github.com/tickstep/library-go/logger"
 	"path"
 	"path/filepath"
+	"time"
 )
 
 type DriveInfo struct {
@@ -57,12 +61,28 @@ func (d DriveInfoList) GetResourceDriveId() string {
 	return ""
 }
 
+// PanClientToken 授权Token
+type PanClientToken struct {
+	// AccessToken AccessToken
+	AccessToken string `json:"accessToken"`
+	// Expired 过期时间戳，单位秒
+	Expired int64 `json:"expired"`
+}
+
+// GetExpiredTimeCstStr 获取东八区时间字符串
+func (t *PanClientToken) GetExpiredTimeCstStr() string {
+	cz := time.FixedZone("CST", 8*3600) // 东8区
+	tm := time.Unix(t.Expired, 0).In(cz)
+	return tm.Format("2006-01-02 15:04:05")
+}
+
 type PanUser struct {
+	// 用户信息
 	UserId      string `json:"userId"`
 	Nickname    string `json:"nickname"`
 	AccountName string `json:"accountName"`
 
-	// 文件/备份盘
+	// 文件（备份盘）
 	Workdir           string               `json:"workdir"`
 	WorkdirFileEntity aliyunpan.FileEntity `json:"workdirFileEntity"`
 
@@ -74,89 +94,115 @@ type PanUser struct {
 	AlbumWorkdir           string               `json:"albumWorkdir"`
 	AlbumWorkdirFileEntity aliyunpan.FileEntity `json:"albumWorkdirFileEntity"`
 
+	// 用户网盘信息
 	ActiveDriveId string        `json:"activeDriveId"`
 	DriveList     DriveInfoList `json:"driveList"`
 
-	RefreshToken string                  `json:"refreshToken"`
-	WebToken     aliyunpan.WebLoginToken `json:"webToken"`
-	TokenId      string                  `json:"tokenId"`
+	// 授权Token信息
+	TicketId     string          `json:"ticketId"`
+	WebapiToken  *PanClientToken `json:"webapiToken"`
+	OpenapiToken *PanClientToken `json:"openapiToken"`
 
-	panClient  *aliyunpan.PanClient
-	cacheOpMap cachemap.CacheOpMap
+	// API客户端
+	//panClient  *aliyunpan.PanClient `json:"-"`
+	panClient  *PanClient          `json:"-"`
+	cacheOpMap cachemap.CacheOpMap `json:"-"`
 }
 
 type PanUserList []*PanUser
 
-func SetupUserByCookie(webToken *aliyunpan.WebLoginToken, deviceId, deviceName string) (user *PanUser, err *apierror.ApiError) {
+func SetupUserByCookie(openapiToken, webapiToken *PanClientToken, ticketId, userId, deviceId, deviceName, clientId, clientSecret string) (user *PanUser, err *apierror.ApiError) {
 	tryRefreshWebToken := true
+	tryRefreshOpenToken := true
+	loginHelper := panlogin.NewLoginHelper(DefaultTokenServiceWebHost)
 
-	if webToken == nil {
-		return nil, apierror.NewFailedApiError("web token is empty")
+	if openapiToken == nil {
+		return nil, apierror.NewFailedApiError("openapi token is empty")
+	}
+	if webapiToken == nil {
+		return nil, apierror.NewFailedApiError("webapi token is empty")
 	}
 
-doLoginAct:
-	appConfig := aliyunpan.AppConfig{
-		AppId:     "25dzX3vbYqktVxyX",
-		DeviceId:  deviceId,
-		UserId:    "",
-		Nonce:     0,
-		PublicKey: "",
-	}
-	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{}, appConfig, aliyunpan.SessionConfig{
-		DeviceName: deviceName,
-		ModelName:  "Windows网页版",
+doOpenLoginAct:
+	// setup openapi client
+	openPanClient := aliyunpan_open.NewOpenPanClient(openapi.ApiConfig{
+		TicketId:     ticketId,
+		UserId:       userId,
+		ClientId:     clientId,
+		ClientSecret: clientSecret,
+	}, openapi.ApiToken{
+		AccessToken: openapiToken.AccessToken,
+		ExpiredAt:   openapiToken.Expired,
+	}, func(newToken openapi.ApiToken) error {
+		// TODO: save & refresh new token
+		return nil
 	})
-	u := &PanUser{
-		WebToken:          *webToken,
-		panClient:         panClient,
-		Workdir:           "/",
-		WorkdirFileEntity: *aliyunpan.NewFileEntityForRootDir(),
-	}
-
-	// web api token maybe expired
-	userInfo, err := panClient.GetUserInfo()
+	// open api token maybe expired
+	// check & refresh new one
+	openUserInfo, err := openPanClient.GetUserInfo()
 	if err != nil {
-		if err.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshWebToken {
-			tryRefreshWebToken = false
-			webCookie, _ := aliyunpan.GetAccessTokenFromRefreshToken(webToken.RefreshToken)
-			if webCookie != nil {
-				webToken = webCookie
-				goto doLoginAct
+		if err.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshOpenToken {
+			tryRefreshOpenToken = false
+			wt, e := loginHelper.GetOpenapiNewToken(ticketId, userId)
+			if e != nil {
+				logger.Verboseln("get openapi token from server error: ", e)
+				return nil, apierror.NewFailedApiError("get new openapi token error, try login again")
+			}
+			if wt != nil {
+				openapiToken = &PanClientToken{
+					AccessToken: wt.AccessToken,
+					Expired:     wt.Expired,
+				}
+				goto doOpenLoginAct
 			}
 		}
 		return nil, err
 	}
-	name := "Unknown"
-	if userInfo != nil {
-		if userInfo.Nickname != "" {
-			name = userInfo.Nickname
-		}
 
-		// update user
-		u.UserId = userInfo.UserId
-		u.Nickname = name
-		u.AccountName = userInfo.UserName
-
-		// default file drive
-		if u.ActiveDriveId == "" {
-			u.ActiveDriveId = userInfo.FileDriveId
+doWebLoginAct:
+	// setup webapi client
+	appConfig := aliyunpan.AppConfig{
+		AppId:     "25dzX3vbYqktVxyX",
+		DeviceId:  deviceId,
+		UserId:    userId,
+		Nonce:     0,
+		PublicKey: "",
+	}
+	webPanClient := aliyunpan.NewPanClient(aliyunpan.WebLoginToken{
+		AccessTokenType: "Bearer",
+		AccessToken:     webapiToken.AccessToken,
+		RefreshToken:    "",
+		ExpiresIn:       7200,
+		ExpireTime:      webapiToken.GetExpiredTimeCstStr(),
+	}, aliyunpan.AppLoginToken{}, appConfig, aliyunpan.SessionConfig{
+		DeviceName: deviceName,
+		ModelName:  "Windows网页版",
+	})
+	// web api token maybe expired
+	// check & refresh new one
+	webUserInfo, err2 := webPanClient.GetUserInfo()
+	if err != nil {
+		if err2.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshWebToken {
+			tryRefreshWebToken = false
+			wt, e := loginHelper.GetWebapiNewToken(ticketId, userId)
+			if e != nil {
+				logger.Verboseln("get web token from server error: ", e)
+			}
+			if wt != nil {
+				webapiToken = &PanClientToken{
+					AccessToken: wt.AccessToken,
+					Expired:     wt.Expired,
+				}
+				goto doWebLoginAct
+			}
 		}
-
-		// drive list
-		u.DriveList = DriveInfoList{
-			{DriveId: userInfo.FileDriveId, DriveTag: "File", DriveName: "备份盘"},
-			{DriveId: userInfo.ResourceDriveId, DriveTag: "Resource", DriveName: "资源库"},
-			{DriveId: userInfo.AlbumDriveId, DriveTag: "Album", DriveName: "相册"},
-		}
-	} else {
-		// error, maybe the token has expired
-		return nil, apierror.NewFailedApiError("cannot get user info, the token has expired")
+		return nil, err
 	}
 
-	// create session
-	appConfig.UserId = u.UserId
-	panClient.UpdateAppConfig(appConfig)
-	r, e := panClient.CreateSession(nil)
+	// web create session
+	appConfig.UserId = webUserInfo.UserId
+	webPanClient.UpdateAppConfig(appConfig)
+	r, e := webPanClient.CreateSession(nil)
 	if e != nil {
 		logger.Verboseln("call CreateSession error in SetupUserByCookie: " + e.Error())
 	}
@@ -164,10 +210,56 @@ doLoginAct:
 		logger.Verboseln("上传签名秘钥失败，可能是你账号登录的设备已超最大数量")
 	}
 
+	//
+	// setup PanUser
+	//
+	u := &PanUser{
+		WebapiToken:       webapiToken,
+		OpenapiToken:      openapiToken,
+		panClient:         NewPanClient(webPanClient, openPanClient),
+		Workdir:           "/",
+		WorkdirFileEntity: *aliyunpan.NewFileEntityForRootDir(),
+	}
+
+	// setup user info
+	name := "Unknown"
+	if openUserInfo != nil {
+		// fill userId for client
+		u.PanClient().OpenapiPanClient().UpdateUserId(openUserInfo.UserId)
+		u.PanClient().WebapiPanClient().UpdateUserId(openUserInfo.UserId)
+
+		// update user
+		if openUserInfo.Nickname != "" {
+			name = openUserInfo.Nickname
+		}
+		u.UserId = openUserInfo.UserId
+		u.Nickname = name
+		u.AccountName = openUserInfo.UserName
+
+		// default file drive
+		if u.ActiveDriveId == "" {
+			u.ActiveDriveId = openUserInfo.FileDriveId
+		}
+
+		// drive list
+		u.DriveList = DriveInfoList{
+			{DriveId: openUserInfo.FileDriveId, DriveTag: "File", DriveName: "备份盘"},
+			{DriveId: openUserInfo.ResourceDriveId, DriveTag: "Resource", DriveName: "资源库"},
+		}
+		if webUserInfo != nil {
+			u.AccountName = webUserInfo.UserName
+			u.DriveList = append(u.DriveList, &DriveInfo{DriveId: webUserInfo.AlbumDriveId, DriveTag: "Album", DriveName: "相册"})
+		}
+	} else {
+		// error, maybe the token has expired
+		return nil, apierror.NewFailedApiError("cannot get user info, the token has expired. please login again")
+	}
+
+	// return user
 	return u, nil
 }
 
-func (pu *PanUser) PanClient() *aliyunpan.PanClient {
+func (pu *PanUser) PanClient() *PanClient {
 	return pu.panClient
 }
 
@@ -192,21 +284,20 @@ func (pu *PanUser) PathJoin(driveId, p string) string {
 
 func (pu *PanUser) FreshWorkdirInfo() {
 	if pu.IsFileDriveActive() {
-		fe, err := pu.PanClient().FileInfoById(pu.ActiveDriveId, pu.WorkdirFileEntity.FileId)
+		fe, err := pu.PanClient().WebapiPanClient().FileInfoById(pu.ActiveDriveId, pu.WorkdirFileEntity.FileId)
 		if err != nil {
 			logger.Verboseln("刷新工作目录信息失败")
 			return
 		}
 		pu.WorkdirFileEntity = *fe
 	} else if pu.IsAlbumDriveActive() {
-		fe, err := pu.PanClient().FileInfoById(pu.ActiveDriveId, pu.AlbumWorkdirFileEntity.FileId)
+		fe, err := pu.PanClient().WebapiPanClient().FileInfoById(pu.ActiveDriveId, pu.AlbumWorkdirFileEntity.FileId)
 		if err != nil {
 			logger.Verboseln("刷新工作目录信息失败")
 			return
 		}
 		pu.AlbumWorkdirFileEntity = *fe
 	}
-
 }
 
 // GetSavePath 根据提供的网盘文件路径 panpath, 返回本地储存路径,

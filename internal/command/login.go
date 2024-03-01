@@ -15,14 +15,12 @@ package command
 
 import (
 	"fmt"
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder/cmdliner"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/functions/panlogin"
-	"github.com/tickstep/library-go/logger"
 	_ "github.com/tickstep/library-go/requester"
 	"github.com/urfave/cli"
-	"time"
+	"strings"
 )
 
 func CmdLogin() cli.Command {
@@ -34,55 +32,36 @@ func CmdLogin() cli.Command {
 		1.常规登录，按提示一步一步来即可
 		aliyunpan login
 
-		2.直接指定RefreshToken进行登录
-		aliyunpan login -RefreshToken=8B12CBBCE89CA8DFC3445985B63B511B5E7EC7...
-
-		3.使用二维码方式进行登录
-		aliyunpan login -QrCode
 `,
 		Category: "阿里云盘账号",
 		Before:   ReloadConfigFunc, // 每次进行登录动作的时候需要调用刷新配置
 		After:    SaveConfigFunc,   // 登录完成需要调用保存配置
 		Action: func(c *cli.Context) error {
-			refreshTokenStr := ""
-			if refreshTokenStr == "" {
-				refreshTokenStr = c.String("RefreshToken")
-			}
-			useQrCode := c.Bool("QrCode")
-
-			tokenId := ""
-			webToken := aliyunpan.WebLoginToken{}
-			refreshToken := ""
+			ticketId := ""
+			openToken := &config.PanClientToken{}
+			webToken := &config.PanClientToken{}
 			var err error
-			tokenId, refreshToken, webToken, err = RunLogin(useQrCode, refreshTokenStr)
+			ticketId, openToken, webToken, err = RunLogin()
 			if err != nil {
 				fmt.Println(err)
 				return err
 			}
 
-			cloudUser, err := config.SetupUserByCookie(&webToken, config.Config.DeviceId, config.Config.DeviceName)
+			cloudUser, err := config.SetupUserByCookie(openToken, webToken,
+				ticketId, "",
+				config.Config.DeviceId, config.Config.DeviceName,
+				config.Config.ClientId, config.Config.ClientSecret)
 			if cloudUser == nil {
 				fmt.Println("登录失败: ", err)
 				return nil
 			}
-			cloudUser.RefreshToken = refreshToken
-			cloudUser.TokenId = tokenId
+			cloudUser.TicketId = ticketId
 			config.Config.SetActiveUser(cloudUser)
 			fmt.Println("阿里云盘登录成功: ", cloudUser.Nickname)
 			return nil
 		},
 		// 命令的附加options参数说明，使用 help panlogin 命令即可查看
-		Flags: []cli.Flag{
-			// aliyunpan panlogin -RefreshToken=8B12CBBCE89CA8DFC3445985B63B511B5E7EC7...
-			cli.StringFlag{
-				Name:  "RefreshToken",
-				Usage: "使用RefreshToken Cookie来登录帐号",
-			},
-			cli.BoolFlag{
-				Name:  "QrCode",
-				Usage: "使用二维码登录",
-			},
-		},
+		Flags: []cli.Flag{},
 	}
 }
 
@@ -117,7 +96,7 @@ func CmdLogout() cli.Command {
 			}
 
 			// 云端注销登录
-			//if _, e := activeUser.PanClient().DeviceLogout(); e != nil {
+			//if _, e := activeUser.PanClient().WebapiPanClient().DeviceLogout(); e != nil {
 			//	fmt.Printf("登出设备失败，请手动在网页端进行登出: %s\n", e.String())
 			//}
 
@@ -139,55 +118,40 @@ func CmdLogout() cli.Command {
 	}
 }
 
-func RunLogin(useQrCodeLogin bool, refreshToken string) (tokenId, refreshTokenStr string, webToken aliyunpan.WebLoginToken, error error) {
-	if useQrCodeLogin {
-		h := panlogin.NewLoginHelper(config.DefaultTokenServiceWebHost)
-		qrCodeUrlResult, err := h.GetQRCodeLoginUrl("")
-		if err != nil {
-			fmt.Println("二维码登录错误：", err)
-			return "", "", aliyunpan.WebLoginToken{}, err
-		}
-		fmt.Printf("请在浏览器打开以下链接进行扫码登录，链接有效时间为5分钟\n%s\n\n", qrCodeUrlResult.TokenUrl+"&deviceId="+config.Config.DeviceId)
+func RunLogin() (ticketId string, openapiToken, webapiToken *config.PanClientToken, error error) {
+	h := panlogin.NewLoginHelper(config.DefaultTokenServiceWebHost)
 
-		// handler waiting
-		line := cmdliner.NewLiner()
-		var qrCodeLoginResult *panlogin.QRCodeLoginResult
-		queryResult := true
-		defer line.Close()
+	// web login request
+	qrCodeUrlResult, err := h.GetQRCodeLoginUrl("")
+	if err != nil {
+		fmt.Println("登录出错：", err)
+		return "", nil, nil, err
+	}
+	ticketId = qrCodeUrlResult.TokenId
+	loginUrl := &strings.Builder{}
+	fmt.Fprintf(loginUrl, "https://openapi.alipan.com/oauth/authorize?client_id=%s&redirect_uri=https%%3A%%2F%%2Fapi.tickstep.com%%2Fauth%%2Ftickstep%%2Faliyunpan%%2Ftoken%%2Fopenapi%%2F%s%%2Fauth&scope=user:base,file:all:read,file:all:write",
+		config.Config.ClientId, ticketId)
+	fmt.Printf("请在浏览器打开以下链接进行扫码登录，链接有效时间为5分钟\n%s\n\n", loginUrl)
 
-		go func() {
-			for queryResult {
-				time.Sleep(3 * time.Second)
-				qr, er := h.GetQRCodeLoginResult(qrCodeUrlResult.TokenId)
-				if er != nil {
-					continue
-				}
-				logger.Verboseln(qr)
-				if qr.QrCodeStatus == "CONFIRMED" {
-					// login successfully
-					qrCodeLoginResult = qr
-					break
-				} else if qr.QrCodeStatus == "EXPIRED" {
-					break
-				}
-			}
-		}()
+	// handler waiting
+	line := cmdliner.NewLiner()
+	defer line.Close()
+	line.State.Prompt("请在浏览器里面完成扫码登录，然后再按Enter键继续...")
 
-		line.State.Prompt("请在浏览器里面完成扫码登录，然后再按Enter键继续...")
-		if qrCodeLoginResult == nil {
-			queryResult = false
-			return "", "", aliyunpan.WebLoginToken{}, fmt.Errorf("二维码登录失败")
-		}
-
-		tokenStr, er := h.ParseSecureRefreshToken("", qrCodeLoginResult.SecureRefreshToken)
-		if er != nil {
-			fmt.Println("解析Token错误：", er)
-			return "", "", aliyunpan.WebLoginToken{}, er
-		}
-		refreshToken = tokenStr
-		tokenId = qrCodeUrlResult.TokenId
+	// get login token
+	comToken, er := h.GetLoginToken(ticketId)
+	if er != nil {
+		return ticketId, nil, nil, fmt.Errorf("登录失败，请稍后尝试重新登录")
 	}
 
-	refreshTokenStr, webToken, error = DoLoginHelper(refreshToken)
-	return
+	return ticketId,
+		&config.PanClientToken{
+			AccessToken: comToken.Openapi.AccessToken,
+			Expired:     comToken.Openapi.Expired,
+		},
+		&config.PanClientToken{
+			AccessToken: comToken.Webapi.AccessToken,
+			Expired:     comToken.Webapi.Expired,
+		},
+		nil
 }

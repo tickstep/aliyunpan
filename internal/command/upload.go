@@ -273,9 +273,9 @@ func CmdRapidUpload() cli.Command {
 // RunUpload 执行文件上传
 func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	activeUser := GetActiveUser()
-	activeUser.PanClient().EnableCache()
-	activeUser.PanClient().ClearCache()
-	defer activeUser.PanClient().DisableCache()
+	activeUser.PanClient().WebapiPanClient().EnableCache()
+	activeUser.PanClient().WebapiPanClient().ClearCache()
+	defer activeUser.PanClient().WebapiPanClient().DisableCache()
 	// pan token expired checker
 	continueFlag := int32(0)
 	atomic.StoreInt32(&continueFlag, 0)
@@ -316,13 +316,13 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 
 	// 超时时间
 	if opt.MaxTimeoutSec > 0 {
-		activeUser.PanClient().SetTimeout(time.Duration(opt.MaxTimeoutSec) * time.Second)
+		activeUser.PanClient().WebapiPanClient().SetTimeout(time.Duration(opt.MaxTimeoutSec) * time.Second)
 	}
 
 	fmt.Printf("\n[0] 当前文件上传最大并发量为: %d, 上传分片大小为: %s\n", opt.AllParallel, converter.ConvertFileSize(opt.BlockSize, 2))
 
 	savePath = activeUser.PathJoin(opt.DriveId, savePath)
-	_, err1 := activeUser.PanClient().FileInfoByPath(opt.DriveId, savePath)
+	_, err1 := activeUser.PanClient().WebapiPanClient().FileInfoByPath(opt.DriveId, savePath)
 	if err1 != nil {
 		fmt.Printf("警告: 上传文件, 获取云盘路径 %s 错误, %s\n", savePath, err1)
 	}
@@ -441,7 +441,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 					LocalFileChecksum: localfile.NewLocalSymlinkFileEntity(file),
 					SavePath:          subSavePath,
 					DriveId:           opt.DriveId,
-					PanClient:         activeUser.PanClient(),
+					PanClient:         activeUser.PanClient().WebapiPanClient(),
 					UploadingDatabase: uploadDatabase,
 					FolderCreateMutex: folderCreateMutex,
 					Parallel:          opt.Parallel,
@@ -463,11 +463,11 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 				if saveFilePath != "/" {
 					folderCreateMutex.Lock()
 					fmt.Printf("正在检测和创建云盘文件夹: %s\n", saveFilePath)
-					_, apierr1 := activeUser.PanClient().FileInfoByPath(opt.DriveId, saveFilePath)
+					_, apierr1 := activeUser.PanClient().WebapiPanClient().FileInfoByPath(opt.DriveId, saveFilePath)
 					time.Sleep(1 * time.Second)
 					if apierr1 != nil && apierr1.Code == apierror.ApiCodeFileNotFoundCode {
 						logger.Verbosef("%s 创建云盘文件夹: %s\n", utils.NowTimeStr(), saveFilePath)
-						rs, apierr := activeUser.PanClient().Mkdir(opt.DriveId, "root", saveFilePath)
+						rs, apierr := activeUser.PanClient().WebapiPanClient().Mkdir(opt.DriveId, "root", saveFilePath)
 						if apierr != nil || rs.FileId == "" {
 							fmt.Printf("创建云盘文件夹失败: %s\n", saveFilePath)
 						}
@@ -565,7 +565,7 @@ func doRapidUpload(driveId string, isOverwrite bool, item *RapidUploadItem) erro
 	panDir, panFileName := path.Split(item.FilePath)
 	saveFilePath = item.FilePath
 	if panDir != "/" {
-		rs, apierr = panClient.MkdirRecursive(driveId, "", "", 0, strings.Split(path.Clean(panDir), "/"))
+		rs, apierr = panClient.WebapiPanClient().MkdirRecursive(driveId, "", "", 0, strings.Split(path.Clean(panDir), "/"))
 		if apierr != nil || rs.FileId == "" {
 			return fmt.Errorf("创建云盘文件夹失败")
 		}
@@ -578,13 +578,13 @@ func doRapidUpload(driveId string, isOverwrite bool, item *RapidUploadItem) erro
 	if isOverwrite {
 		// 标记覆盖旧同名文件
 		// 检查同名文件是否存在
-		efi, apierr := panClient.FileInfoByPath(driveId, saveFilePath)
+		efi, apierr := panClient.WebapiPanClient().FileInfoByPath(driveId, saveFilePath)
 		if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
 			return fmt.Errorf("检测同名文件失败，请稍后重试")
 		}
 		if efi != nil && efi.FileId != "" {
 			// existed, delete it
-			fileDeleteResult, err1 := panClient.FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: efi.DriveId, FileId: efi.FileId}})
+			fileDeleteResult, err1 := panClient.WebapiPanClient().FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: efi.DriveId, FileId: efi.FileId}})
 			if err1 != nil || len(fileDeleteResult) == 0 {
 				return fmt.Errorf("无法删除文件，请稍后重试")
 			}
@@ -604,7 +604,7 @@ func doRapidUpload(driveId string, isOverwrite bool, item *RapidUploadItem) erro
 		ContentHash:  item.FileSha1,
 		ParentFileId: rs.FileId,
 	}
-	uploadOpEntity, apierr := panClient.CreateUploadFile(appCreateUploadFileParam)
+	uploadOpEntity, apierr := panClient.WebapiPanClient().CreateUploadFile(appCreateUploadFileParam)
 	if apierr != nil {
 		return fmt.Errorf("创建秒传任务失败：" + apierr.Error())
 	}

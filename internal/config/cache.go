@@ -30,7 +30,7 @@ func (pu *PanUser) DeleteOneCache(dirPath string) {
 func (pu *PanUser) CacheFilesDirectoriesList(pathStr string) (fdl aliyunpan.FileList, apiError *apierror.ApiError) {
 	data := pu.cacheOpMap.CacheOperation(pu.ActiveDriveId, pathStr+"_OrderByName", func() expires.DataExpires {
 		var fi *aliyunpan.FileEntity
-		fi, apiError = pu.panClient.FileInfoByPath(pu.ActiveDriveId, pathStr)
+		fi, apiError = pu.panClient.WebapiPanClient().FileInfoByPath(pu.ActiveDriveId, pathStr)
 		if apiError != nil {
 			return nil
 		}
@@ -38,7 +38,7 @@ func (pu *PanUser) CacheFilesDirectoriesList(pathStr string) (fdl aliyunpan.File
 			DriveId:      pu.ActiveDriveId,
 			ParentFileId: fi.FileId,
 		}
-		fdl, apiError = pu.panClient.FileListGetAll(fileListParam, 100)
+		fdl, apiError = pu.panClient.WebapiPanClient().FileListGetAll(fileListParam, 100)
 		if apiError != nil {
 			return nil
 		}

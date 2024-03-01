@@ -72,7 +72,7 @@ func RunSave(driveId string, args ...string) {
 
 	targetFilePath := path.Clean(args[len(args)-1])
 	absolutePath := activeUser.PathJoin(driveId, targetFilePath)
-	targetFile, err := activeUser.PanClient().FileInfoByPath(driveId, absolutePath)
+	targetFile, err := activeUser.PanClient().WebapiPanClient().FileInfoByPath(driveId, absolutePath)
 	if err != nil || !targetFile.IsFolder() {
 		fmt.Println("指定目标文件夹不存在")
 		return
@@ -88,19 +88,19 @@ func RunSave(driveId string, args ...string) {
 		sharePwd = args[1]
 	}
 
-	token, err := activeUser.PanClient().GetShareToken(shareID, sharePwd)
+	token, err := activeUser.PanClient().WebapiPanClient().GetShareToken(shareID, sharePwd)
 	if err != nil {
 		fmt.Println("读取分享链接失败：", err)
 		return
 	}
 
-	list, err := activeUser.PanClient().GetListByShare(token.ShareToken, shareID, "")
+	list, err := activeUser.PanClient().WebapiPanClient().GetListByShare(token.ShareToken, shareID, "")
 	if err != nil {
 		fmt.Println("读取分享文件列表失败：", err)
 		return
 	}
 	for list.NextMarker != "" {
-		list2, err := activeUser.PanClient().GetListByShare(token.ShareToken, shareID, "")
+		list2, err := activeUser.PanClient().WebapiPanClient().GetListByShare(token.ShareToken, shareID, "")
 		if err != nil {
 			fmt.Println("读取分享文件列表失败：", err)
 			return
@@ -129,7 +129,7 @@ func RunSave(driveId string, args ...string) {
 	}
 	fmt.Println()
 
-	result, err := activeUser.PanClient().FileCopy(token.ShareToken, params)
+	result, err := activeUser.PanClient().WebapiPanClient().FileCopy(token.ShareToken, params)
 	if err != nil {
 		fmt.Println("保存分享文件失败：", err)
 		return
@@ -148,7 +148,7 @@ func RunSave(driveId string, args ...string) {
 		}
 	}
 	if ids != nil {
-		result2, err := activeUser.PanClient().AsyncTaskGet(token.ShareToken, ids)
+		result2, err := activeUser.PanClient().WebapiPanClient().AsyncTaskGet(token.ShareToken, ids)
 		if err != nil {
 			fmt.Println("读取保存结果失败：", err)
 		}

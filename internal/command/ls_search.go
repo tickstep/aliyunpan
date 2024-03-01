@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -169,7 +169,7 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions,
 	fileListParam.OrderBy = orderBy
 	fileListParam.OrderDirection = orderDirection
 	if targetPathInfo.IsFolder() {
-		fileResult, err1 := activeUser.PanClient().FileListGetAll(fileListParam, 200)
+		fileResult, err1 := activeUser.PanClient().WebapiPanClient().FileListGetAll(fileListParam, 200)
 		if err1 != nil {
 			fmt.Println(err1)
 			return

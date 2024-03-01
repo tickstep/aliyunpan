@@ -3,6 +3,7 @@ package plugins
 import (
 	"fmt"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/global"
 	"github.com/tickstep/library-go/logger"
 	"io/ioutil"
 	"os"
@@ -21,7 +22,7 @@ func GetContext(user *config.PanUser) *Context {
 	if user == nil {
 		return &Context{
 			AppName:      "aliyunpan",
-			Version:      config.AppVersion,
+			Version:      global.AppVersion,
 			UserId:       "",
 			Nickname:     "",
 			FileDriveId:  "",
@@ -30,7 +31,7 @@ func GetContext(user *config.PanUser) *Context {
 	}
 	return &Context{
 		AppName:      "aliyunpan",
-		Version:      config.AppVersion,
+		Version:      global.AppVersion,
 		UserId:       user.UserId,
 		Nickname:     user.Nickname,
 		FileDriveId:  user.DriveList.GetFileDriveId(),

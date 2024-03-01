@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/global"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/crypto"
 	"github.com/tickstep/library-go/getip"
@@ -40,6 +40,17 @@ type QRCodeLoginResult struct {
 	SecureRefreshToken string `json:"secureRefreshToken"`
 }
 
+// LoginTokenResult Token结果
+type LoginTokenResult struct {
+	AccessToken string `json:"accessToken"`
+	Expired     int64  `json:"expired"`
+}
+
+type CommonTokenEntity struct {
+	Openapi *LoginTokenResult `json:"openapi"`
+	Webapi  *LoginTokenResult `json:"webapi"`
+}
+
 func NewLoginHelper(webHost string) *LoginHelper {
 	return &LoginHelper{
 		webHost: webHost,
@@ -57,13 +68,13 @@ func (h *LoginHelper) GetQRCodeLoginUrl(keyStr string) (*QRCodeUrlResult, error)
 		ipAddr = "127.0.0.1"
 	}
 	fmt.Fprintf(&fullUrl, "%s/auth/tickstep/aliyunpan/token/qrcode/create?ip=%s&os=%s&arch=%s&version=%s&key=%s",
-		h.webHost, ipAddr, runtime.GOOS, runtime.GOARCH, config.AppVersion, keyStr)
+		h.webHost, ipAddr, runtime.GOOS, runtime.GOARCH, global.AppVersion, keyStr)
 
 	logger.Verboseln("do request url: " + fullUrl.String())
 	header := map[string]string{
 		"accept":       "application/json, text/plain, */*",
 		"content-type": "application/json;charset=UTF-8",
-		"user-agent":   "aliyunpan/" + config.AppVersion,
+		"user-agent":   "aliyunpan/" + global.AppVersion,
 	}
 	// request
 	client := requester.NewHTTPClient()
@@ -114,7 +125,7 @@ func (h *LoginHelper) GetQRCodeLoginResult(tokenId string) (*QRCodeLoginResult, 
 	header := map[string]string{
 		"accept":       "application/json, text/plain, */*",
 		"content-type": "application/json;charset=UTF-8",
-		"user-agent":   "aliyunpan/" + config.AppVersion,
+		"user-agent":   "aliyunpan/" + global.AppVersion,
 	}
 	// request
 	client := requester.NewHTTPClient()
@@ -154,7 +165,7 @@ func (h *LoginHelper) GetRefreshToken(tokenId string) (*QRCodeLoginResult, error
 	header := map[string]string{
 		"accept":       "application/json, text/plain, */*",
 		"content-type": "application/json;charset=UTF-8",
-		"user-agent":   "aliyunpan/" + config.AppVersion,
+		"user-agent":   "aliyunpan/" + global.AppVersion,
 	}
 	// request
 	client := requester.NewHTTPClient()
@@ -219,4 +230,124 @@ func (h *LoginHelper) ParseSecureRefreshToken(keyStr, secureRefreshToken string)
 		return "", fmt.Errorf("Token解析错误")
 	}
 	return refreshToken, nil
+}
+
+// GetWebapiNewToken 获取Webapi Token
+func (h *LoginHelper) GetWebapiNewToken(ticketId, userId string) (*LoginTokenResult, error) {
+	fullUrl := strings.Builder{}
+	fmt.Fprintf(&fullUrl, "%s/auth/tickstep/aliyunpan/token/webapi/%s/refresh?userId=%s",
+		h.webHost, ticketId, userId)
+	logger.Verboseln("do request url: " + fullUrl.String())
+	header := map[string]string{
+		"accept":       "application/json, text/plain, */*",
+		"content-type": "application/json;charset=UTF-8",
+		"user-agent":   "aliyunpan/" + global.AppVersion,
+	}
+	// request
+	client := requester.NewHTTPClient()
+	client.SetTimeout(20 * time.Second)
+	client.SetKeepAlive(false)
+	body, err := client.Fetch("GET", fullUrl.String(), nil, header)
+	if err != nil {
+		logger.Verboseln("get web token result error ", err)
+		return nil, err
+	}
+
+	errResp := &LoginHttpResult{}
+	if err1 := json.Unmarshal(body, errResp); err1 != nil {
+		logger.Verboseln("parse result json error ", err1)
+		return nil, err1
+	}
+	if errResp.Code != 0 {
+		return nil, fmt.Errorf(errResp.Msg)
+	}
+
+	// parse result
+	r := &LoginHttpResult{}
+	r.Data = &LoginTokenResult{}
+	if err2 := json.Unmarshal(body, r); err2 != nil {
+		logger.Verboseln("parse web token result json error ", err2)
+		return nil, err2
+	}
+	return r.Data.(*LoginTokenResult), nil
+}
+
+// GetOpenapiNewToken 获取Openapi Token
+func (h *LoginHelper) GetOpenapiNewToken(ticketId, userId string) (*LoginTokenResult, error) {
+	fullUrl := strings.Builder{}
+	fmt.Fprintf(&fullUrl, "%s/auth/tickstep/aliyunpan/token/openapi/%s/refresh?userId=%s",
+		h.webHost, ticketId, userId)
+	logger.Verboseln("do request url: " + fullUrl.String())
+	header := map[string]string{
+		"accept":       "application/json, text/plain, */*",
+		"content-type": "application/json;charset=UTF-8",
+		"user-agent":   "aliyunpan/" + global.AppVersion,
+	}
+	// request
+	client := requester.NewHTTPClient()
+	client.SetTimeout(20 * time.Second)
+	client.SetKeepAlive(false)
+	body, err := client.Fetch("GET", fullUrl.String(), nil, header)
+	if err != nil {
+		logger.Verboseln("get openapi token result error ", err)
+		return nil, err
+	}
+
+	errResp := &LoginHttpResult{}
+	if err1 := json.Unmarshal(body, errResp); err1 != nil {
+		logger.Verboseln("parse result json error ", err1)
+		return nil, err1
+	}
+	if errResp.Code != 0 {
+		return nil, fmt.Errorf(errResp.Msg)
+	}
+
+	// parse result
+	r := &LoginHttpResult{}
+	r.Data = &LoginTokenResult{}
+	if err2 := json.Unmarshal(body, r); err2 != nil {
+		logger.Verboseln("parse openapi token result json error ", err2)
+		return nil, err2
+	}
+	return r.Data.(*LoginTokenResult), nil
+}
+
+// GetLoginToken 获取登录后的Token
+func (h *LoginHelper) GetLoginToken(ticketId string) (*CommonTokenEntity, error) {
+	fullUrl := strings.Builder{}
+	fmt.Fprintf(&fullUrl, "%s/auth/tickstep/aliyunpan/token/common/%s/login",
+		h.webHost, ticketId)
+	logger.Verboseln("do request url: " + fullUrl.String())
+	header := map[string]string{
+		"accept":       "application/json, text/plain, */*",
+		"content-type": "application/json;charset=UTF-8",
+		"user-agent":   "aliyunpan/" + global.AppVersion,
+	}
+	// request
+	client := requester.NewHTTPClient()
+	client.SetTimeout(20 * time.Second)
+	client.SetKeepAlive(false)
+	body, err := client.Fetch("GET", fullUrl.String(), nil, header)
+	if err != nil {
+		logger.Verboseln("get login token result error ", err)
+		return nil, err
+	}
+
+	errResp := &LoginHttpResult{}
+	if err1 := json.Unmarshal(body, errResp); err1 != nil {
+		logger.Verboseln("parse result json error ", err1)
+		return nil, err1
+	}
+	if errResp.Code != 0 {
+		return nil, fmt.Errorf(errResp.Msg)
+	}
+
+	// parse result
+	r := &LoginHttpResult{}
+	r.Data = &CommonTokenEntity{}
+	if err2 := json.Unmarshal(body, r); err2 != nil {
+		logger.Verboseln("parse login token result json error ", err2)
+		return nil, err2
+	}
+	return r.Data.(*CommonTokenEntity), nil
 }

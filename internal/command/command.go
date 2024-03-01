@@ -58,7 +58,7 @@ const (
 var ErrBadArgs = errors.New("参数错误")
 var ErrNotLogined = errors.New("未登录账号")
 
-func GetActivePanClient() *aliyunpan.PanClient {
+func GetActivePanClient() *config.PanClient {
 	return config.Config.ActiveUser().PanClient()
 }
 

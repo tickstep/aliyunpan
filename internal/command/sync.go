@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/global"
 	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/syncdrive"
 	"github.com/tickstep/aliyunpan/internal/utils"
@@ -302,7 +303,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	maxUploadRate := config.Config.MaxUploadRate
 	activeUser := GetActiveUser()
 	panClient := activeUser.PanClient()
-	panClient.DisableCache()
+	panClient.WebapiPanClient().DisableCache()
 
 	// pan token expired checker
 	continueFlag := int32(0)
@@ -315,7 +316,8 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 			time.Sleep(time.Duration(1) * time.Minute)
 			if RefreshTokenInNeed(activeUser, config.Config.DeviceName) {
 				logger.Verboseln("update access token for sync task")
-				panClient.UpdateToken(activeUser.WebToken)
+				userWebToken := NewWebLoginToken(activeUser.WebapiToken.AccessToken, activeUser.WebapiToken.Expired)
+				panClient.WebapiPanClient().UpdateToken(userWebToken)
 			}
 		}
 	}(&continueFlag)
@@ -354,7 +356,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 		LocalFileModifiedCheckIntervalSec: localDelayTime,
 		FileRecorder:                      fileRecorder,
 	}
-	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath, option)
+	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient.WebapiPanClient(), syncFolderRootPath, option)
 	syncConfigFile := syncMgr.ConfigFilePath()
 	if tasks != nil {
 		syncConfigFile = "(使用命令行配置)"
@@ -377,7 +379,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 				time.Sleep(60 * time.Second)
 			}
 		} else {
-			if config.IsAppInCliMode {
+			if global.IsAppInCliMode {
 				// in cmd mode
 				c := ""
 				fmt.Println("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止。")

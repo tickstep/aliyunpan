@@ -98,7 +98,7 @@ func RunMove(driveId string, paths ...string) {
 			})
 		cacheCleanPaths = append(cacheCleanPaths, path.Dir(mfi.Path))
 	}
-	fmr, er := activeUser.PanClient().FileMove(moveFileParamList)
+	fmr, er := activeUser.PanClient().WebapiPanClient().FileMove(moveFileParamList)
 
 	for _, rs := range fmr {
 		if !rs.Success {
@@ -138,7 +138,7 @@ func getFileInfo(driveId string, paths ...string) (opFileList []*aliyunpan.FileE
 	// the last one is the target file path
 	targetFilePath := path.Clean(paths[len(paths)-1])
 	absolutePath := activeUser.PathJoin(driveId, targetFilePath)
-	targetFile, err := activeUser.PanClient().FileInfoByPath(driveId, absolutePath)
+	targetFile, err := activeUser.PanClient().WebapiPanClient().FileInfoByPath(driveId, absolutePath)
 	if err != nil || !targetFile.IsFolder() {
 		return nil, nil, nil, fmt.Errorf("指定目标文件夹不存在")
 	}
