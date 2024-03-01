@@ -109,7 +109,7 @@ func RunSave(driveId string, args ...string) {
 		list.NextMarker = list2.NextMarker
 	}
 
-	var params []*aliyunpan.FileCopyParam
+	var params []*aliyunpan.FileSaveParam
 	files := make(map[string]*aliyunpan.ListByShareItem)
 	for _, item := range list.Items {
 		if item.FileExtension != "" {
@@ -119,7 +119,7 @@ func RunSave(driveId string, args ...string) {
 		}
 		files[item.FileID] = item
 
-		params = append(params, &aliyunpan.FileCopyParam{
+		params = append(params, &aliyunpan.FileSaveParam{
 			ShareID:        shareID,
 			FileId:         item.FileID,
 			AutoRename:     true,
