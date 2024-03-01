@@ -15,9 +15,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/olekukonko/tablewriter"
-	"github.com/tickstep/aliyunpan/cmder"
-	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -30,9 +27,12 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/peterh/liner"
+	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdliner"
 	"github.com/tickstep/aliyunpan/cmder/cmdliner/args"
+	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil/escaper"
 	"github.com/tickstep/aliyunpan/internal/command"
@@ -172,7 +172,7 @@ func main() {
 				lineArgs                   = args.Parse(line)
 				numArgs                    = len(lineArgs)
 				acceptCompleteFileCommands = []string{
-					"cd", "cp", "xcp", "download", "ls", "mkdir", "mv", "pwd", "rename", "rm", "share", "upload", "login", "loglist", "logout",
+					"cd", "cp", "xcp", "download", "ls", "mkdir", "mv", "pwd", "rename", "rm", "share", "save", "upload", "login", "loglist", "logout",
 					"clear", "quit", "exit", "quota", "who", "sign", "update", "who", "su", "config",
 					"drive", "export", "import", "sync", "tree",
 				}
@@ -449,6 +449,9 @@ func main() {
 
 		// 分享文件/目录 share
 		command.CmdShare(),
+
+		// 保存分享文件/目录 save
+		command.CmdSave(),
 
 		// 同步备份 sync
 		command.CmdSync(),
