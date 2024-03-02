@@ -66,7 +66,7 @@ func CmdRecycle() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					RunRecycleList(parseDriveId(c))
@@ -92,7 +92,7 @@ func CmdRecycle() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					if c.NArg() <= 0 {
@@ -122,7 +122,7 @@ func CmdRecycle() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					if c.Bool("all") {

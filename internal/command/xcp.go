@@ -56,7 +56,7 @@ func CmdXcp() cli.Command {
 				return nil
 			}
 			if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-				fmt.Println("WEB客户端未登录，请登录后再使用")
+				fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 				return nil
 			}
 			srcDriveId := parseDriveId(c)

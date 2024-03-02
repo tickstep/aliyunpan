@@ -153,61 +153,70 @@ doOpenLoginAct:
 					AccessToken: wt.AccessToken,
 					Expired:     wt.Expired,
 				}
-				goto doOpenLoginAct
 			}
+			time.Sleep(time.Duration(1) * time.Second)
+			goto doOpenLoginAct
 		}
 		return nil, err
 	}
 
 doWebLoginAct:
 	// setup webapi client
-	appConfig := aliyunpan.AppConfig{
-		AppId:     "25dzX3vbYqktVxyX",
-		DeviceId:  deviceId,
-		UserId:    userId,
-		Nonce:     0,
-		PublicKey: "",
-	}
-	webPanClient := aliyunpan.NewPanClient(aliyunpan.WebLoginToken{
-		AccessTokenType: "Bearer",
-		AccessToken:     webapiToken.AccessToken,
-		RefreshToken:    "",
-		ExpiresIn:       7200,
-		ExpireTime:      webapiToken.GetExpiredTimeCstStr(),
-	}, aliyunpan.AppLoginToken{}, appConfig, aliyunpan.SessionConfig{
-		DeviceName: deviceName,
-		ModelName:  "Windows网页版",
-	})
-	// web api token maybe expired
-	// check & refresh new one
-	webUserInfo, err2 := webPanClient.GetUserInfo()
-	if err2 != nil {
-		if err2.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshWebToken {
-			tryRefreshWebToken = false
-			wt, e := loginHelper.GetWebapiNewToken(ticketId, userId)
-			if e != nil {
-				logger.Verboseln("get web token from server error: ", e)
-			}
-			if wt != nil {
-				webapiToken = &PanClientToken{
-					AccessToken: wt.AccessToken,
-					Expired:     wt.Expired,
+	var webUserInfo *aliyunpan.UserInfo
+	var err2 *apierror.ApiError
+	var webPanClient *aliyunpan.PanClient
+	if webapiToken != nil && webapiToken.AccessToken != "" {
+		appConfig := aliyunpan.AppConfig{
+			AppId:     "25dzX3vbYqktVxyX",
+			DeviceId:  deviceId,
+			UserId:    userId,
+			Nonce:     0,
+			PublicKey: "",
+		}
+		webPanClient = aliyunpan.NewPanClient(aliyunpan.WebLoginToken{
+			AccessTokenType: "Bearer",
+			AccessToken:     webapiToken.AccessToken,
+			RefreshToken:    "",
+			ExpiresIn:       7200,
+			ExpireTime:      webapiToken.GetExpiredTimeCstStr(),
+		}, aliyunpan.AppLoginToken{}, appConfig, aliyunpan.SessionConfig{
+			DeviceName: deviceName,
+			ModelName:  "Windows网页版",
+		})
+		// web api token maybe expired
+		// check & refresh new one
+		webUserInfo, err2 = webPanClient.GetUserInfo()
+		if err2 != nil {
+			if err2.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshWebToken {
+				tryRefreshWebToken = false
+				wt, e := loginHelper.GetWebapiNewToken(ticketId, userId)
+				if e != nil {
+					logger.Verboseln("get web token from server error: ", e)
 				}
+				if wt != nil {
+					webapiToken = &PanClientToken{
+						AccessToken: wt.AccessToken,
+						Expired:     wt.Expired,
+					}
+				}
+				time.Sleep(time.Duration(1) * time.Second)
 				goto doWebLoginAct
 			}
+			webPanClient = nil
+			//return nil, err2
 		}
-		return nil, err2
-	}
-
-	// web create session
-	appConfig.UserId = webUserInfo.UserId
-	webPanClient.UpdateAppConfig(appConfig)
-	r, e := webPanClient.CreateSession(nil)
-	if e != nil {
-		logger.Verboseln("call CreateSession error in SetupUserByCookie: " + e.Error())
-	}
-	if r != nil && !r.Result {
-		logger.Verboseln("上传签名秘钥失败，可能是你账号登录的设备已超最大数量")
+		// web create session
+		if webUserInfo != nil {
+			appConfig.UserId = webUserInfo.UserId
+			webPanClient.UpdateAppConfig(appConfig)
+			r, e := webPanClient.CreateSession(nil)
+			if e != nil {
+				logger.Verboseln("call CreateSession error in SetupUserByCookie: " + e.Error())
+			}
+			if r != nil && !r.Result {
+				logger.Verboseln("上传签名秘钥失败，可能是你账号登录的设备已超最大数量")
+			}
+		}
 	}
 
 	//
@@ -226,7 +235,9 @@ doWebLoginAct:
 	if openUserInfo != nil {
 		// fill userId for client
 		u.PanClient().OpenapiPanClient().UpdateUserId(openUserInfo.UserId)
-		u.PanClient().WebapiPanClient().UpdateUserId(openUserInfo.UserId)
+		if u.PanClient().WebapiPanClient() != nil {
+			u.PanClient().WebapiPanClient().UpdateUserId(openUserInfo.UserId)
+		}
 
 		// update user
 		if openUserInfo.Nickname != "" {

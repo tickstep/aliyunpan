@@ -79,7 +79,7 @@ func CmdAlbum() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					RunAlbumList()
@@ -107,7 +107,7 @@ func CmdAlbum() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					RunAlbumCreate(c.Args().Get(0), c.Args().Get(1))
@@ -136,7 +136,7 @@ func CmdAlbum() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					RunAlbumDelete(c.Args())
@@ -162,7 +162,7 @@ func CmdAlbum() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					RunAlbumRename(c.Args().Get(0), c.Args().Get(1))
@@ -188,7 +188,7 @@ func CmdAlbum() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					RunAlbumListFile(c.Args().Get(0))
@@ -214,7 +214,7 @@ func CmdAlbum() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					subArgs := c.Args()
@@ -248,7 +248,7 @@ func CmdAlbum() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					subArgs := c.Args()
@@ -280,7 +280,7 @@ func CmdAlbum() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					subArgs := c.Args()

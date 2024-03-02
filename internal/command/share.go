@@ -74,7 +74,7 @@ func CmdShare() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					et := ""
@@ -152,7 +152,7 @@ func CmdShare() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					RunShareList()
@@ -172,7 +172,7 @@ func CmdShare() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					if c.NArg() < 1 {
@@ -203,7 +203,7 @@ func CmdShare() cli.Command {
 						return nil
 					}
 					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用")
+						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					if c.NArg() < 1 {

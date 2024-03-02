@@ -146,8 +146,8 @@ func RefreshTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 		return false
 	}
 
-	// refresh expired token
-	if activeUser.PanClient() != nil {
+	// refresh expired web token
+	if activeUser.PanClient().WebapiPanClient() != nil {
 		if len(activeUser.WebapiToken.AccessToken) > 0 {
 			cz := time.FixedZone("CST", 8*3600) // 东8区
 			expiredTime := time.Unix(activeUser.WebapiToken.Expired, 0).In(cz)
@@ -164,7 +164,7 @@ func RefreshTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 				}
 
 				// need update refresh token
-				logger.Verboseln("access token expired, get new from server")
+				logger.Verboseln("web access token expired, get new from server")
 				loginHelper := panlogin.NewLoginHelper(config.DefaultTokenServiceWebHost)
 				wt, e := loginHelper.GetWebapiNewToken(activeUser.TicketId, activeUser.UserId)
 				if e != nil {
