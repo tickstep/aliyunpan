@@ -140,8 +140,8 @@ func NewWebLoginToken(accessToken string, expired int64) aliyunpan.WebLoginToken
 	}
 }
 
-// RefreshTokenInNeed 刷新 webapi access token
-func RefreshTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
+// RefreshWebTokenInNeed 刷新 webapi access token
+func RefreshWebTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 	if activeUser == nil {
 		return false
 	}
@@ -191,7 +191,7 @@ func RefreshTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 					// create new signature
 					_, e := activeUser.PanClient().WebapiPanClient().CreateSession(nil)
 					if e != nil {
-						logger.Verboseln("call CreateSession error in RefreshTokenInNeed: " + e.Error())
+						logger.Verboseln("call CreateSession error in RefreshWebTokenInNeed: " + e.Error())
 					}
 					return true
 				} else {
