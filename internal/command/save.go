@@ -53,6 +53,10 @@ func CmdSave() cli.Command {
 				fmt.Println("未登录账号")
 				return nil
 			}
+			if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+				fmt.Println("WEB客户端未登录，请登录后再使用")
+				return nil
+			}
 			RunSave(parseDriveId(c), c.Args()...)
 			return nil
 		},
@@ -66,7 +70,7 @@ func CmdSave() cli.Command {
 	}
 }
 
-// RunMove 执行移动文件/目录
+// RunSave 保存分享的文件
 func RunSave(driveId string, args ...string) {
 	activeUser := GetActiveUser()
 
