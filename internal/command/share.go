@@ -73,6 +73,10 @@ func CmdShare() cli.Command {
 						fmt.Println("未登录账号")
 						return nil
 					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					et := ""
 					timeFlag := "0"
 					if c.IsSet("time") {
@@ -143,6 +147,14 @@ func CmdShare() cli.Command {
 				Usage:     "列出已分享文件/目录",
 				UsageText: cmder.App().Name + " share list",
 				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					RunShareList()
 					return nil
 				},
@@ -155,6 +167,14 @@ func CmdShare() cli.Command {
 				UsageText:   cmder.App().Name + " share cancel <shareid_1> <shareid_2> ...",
 				Description: `目前只支持通过分享id (shareid) 来取消分享.`,
 				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					if c.NArg() < 1 {
 						cli.ShowCommandHelp(c, c.Command.Name)
 						return nil
@@ -178,6 +198,14 @@ func CmdShare() cli.Command {
 	aliyunpan share export -option 2 "d:\myfoler\share_list.csv"
 `,
 				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					if c.NArg() < 1 {
 						cli.ShowCommandHelp(c, c.Command.Name)
 						return nil
@@ -198,51 +226,6 @@ func CmdShare() cli.Command {
 					},
 				},
 			},
-			//			{
-			//				Name:      "mc",
-			//				Aliases:   []string{},
-			//				Usage:     "创建秒传链接",
-			//				UsageText: cmder.App().Name + " share mc <文件/目录1> <文件/目录2> ...",
-			//				Description: `
-			//创建文件秒传链接，秒传链接只能是文件，如果是文件夹则会创建文件夹包含的所有文件的秒传链接。秒传链接可以通过RapidUpload命令或者Import命令进行导入到自己的网盘。
-			//示例:
-			//    创建文件 1.mp4 的秒传链接
-			//	aliyunpan share mc 1.mp4
-			//
-			//    创建文件 1.mp4 的秒传链接，但链接隐藏相对路径
-			//	aliyunpan share mc -hp 1.mp4
-			//
-			//    创建文件夹 share_folder 下面所有文件的秒传链接
-			//	aliyunpan share mc share_folder/
-			//`,
-			//				Action: func(c *cli.Context) error {
-			//					if c.NArg() < 1 {
-			//						cli.ShowCommandHelp(c, c.Command.Name)
-			//						return nil
-			//					}
-			//					if config.Config.ActiveUser() == nil {
-			//						fmt.Println("未登录账号")
-			//						return nil
-			//					}
-			//					hp := false
-			//					if c.IsSet("hp") {
-			//						hp = c.Bool("hp")
-			//					}
-			//					RunShareMc(parseDriveId(c), hp, c.Args())
-			//					return nil
-			//				},
-			//				Flags: []cli.Flag{
-			//					cli.StringFlag{
-			//						Name:  "driveId",
-			//						Usage: "网盘ID",
-			//						Value: "",
-			//					},
-			//					cli.BoolFlag{
-			//						Name:  "hp",
-			//						Usage: "hide path, 隐藏相对目录",
-			//					},
-			//				},
-			//			},
 		},
 	}
 }

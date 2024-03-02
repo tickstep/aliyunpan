@@ -78,6 +78,10 @@ func CmdAlbum() cli.Command {
 						fmt.Println("未登录账号")
 						return nil
 					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					RunAlbumList()
 					return nil
 				},
@@ -100,6 +104,10 @@ func CmdAlbum() cli.Command {
 				Action: func(c *cli.Context) error {
 					if config.Config.ActiveUser() == nil {
 						fmt.Println("未登录账号")
+						return nil
+					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
 						return nil
 					}
 					RunAlbumCreate(c.Args().Get(0), c.Args().Get(1))
@@ -127,6 +135,10 @@ func CmdAlbum() cli.Command {
 						fmt.Println("未登录账号")
 						return nil
 					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					RunAlbumDelete(c.Args())
 					return nil
 				},
@@ -147,6 +159,10 @@ func CmdAlbum() cli.Command {
 				Action: func(c *cli.Context) error {
 					if config.Config.ActiveUser() == nil {
 						fmt.Println("未登录账号")
+						return nil
+					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
 						return nil
 					}
 					RunAlbumRename(c.Args().Get(0), c.Args().Get(1))
@@ -171,6 +187,10 @@ func CmdAlbum() cli.Command {
 						fmt.Println("未登录账号")
 						return nil
 					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					RunAlbumListFile(c.Args().Get(0))
 					return nil
 				},
@@ -191,6 +211,10 @@ func CmdAlbum() cli.Command {
 				Action: func(c *cli.Context) error {
 					if config.Config.ActiveUser() == nil {
 						fmt.Println("未登录账号")
+						return nil
+					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
 						return nil
 					}
 					subArgs := c.Args()
@@ -223,6 +247,10 @@ func CmdAlbum() cli.Command {
 						fmt.Println("未登录账号")
 						return nil
 					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					subArgs := c.Args()
 					if len(subArgs) < 2 {
 						fmt.Println("请指定增加的文件")
@@ -249,6 +277,10 @@ func CmdAlbum() cli.Command {
 				Action: func(c *cli.Context) error {
 					if config.Config.ActiveUser() == nil {
 						fmt.Println("未登录账号")
+						return nil
+					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
 						return nil
 					}
 					subArgs := c.Args()

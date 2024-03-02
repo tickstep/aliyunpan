@@ -55,6 +55,10 @@ func CmdXcp() cli.Command {
 				fmt.Println("未登录账号")
 				return nil
 			}
+			if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+				fmt.Println("WEB客户端未登录，请登录后再使用")
+				return nil
+			}
 			srcDriveId := parseDriveId(c)
 			dstDriveId := ""
 			driveList := config.Config.ActiveUser().DriveList

@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
@@ -60,6 +61,14 @@ func CmdRecycle() cli.Command {
 				Usage:     "列出回收站文件列表",
 				UsageText: cmder.App().Name + " recycle list",
 				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					RunRecycleList(parseDriveId(c))
 					return nil
 				},
@@ -78,6 +87,14 @@ func CmdRecycle() cli.Command {
 				UsageText:   cmder.App().Name + " recycle restore <file_id 1> <file_id 2> <file_id 3> ...",
 				Description: `根据文件/目录的 fs_id, 还原回收站指定的文件或目录`,
 				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					if c.NArg() <= 0 {
 						cli.ShowCommandHelp(c, c.Command.Name)
 						return nil
@@ -100,6 +117,14 @@ func CmdRecycle() cli.Command {
 				UsageText:   cmder.App().Name + " recycle delete [-all] <file_id 1> <file_id 2> <file_id 3> ...",
 				Description: `根据文件/目录的 file_id 或 -all 参数, 删除回收站指定的文件或目录或清空回收站`,
 				Action: func(c *cli.Context) error {
+					if config.Config.ActiveUser() == nil {
+						fmt.Println("未登录账号")
+						return nil
+					}
+					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
+						fmt.Println("WEB客户端未登录，请登录后再使用")
+						return nil
+					}
 					if c.Bool("all") {
 						// 清空回收站
 						RunRecycleClear(parseDriveId(c))
