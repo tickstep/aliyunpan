@@ -15,7 +15,6 @@ package command
 
 import (
 	"fmt"
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
@@ -134,8 +133,4 @@ func CmdWho() cli.Command {
 			return nil
 		},
 	}
-}
-
-func RunGetUserInfo() (userInfo *aliyunpan.UserInfo, error error) {
-	return GetActivePanClient().WebapiPanClient().GetUserInfo()
 }
