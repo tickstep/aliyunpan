@@ -125,6 +125,9 @@ func getDriveOptionList() (config.DriveInfoList, string) {
 	tb.SetHeader([]string{"#", "drive_id", "网盘名称"})
 
 	for k, info := range driveList {
+		if info.IsAlbumDrive() {
+			continue
+		}
 		tb.Append([]string{strconv.Itoa(k + 1), info.DriveId, info.DriveName})
 	}
 	tb.Render()
