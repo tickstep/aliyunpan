@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -109,7 +109,7 @@ func DecryptString(text string) string {
 	return string(r)
 }
 
-// isFolderExist 判断文件夹是否存在
+// IsFolderExist 判断文件夹是否存在
 func IsFolderExist(pathStr string) bool {
 	fi, err := os.Stat(pathStr)
 	if err != nil {

@@ -133,10 +133,8 @@ doOpenLoginAct:
 	}, openapi.ApiToken{
 		AccessToken: openapiToken.AccessToken,
 		ExpiredAt:   openapiToken.Expired,
-	}, func(newToken openapi.ApiToken) error {
-		// TODO: save & refresh new token
-		return nil
-	})
+	}, nil)
+
 	// open api token maybe expired
 	// check & refresh new one
 	openUserInfo, err := openPanClient.GetUserInfo()
@@ -229,6 +227,14 @@ doWebLoginAct:
 		Workdir:           "/",
 		WorkdirFileEntity: *aliyunpan.NewFileEntityForRootDir(),
 	}
+	u.PanClient().OpenapiPanClient().SetAccessTokenRefreshCallback(func(userId string, newToken openapi.ApiToken) error {
+		logger.Verboseln("openapi token refresh, update for user")
+		u.OpenapiToken = &PanClientToken{
+			AccessToken: newToken.AccessToken,
+			Expired:     newToken.ExpiredAt,
+		}
+		return nil
+	})
 
 	// setup user info
 	name := "Unknown"
