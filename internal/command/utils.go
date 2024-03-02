@@ -152,7 +152,7 @@ func RefreshTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 			cz := time.FixedZone("CST", 8*3600) // 东8区
 			expiredTime := time.Unix(activeUser.WebapiToken.Expired, 0).In(cz)
 			now := time.Now()
-			if (expiredTime.Unix() - now.Unix()) <= (5 * 60) { // 有效期小于5min就刷新
+			if (expiredTime.Unix() - now.Unix()) <= (2 * 60) { // 有效期小于2min就刷新
 				pluginManger := plugins.NewPluginManager(config.GetPluginDir())
 				plugin, _ := pluginManger.GetPlugin()
 				params := &plugins.UserTokenRefreshFinishParams{
