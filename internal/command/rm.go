@@ -106,7 +106,7 @@ func RunRemove(driveId string, paths ...string) {
 
 	// delete
 	successDelFileEntity := []*aliyunpan.FileEntity{}
-	fdr, err := activeUser.PanClient().WebapiPanClient().FileDelete(delFileInfos)
+	fdr, err := activeUser.PanClient().OpenapiPanClient().FileDelete(delFileInfos)
 	if fdr != nil {
 		for _, item := range fdr {
 			if !item.Success {

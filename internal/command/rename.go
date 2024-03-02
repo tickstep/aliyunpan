@@ -136,14 +136,14 @@ func RunRename(driveId string, oldName string, newName string) {
 	}
 
 	fileId := ""
-	r, err := GetActivePanClient().WebapiPanClient().FileInfoByPath(driveId, activeUser.PathJoin(driveId, oldName))
+	r, err := GetActivePanClient().OpenapiPanClient().FileInfoByPath(driveId, activeUser.PathJoin(driveId, oldName))
 	if err != nil {
 		fmt.Printf("原文件不存在： %s, %s\n", oldName, err)
 		return
 	}
 	fileId = r.FileId
 
-	b, e := activeUser.PanClient().WebapiPanClient().FileRename(driveId, fileId, path.Base(newName))
+	b, e := activeUser.PanClient().OpenapiPanClient().FileRename(driveId, fileId, path.Base(newName))
 	if e != nil {
 		fmt.Println(e.Err)
 		return
@@ -234,7 +234,7 @@ func RunRenameBatch(skipConfirm bool, driveId string, expression, replacement, f
 
 	// 重命名
 	for _, file := range files {
-		b, e := activeUser.PanClient().WebapiPanClient().FileRename(driveId, file.file.FileId, file.newFileName)
+		b, e := activeUser.PanClient().OpenapiPanClient().FileRename(driveId, file.file.FileId, file.newFileName)
 		if e != nil {
 			fmt.Println(e.Err)
 			return

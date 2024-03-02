@@ -58,7 +58,7 @@ var (
 // RunTestShellPattern 执行测试通配符
 func RunTestShellPattern(driveId string, pattern string) {
 	acUser := GetActiveUser()
-	files, err := acUser.PanClient().WebapiPanClient().MatchPathByShellPattern(driveId, GetActiveUser().PathJoin(driveId, pattern))
+	files, err := acUser.PanClient().OpenapiPanClient().MatchPathByShellPattern(driveId, GetActiveUser().PathJoin(driveId, pattern))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -73,7 +73,7 @@ func RunTestShellPattern(driveId string, pattern string) {
 func matchPathByShellPattern(driveId string, patterns ...string) (files []*aliyunpan.FileEntity, e error) {
 	acUser := GetActiveUser()
 	for k := range patterns {
-		ps, err := acUser.PanClient().WebapiPanClient().MatchPathByShellPattern(driveId, acUser.PathJoin(driveId, patterns[k]))
+		ps, err := acUser.PanClient().OpenapiPanClient().MatchPathByShellPattern(driveId, acUser.PathJoin(driveId, patterns[k]))
 		if err != nil {
 			return nil, err
 		}
@@ -140,7 +140,7 @@ func NewWebLoginToken(accessToken string, expired int64) aliyunpan.WebLoginToken
 	}
 }
 
-// RefreshTokenInNeed 刷新webapi access token
+// RefreshTokenInNeed 刷新 webapi access token
 func RefreshTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 	if activeUser == nil {
 		return false

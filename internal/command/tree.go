@@ -113,23 +113,31 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, setti
 	pathStr = activeUser.PathJoin(driveId, pathStr)
 	pathStr = path.Clean(pathStr)
 
-	files, err := matchPathByShellPattern(driveId, pathStr)
+	// 获取目标路径文件信息
+	targetPathInfo, err := activeUser.PanClient().OpenapiPanClient().FileInfoByPath(driveId, pathStr)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	var targetPathInfo *aliyunpan.FileEntity
-	if len(files) == 1 {
-		targetPathInfo = files[0]
-	} else {
-		for _, f := range files {
-			if f.IsFolder() {
-				targetPathInfo = f
-				break
-			}
-		}
-	}
+	// 适配通配符路径获取目标文件信息（弃用，容易触发风控）
+	//files, err := matchPathByShellPattern(driveId, pathStr)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//var targetPathInfo *aliyunpan.FileEntity
+	//if len(files) == 1 {
+	//	targetPathInfo = files[0]
+	//} else {
+	//	for _, f := range files {
+	//		if f.IsFolder() {
+	//			targetPathInfo = f
+	//			break
+	//		}
+	//	}
+	//}
+
 	if targetPathInfo == nil {
 		fmt.Println("路径不存在")
 		return
@@ -146,7 +154,7 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, setti
 	fileListParam.OrderBy = aliyunpan.FileOrderByName
 	fileListParam.OrderDirection = aliyunpan.FileOrderDirectionAsc
 	if targetPathInfo.IsFolder() {
-		fileResult, err := activeUser.PanClient().WebapiPanClient().FileListGetAll(fileListParam, 500)
+		fileResult, err := activeUser.PanClient().OpenapiPanClient().FileListGetAll(fileListParam, 500)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -169,7 +177,7 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, setti
 			} else {
 				fmt.Printf("%v%v %v/\n", indentPrefixStr, pathPrefix, file.FileName)
 			}
-			getTree(driveId, targetPathInfo.Path+"/"+file.Path, depth+1, statistic, setting)
+			getTree(driveId, targetPathInfo.Path+"/"+file.FileName, depth+1, statistic, setting)
 			continue
 		}
 
@@ -214,9 +222,9 @@ func getTree(driveId, pathStr string, depth int, statistic *treeStatistic, setti
 // RunTree 列出树形图
 func RunTree(driveId, pathStr string, showFullPath, showFileSize bool, minSize, maxSize int64) {
 	activeUser := config.Config.ActiveUser()
-	activeUser.PanClient().WebapiPanClient().ClearCache()
-	activeUser.PanClient().WebapiPanClient().EnableCache()
-	defer activeUser.PanClient().WebapiPanClient().DisableCache()
+	activeUser.PanClient().OpenapiPanClient().ClearCache()
+	activeUser.PanClient().OpenapiPanClient().EnableCache()
+	defer activeUser.PanClient().OpenapiPanClient().DisableCache()
 	pathStr = activeUser.PathJoin(driveId, pathStr)
 	statistic := &treeStatistic{
 		CountOfDir:  0,

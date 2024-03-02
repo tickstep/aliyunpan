@@ -181,7 +181,7 @@ doWebLoginAct:
 	// web api token maybe expired
 	// check & refresh new one
 	webUserInfo, err2 := webPanClient.GetUserInfo()
-	if err != nil {
+	if err2 != nil {
 		if err2.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshWebToken {
 			tryRefreshWebToken = false
 			wt, e := loginHelper.GetWebapiNewToken(ticketId, userId)
@@ -196,7 +196,7 @@ doWebLoginAct:
 				goto doWebLoginAct
 			}
 		}
-		return nil, err
+		return nil, err2
 	}
 
 	// web create session
@@ -284,14 +284,14 @@ func (pu *PanUser) PathJoin(driveId, p string) string {
 
 func (pu *PanUser) FreshWorkdirInfo() {
 	if pu.IsFileDriveActive() {
-		fe, err := pu.PanClient().WebapiPanClient().FileInfoById(pu.ActiveDriveId, pu.WorkdirFileEntity.FileId)
+		fe, err := pu.PanClient().OpenapiPanClient().FileInfoById(pu.ActiveDriveId, pu.WorkdirFileEntity.FileId)
 		if err != nil {
 			logger.Verboseln("刷新工作目录信息失败")
 			return
 		}
 		pu.WorkdirFileEntity = *fe
 	} else if pu.IsAlbumDriveActive() {
-		fe, err := pu.PanClient().WebapiPanClient().FileInfoById(pu.ActiveDriveId, pu.AlbumWorkdirFileEntity.FileId)
+		fe, err := pu.PanClient().OpenapiPanClient().FileInfoById(pu.ActiveDriveId, pu.AlbumWorkdirFileEntity.FileId)
 		if err != nil {
 			logger.Verboseln("刷新工作目录信息失败")
 			return

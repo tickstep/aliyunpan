@@ -56,7 +56,7 @@ func RunMkdir(driveId, name string) {
 	fullpath := activeUser.PathJoin(driveId, name)
 	rs := &aliyunpan.MkdirResult{}
 	err := apierror.NewFailedApiError("")
-	rs, err = activeUser.PanClient().WebapiPanClient().Mkdir(driveId, "", fullpath)
+	rs, err = activeUser.PanClient().OpenapiPanClient().MkdirByFullPath(driveId, fullpath)
 
 	if err != nil {
 		fmt.Println("创建文件夹失败：" + err.Error())

@@ -410,7 +410,7 @@ func (c *PanConfig) ActiveUser() *PanUser {
 					u.DriveList = user.DriveList
 					// check workdir valid or not
 					if user.IsFileDriveActive() {
-						fe, err1 := u.PanClient().WebapiPanClient().FileInfoByPath(u.ActiveDriveId, u.Workdir)
+						fe, err1 := u.PanClient().OpenapiPanClient().FileInfoByPath(u.ActiveDriveId, u.Workdir)
 						if err1 != nil {
 							// default to root
 							u.Workdir = "/"
@@ -419,7 +419,7 @@ func (c *PanConfig) ActiveUser() *PanUser {
 							u.WorkdirFileEntity = *fe
 						}
 					} else if user.IsResourceDriveActive() {
-						fe, err1 := u.PanClient().WebapiPanClient().FileInfoByPath(u.ActiveDriveId, u.ResourceWorkdir)
+						fe, err1 := u.PanClient().OpenapiPanClient().FileInfoByPath(u.ActiveDriveId, u.ResourceWorkdir)
 						if err1 != nil {
 							// default to root
 							u.ResourceWorkdir = "/"

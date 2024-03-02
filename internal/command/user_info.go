@@ -129,7 +129,7 @@ func CmdWho() cli.Command {
 			}
 			activeUser := config.Config.ActiveUser()
 			cloudName := activeUser.GetDriveById(activeUser.ActiveDriveId).DriveName
-			fmt.Printf("当前帐号UID: %s, 昵称: %s, 用户名: %s, 网盘：%s\n", activeUser.UserId, activeUser.Nickname, activeUser.AccountName, cloudName)
+			fmt.Printf("当前帐号UID: %s, 昵称: %s, 用户名: %s, 当前使用网盘：%s\n", activeUser.UserId, activeUser.Nickname, activeUser.AccountName, cloudName)
 			return nil
 		},
 	}

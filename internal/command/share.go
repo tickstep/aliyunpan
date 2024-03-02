@@ -21,7 +21,6 @@ import (
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
-	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
 	"os"
 	"path"
@@ -457,37 +456,4 @@ func ExportCsv(savePath string, data [][]string) bool {
 	w.WriteAll(data)
 	w.Flush()
 	return true
-}
-
-// 创建秒传链接
-func RunShareMc(driveId string, hideRelativePath bool, panPaths []string) {
-	activeUser := config.Config.ActiveUser()
-	panClient := activeUser.PanClient()
-
-	totalCount := 0
-	for _, panPath := range panPaths {
-		panPath = activeUser.PathJoin(driveId, panPath)
-		panClient.WebapiPanClient().FilesDirectoriesRecurseList(driveId, panPath, func(depth int, _ string, fd *aliyunpan.FileEntity, apiError *apierror.ApiError) bool {
-			if apiError != nil {
-				logger.Verbosef("%s\n", apiError)
-				return true
-			}
-
-			// 只需要文件即可
-			if !fd.IsFolder() {
-				item := newRapidUploadItemFromFileEntity(fd)
-				jstr := item.createRapidUploadLink(hideRelativePath)
-				if len(jstr) <= 0 {
-					logger.Verboseln("create rapid upload link err")
-					return false
-				}
-				// print
-				fmt.Println(jstr)
-				totalCount += 1
-				time.Sleep(time.Duration(100) * time.Millisecond)
-			}
-			return true
-		})
-	}
-	fmt.Printf("\n秒传链接总数量: %d\n", totalCount)
 }

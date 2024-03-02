@@ -263,6 +263,8 @@ func main() {
 					targetDir = path.Dir(targetDir)
 				}
 			}
+
+			// tab键补全路径
 			files, err := activeUser.CacheFilesDirectoriesList(targetDir)
 			if err != nil {
 				return

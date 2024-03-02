@@ -18,16 +18,10 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/library/crypto"
 	"github.com/tickstep/library-go/getip"
 	"github.com/urfave/cli"
-	"net/url"
-	"path"
-	"strconv"
-	"strings"
-
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
-	"github.com/tickstep/aliyunpan/internal/config"
 )
 
 type (
@@ -72,85 +66,6 @@ func parseDriveId(c *cli.Context) string {
 		driveId = c.String("driveId")
 	}
 	return driveId
-}
-
-// newRapidUploadItem 通过解析秒传链接创建秒传实体
-func newRapidUploadItem(rapidUploadShareLink string) (*RapidUploadItem, error) {
-	if strings.IndexAny(rapidUploadShareLink, "aliyunpan://") != 0 {
-		return nil, fmt.Errorf("秒传链接格式错误: %s", rapidUploadShareLink)
-	}
-
-	// 格式：aliyunpan://文件名|sha1|文件大小|<相对路径>
-	rapidUploadShareLinkStr := strings.Replace(rapidUploadShareLink, "aliyunpan://", "", 1)
-
-	item := &RapidUploadItem{}
-	parts := strings.Split(rapidUploadShareLinkStr, "|")
-
-	if len(parts) < 4 {
-		return nil, fmt.Errorf("秒传链接格式错误: %s", rapidUploadShareLink)
-	}
-
-	// hash
-	if len(parts[1]) == 0 {
-		return nil, fmt.Errorf("文件sha1错误: %s", rapidUploadShareLink)
-	}
-	item.FileSha1 = strings.TrimSpace(parts[1])
-
-	// size
-	if size, e := strconv.ParseInt(parts[2], 10, 64); e == nil {
-		item.FileSize = size
-	} else {
-		return nil, fmt.Errorf("文件大小错误: %s", rapidUploadShareLink)
-	}
-
-	// path
-	relativePath, _ := url.QueryUnescape(parts[3])
-	item.FilePath = path.Join(relativePath, parts[0])
-
-	// result
-	return item, nil
-}
-
-func newRapidUploadItemFromFileEntity(fileEntity *aliyunpan.FileEntity) *RapidUploadItem {
-	if fileEntity == nil {
-		return nil
-	}
-	return &RapidUploadItem{
-		FileSha1: fileEntity.ContentHash,
-		FileSize: fileEntity.FileSize,
-		FilePath: fileEntity.Path,
-	}
-}
-
-// 创建秒传链接
-// 链接格式说明：aliyunpan://文件名|sha1|文件大小|<相对路径>
-// "相对路径" 可以为空，为空代表存储到网盘根目录
-func (r *RapidUploadItem) createRapidUploadLink(hideRelativePath bool) string {
-	fullLink := &strings.Builder{}
-
-	p := r.FilePath
-	p = strings.ReplaceAll(p, "\\", "/")
-
-	fileName := path.Base(p)
-	dirPath := path.Dir(p)
-
-	// 去掉开头/
-	if strings.Index(dirPath, "/") == 0 {
-		dirPath = dirPath[1:]
-	}
-	// 相对路径编码
-	dirPath = url.QueryEscape(dirPath)
-
-	// 隐藏相对路径
-	if hideRelativePath {
-		dirPath = ""
-	}
-
-	// 拼接
-	fmt.Fprintf(fullLink, "aliyunpan://%s|%s|%d|%s",
-		fileName, strings.ToUpper(r.FileSha1), r.FileSize, dirPath)
-
-	return fullLink.String()
 }
 
 func CmdConfig() cli.Command {

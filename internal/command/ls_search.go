@@ -141,22 +141,31 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions,
 	activeUser := config.Config.ActiveUser()
 	targetPath = activeUser.PathJoin(driveId, targetPath)
 
-	files, err := matchPathByShellPattern(driveId, targetPath)
+	// 获取目标路径文件信息
+	targetPathInfo, err := activeUser.PanClient().OpenapiPanClient().FileInfoByPath(driveId, targetPath)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	var targetPathInfo *aliyunpan.FileEntity
-	if len(files) == 1 {
-		targetPathInfo = files[0]
-	} else {
-		for _, f := range files {
-			if f.IsFolder() {
-				targetPathInfo = f
-				break
-			}
-		}
-	}
+
+	// 适配通配符路径获取目标文件信息（弃用，容易触发风控）
+	//files, err := matchPathByShellPattern(driveId, targetPath)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//var targetPathInfo *aliyunpan.FileEntity
+	//if len(files) == 1 {
+	//	targetPathInfo = files[0]
+	//} else {
+	//	for _, f := range files {
+	//		if f.IsFolder() {
+	//			targetPathInfo = f
+	//			break
+	//		}
+	//	}
+	//}
+
 	if targetPathInfo == nil {
 		fmt.Println("目录路径不存在")
 		return
@@ -169,7 +178,7 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions,
 	fileListParam.OrderBy = orderBy
 	fileListParam.OrderDirection = orderDirection
 	if targetPathInfo.IsFolder() {
-		fileResult, err1 := activeUser.PanClient().WebapiPanClient().FileListGetAll(fileListParam, 200)
+		fileResult, err1 := activeUser.PanClient().OpenapiPanClient().FileListGetAll(fileListParam, 200)
 		if err1 != nil {
 			fmt.Println(err1)
 			return
