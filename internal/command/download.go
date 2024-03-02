@@ -219,9 +219,9 @@ func downloadPrintFormat(load int) string {
 // RunDownload 执行下载网盘内文件
 func RunDownload(paths []string, options *DownloadOptions) {
 	activeUser := GetActiveUser()
-	activeUser.PanClient().WebapiPanClient().EnableCache()
-	activeUser.PanClient().WebapiPanClient().ClearCache()
-	defer activeUser.PanClient().WebapiPanClient().DisableCache()
+	activeUser.PanClient().OpenapiPanClient().EnableCache()
+	activeUser.PanClient().OpenapiPanClient().ClearCache()
+	defer activeUser.PanClient().OpenapiPanClient().DisableCache()
 	// pan token expired checker
 	continueFlag := int32(0)
 	atomic.StoreInt32(&continueFlag, 0)
@@ -347,7 +347,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 			// 匹配的文件
 			unit := pandownload.DownloadTaskUnit{
 				Cfg:                  &newCfg, // 复制一份新的cfg
-				PanClient:            panClient.WebapiPanClient(),
+				PanClient:            panClient,
 				VerbosePrinter:       panCommandVerbose,
 				PrintFormat:          downloadPrintFormat(options.Load),
 				ParentTaskExecutor:   &executor,

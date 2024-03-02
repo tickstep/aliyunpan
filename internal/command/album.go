@@ -732,7 +732,7 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 			newCfg := *cfg
 			unit := pandownload.DownloadTaskUnit{
 				Cfg:                  &newCfg, // 复制一份新的cfg
-				PanClient:            panClient.WebapiPanClient(),
+				PanClient:            panClient,
 				VerbosePrinter:       panCommandVerbose,
 				PrintFormat:          downloadPrintFormat(options.Load),
 				ParentTaskExecutor:   &executor,

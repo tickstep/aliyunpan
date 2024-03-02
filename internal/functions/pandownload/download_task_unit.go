@@ -50,7 +50,7 @@ type (
 		taskInfo *taskframework.TaskInfo // 任务信息
 
 		Cfg                *downloader.Config
-		PanClient          *aliyunpan.PanClient
+		PanClient          *config.PanClient
 		ParentTaskExecutor *taskframework.TaskExecutor
 
 		DownloadStatistic *DownloadStatistic // 下载统计
@@ -462,7 +462,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			// 没有获取文件信息
 			// 如果是动态添加的下载任务, 是会写入文件信息的
 			// 如果该任务重试过, 则应该再获取一次文件信息
-			dtu.fileInfo, apierr = dtu.PanClient.FileInfoByPath(dtu.DriveId, dtu.FilePanPath)
+			dtu.fileInfo, apierr = dtu.PanClient.OpenapiPanClient().FileInfoByPath(dtu.DriveId, dtu.FilePanPath)
 			if apierr != nil {
 				// 如果不是未登录或文件不存在, 则不重试
 				result.ResultMessage = "获取下载路径信息错误"
@@ -545,7 +545,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		}
 
 		// 获取该目录下的文件列表
-		fileList, apierr := dtu.PanClient.FileListGetAll(&aliyunpan.FileListParam{
+		fileList, apierr := dtu.PanClient.OpenapiPanClient().FileListGetAll(&aliyunpan.FileListParam{
 			DriveId:      dtu.DriveId,
 			ParentFileId: dtu.fileInfo.FileId,
 		}, 1000)
@@ -553,7 +553,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			// retry one more time
 			time.Sleep(3 * time.Second)
 
-			fileList, apierr = dtu.PanClient.FileListGetAll(&aliyunpan.FileListParam{
+			fileList, apierr = dtu.PanClient.OpenapiPanClient().FileListGetAll(&aliyunpan.FileListParam{
 				DriveId:      dtu.DriveId,
 				ParentFileId: dtu.fileInfo.FileId,
 			}, 1000)

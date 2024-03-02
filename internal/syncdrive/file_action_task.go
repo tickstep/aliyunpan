@@ -332,7 +332,8 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	client.SetKeepAlive(true)
 	client.SetTimeout(10 * time.Minute)
 	worker.SetClient(client)
-	worker.SetPanClient(f.panClient)
+	// TODO: need fix
+	//worker.SetPanClient(f.panClient)
 
 	writeMu := &sync.Mutex{}
 	worker.SetWriteMutex(writeMu)
