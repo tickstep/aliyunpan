@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +16,7 @@ package panupload
 import (
 	"context"
 	"encoding/xml"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"io"
@@ -31,7 +32,7 @@ import (
 
 type (
 	PanUpload struct {
-		panClient  *aliyunpan.PanClient
+		panClient  *config.PanClient
 		targetPath string
 		driveId    string
 
@@ -52,7 +53,7 @@ func (e EmptyReaderLen64) Len() int64 {
 	return 0
 }
 
-func NewPanUpload(panClient *aliyunpan.PanClient, targetPath, driveId string, uploadOpEntity *aliyunpan.CreateFileUploadResult, useInternalUrl bool) uploader.MultiUpload {
+func NewPanUpload(panClient *config.PanClient, targetPath, driveId string, uploadOpEntity *aliyunpan.CreateFileUploadResult, useInternalUrl bool) uploader.MultiUpload {
 	return &PanUpload{
 		panClient:      panClient,
 		targetPath:     targetPath,
@@ -64,7 +65,7 @@ func NewPanUpload(panClient *aliyunpan.PanClient, targetPath, driveId string, up
 
 func (pu *PanUpload) lazyInit() {
 	if pu.panClient == nil {
-		pu.panClient = &aliyunpan.PanClient{}
+		pu.panClient = &config.PanClient{}
 	}
 }
 
@@ -94,7 +95,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 			PartInfoList: infoList,
 			UploadId:     pu.uploadOpEntity.UploadId,
 		}
-		newUploadInfo, err := pu.panClient.GetUploadUrl(refreshUploadParam)
+		newUploadInfo, err := pu.panClient.OpenapiPanClient().GetUploadUrl(refreshUploadParam)
 		if err != nil {
 			logger.Verboseln(err)
 			return false, &uploader.MultiError{
@@ -185,12 +186,12 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 	if pu.useInternalUrl {
 		uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].InternalUploadURL
 	}
-	apiError := pu.panClient.UploadFileData(uploadUrl, uploadFunc)
+	apiError := pu.panClient.OpenapiPanClient().UploadFileData(uploadUrl, uploadFunc)
 
 	if respErr != nil {
 		if respErr.Err == uploader.UploadUrlExpired {
 			// URL过期，获取新的URL
-			guur, er := pu.panClient.GetUploadUrl(&aliyunpan.GetUploadUrlParam{
+			guur, er := pu.panClient.OpenapiPanClient().GetUploadUrl(&aliyunpan.GetUploadUrlParam{
 				DriveId:      pu.driveId,
 				FileId:       pu.uploadOpEntity.FileId,
 				UploadId:     pu.uploadOpEntity.UploadId,
@@ -208,7 +209,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 			if pu.useInternalUrl {
 				uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].InternalUploadURL
 			}
-			apiError = pu.panClient.UploadFileData(uploadUrl, uploadFunc)
+			apiError = pu.panClient.OpenapiPanClient().UploadFileData(uploadUrl, uploadFunc)
 		} else if respErr.Err == uploader.UploadPartAlreadyExist {
 			// already upload
 			// success
@@ -233,24 +234,11 @@ func (pu *PanUpload) CommitFile() (cerr error) {
 	pu.lazyInit()
 	var er *apierror.ApiError
 
-	_, er = pu.panClient.CompleteUploadFile(&aliyunpan.CompleteUploadFileParam{
+	_, er = pu.panClient.OpenapiPanClient().CompleteUploadFile(&aliyunpan.CompleteUploadFileParam{
 		DriveId:  pu.driveId,
 		FileId:   pu.uploadOpEntity.FileId,
 		UploadId: pu.uploadOpEntity.UploadId,
 	})
-	if er != nil && er.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
-		_, e := pu.panClient.CreateSession(nil)
-		if e == nil {
-			// retry
-			_, er = pu.panClient.CompleteUploadFile(&aliyunpan.CompleteUploadFileParam{
-				DriveId:  pu.driveId,
-				FileId:   pu.uploadOpEntity.FileId,
-				UploadId: pu.uploadOpEntity.UploadId,
-			})
-		} else {
-			logger.Verboseln("CreateSession failed")
-		}
-	}
 	if er != nil {
 		return er
 	}
@@ -266,7 +254,7 @@ func (pu *PanUpload) triggerVideoTranscodeAction() {
 	// 视频文件触发云端转码请求
 	if pu.uploadOpEntity != nil && IsVideoFile(pu.uploadOpEntity.FileName) {
 		time.Sleep(3 * time.Second)
-		_, er1 := pu.panClient.VideoGetPreviewPlayInfo(&aliyunpan.VideoGetPreviewPlayInfoParam{
+		_, er1 := pu.panClient.OpenapiPanClient().VideoGetPreviewPlayInfo(&aliyunpan.VideoGetPreviewPlayInfoParam{
 			DriveId: pu.driveId,
 			FileId:  pu.uploadOpEntity.FileId,
 		})

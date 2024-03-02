@@ -569,7 +569,9 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 	// 创建分片上传器
 	// 阿里云盘默认就是分片上传，每一个分片对应一个part_info
 	// 但是不支持分片同时上传，必须单线程，并且按照顺序从1开始一个一个上传
-	worker := panupload.NewPanUpload(f.panClient, f.syncItem.getPanFileFullPath(), f.syncItem.DriveId, f.syncItem.UploadEntity, f.syncItem.UseInternalUrl)
+	// TODO: need fix
+	//worker := panupload.NewPanUpload(f.panClient, f.syncItem.getPanFileFullPath(), f.syncItem.DriveId, f.syncItem.UploadEntity, f.syncItem.UseInternalUrl)
+	worker := panupload.NewPanUpload(nil, f.syncItem.getPanFileFullPath(), f.syncItem.DriveId, f.syncItem.UploadEntity, f.syncItem.UseInternalUrl)
 
 	// 限速配置
 	var rateLimit *speeds.RateLimit

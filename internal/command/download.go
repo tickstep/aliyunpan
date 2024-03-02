@@ -25,15 +25,12 @@ import (
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
-	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"github.com/urfave/cli"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
-	"sync/atomic"
-	"time"
 )
 
 type (
@@ -222,20 +219,21 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	activeUser.PanClient().OpenapiPanClient().EnableCache()
 	activeUser.PanClient().OpenapiPanClient().ClearCache()
 	defer activeUser.PanClient().OpenapiPanClient().DisableCache()
-	// pan token expired checker
-	continueFlag := int32(0)
-	atomic.StoreInt32(&continueFlag, 0)
-	defer func() {
-		atomic.StoreInt32(&continueFlag, 1)
-	}()
-	go func(flag *int32) {
-		for atomic.LoadInt32(flag) == 0 {
-			time.Sleep(time.Duration(1) * time.Minute)
-			if RefreshWebTokenInNeed(activeUser, config.Config.DeviceName) {
-				logger.Verboseln("update access token for download task")
-			}
-		}
-	}(&continueFlag)
+
+	//// pan token expired checker
+	//continueFlag := int32(0)
+	//atomic.StoreInt32(&continueFlag, 0)
+	//defer func() {
+	//	atomic.StoreInt32(&continueFlag, 1)
+	//}()
+	//go func(flag *int32) {
+	//	for atomic.LoadInt32(flag) == 0 {
+	//		time.Sleep(time.Duration(1) * time.Minute)
+	//		if RefreshWebTokenInNeed(activeUser, config.Config.DeviceName) {
+	//			logger.Verboseln("update access token for download task")
+	//		}
+	//	}
+	//}(&continueFlag)
 
 	if options == nil {
 		options = &DownloadOptions{}

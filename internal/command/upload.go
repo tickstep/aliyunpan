@@ -26,7 +26,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/tickstep/library-go/logger"
@@ -220,23 +219,24 @@ func CmdUpload() cli.Command {
 // RunUpload 执行文件上传
 func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	activeUser := GetActiveUser()
-	activeUser.PanClient().WebapiPanClient().EnableCache()
-	activeUser.PanClient().WebapiPanClient().ClearCache()
-	defer activeUser.PanClient().WebapiPanClient().DisableCache()
-	// pan token expired checker
-	continueFlag := int32(0)
-	atomic.StoreInt32(&continueFlag, 0)
-	defer func() {
-		atomic.StoreInt32(&continueFlag, 1)
-	}()
-	go func(flag *int32) {
-		for atomic.LoadInt32(flag) == 0 {
-			time.Sleep(time.Duration(1) * time.Minute)
-			if RefreshWebTokenInNeed(activeUser, config.Config.DeviceName) {
-				logger.Verboseln("update access token for upload task")
-			}
-		}
-	}(&continueFlag)
+	activeUser.PanClient().OpenapiPanClient().EnableCache()
+	activeUser.PanClient().OpenapiPanClient().ClearCache()
+	defer activeUser.PanClient().OpenapiPanClient().DisableCache()
+
+	//// pan token expired checker
+	//continueFlag := int32(0)
+	//atomic.StoreInt32(&continueFlag, 0)
+	//defer func() {
+	//	atomic.StoreInt32(&continueFlag, 1)
+	//}()
+	//go func(flag *int32) {
+	//	for atomic.LoadInt32(flag) == 0 {
+	//		time.Sleep(time.Duration(1) * time.Minute)
+	//		if RefreshWebTokenInNeed(activeUser, config.Config.DeviceName) {
+	//			logger.Verboseln("update access token for upload task")
+	//		}
+	//	}
+	//}(&continueFlag)
 
 	if opt == nil {
 		opt = &UploadOptions{}
@@ -263,13 +263,13 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 
 	// 超时时间
 	if opt.MaxTimeoutSec > 0 {
-		activeUser.PanClient().WebapiPanClient().SetTimeout(time.Duration(opt.MaxTimeoutSec) * time.Second)
+		activeUser.PanClient().OpenapiPanClient().SetTimeout(time.Duration(opt.MaxTimeoutSec) * time.Second)
 	}
 
 	fmt.Printf("\n[0] 当前文件上传最大并发量为: %d, 上传分片大小为: %s\n", opt.AllParallel, converter.ConvertFileSize(opt.BlockSize, 2))
 
 	savePath = activeUser.PathJoin(opt.DriveId, savePath)
-	_, err1 := activeUser.PanClient().WebapiPanClient().FileInfoByPath(opt.DriveId, savePath)
+	_, err1 := activeUser.PanClient().OpenapiPanClient().FileInfoByPath(opt.DriveId, savePath)
 	if err1 != nil {
 		fmt.Printf("警告: 上传文件, 获取云盘路径 %s 错误, %s\n", savePath, err1)
 	}
@@ -388,7 +388,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 					LocalFileChecksum: localfile.NewLocalSymlinkFileEntity(file),
 					SavePath:          subSavePath,
 					DriveId:           opt.DriveId,
-					PanClient:         activeUser.PanClient().WebapiPanClient(),
+					PanClient:         activeUser.PanClient(),
 					UploadingDatabase: uploadDatabase,
 					FolderCreateMutex: folderCreateMutex,
 					Parallel:          opt.Parallel,
@@ -410,11 +410,11 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 				if saveFilePath != "/" {
 					folderCreateMutex.Lock()
 					fmt.Printf("正在检测和创建云盘文件夹: %s\n", saveFilePath)
-					_, apierr1 := activeUser.PanClient().WebapiPanClient().FileInfoByPath(opt.DriveId, saveFilePath)
+					_, apierr1 := activeUser.PanClient().OpenapiPanClient().FileInfoByPath(opt.DriveId, saveFilePath)
 					time.Sleep(1 * time.Second)
 					if apierr1 != nil && apierr1.Code == apierror.ApiCodeFileNotFoundCode {
 						logger.Verbosef("%s 创建云盘文件夹: %s\n", utils.NowTimeStr(), saveFilePath)
-						rs, apierr := activeUser.PanClient().WebapiPanClient().Mkdir(opt.DriveId, "root", saveFilePath)
+						rs, apierr := activeUser.PanClient().OpenapiPanClient().MkdirByFullPath(opt.DriveId, saveFilePath)
 						if apierr != nil || rs.FileId == "" {
 							fmt.Printf("创建云盘文件夹失败: %s\n", saveFilePath)
 						}

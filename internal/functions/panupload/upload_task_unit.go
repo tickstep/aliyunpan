@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -51,7 +51,7 @@ type (
 		DriveId           string // 网盘ID，例如：文件网盘，相册网盘
 		FolderCreateMutex *sync.Mutex
 
-		PanClient         *aliyunpan.PanClient
+		PanClient         *config.PanClient
 		UploadingDatabase *UploadingDatabase // 数据库
 		Parallel          int
 		NoRapidUpload     bool  // 禁用秒传，无需计算SHA1，直接上传
@@ -356,7 +356,7 @@ StepUploadPrepareUpload:
 	if saveFilePath != "/" {
 		utu.FolderCreateMutex.Lock()
 		fmt.Printf("[%s] %s 正在检测和创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
-		fe, apierr1 := utu.PanClient.FileInfoByPath(utu.DriveId, saveFilePath)
+		fe, apierr1 := utu.PanClient.OpenapiPanClient().FileInfoByPath(utu.DriveId, saveFilePath)
 		time.Sleep(1 * time.Second)
 		needToCreateFolder := false
 		if apierr1 != nil && apierr1.Code == apierror.ApiCodeFileNotFoundCode {
@@ -371,16 +371,7 @@ StepUploadPrepareUpload:
 		}
 		if needToCreateFolder {
 			logger.Verbosef("[%s] %s 创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
-			rs, apierr = utu.PanClient.Mkdir(utu.DriveId, "root", saveFilePath)
-			if apierr != nil && apierr.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
-				_, e := utu.PanClient.CreateSession(nil)
-				if e == nil {
-					// retry
-					rs, apierr = utu.PanClient.Mkdir(utu.DriveId, "root", saveFilePath)
-				} else {
-					logger.Verboseln("CreateSession failed")
-				}
-			}
+			rs, apierr = utu.PanClient.OpenapiPanClient().MkdirByFullPath(utu.DriveId, saveFilePath)
 			if apierr != nil || rs.FileId == "" {
 				result.Err = apierr
 				result.ResultMessage = "创建云盘文件夹失败"
@@ -402,7 +393,7 @@ StepUploadPrepareUpload:
 	checkNameMode = "auto_rename"
 	// 如果启用了 覆盖/跳过 已存在的文件,则需要提前检查文件是否存在
 	if utu.IsOverwrite || utu.IsSkipSameName {
-		efi, apierr = utu.PanClient.FileInfoByPath(utu.DriveId, utu.SavePath)
+		efi, apierr = utu.PanClient.OpenapiPanClient().FileInfoByPath(utu.DriveId, utu.SavePath)
 		if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
 			result.Err = apierr
 			result.ResultMessage = "检测同名文件失败"
@@ -429,7 +420,7 @@ StepUploadPrepareUpload:
 		// proof code
 		localFile, _ = os.Open(utu.LocalFileChecksum.Path.RealPath)
 		localFileInfo, _ = localFile.Stat()
-		proofCode = aliyunpan.CalcProofCode(utu.PanClient.GetAccessToken(), rio.NewFileReaderAtLen64(localFile), localFileInfo.Size())
+		proofCode = aliyunpan.CalcProofCode(utu.PanClient.OpenapiPanClient().GetAccessToken(), rio.NewFileReaderAtLen64(localFile), localFileInfo.Size())
 		localFile.Close()
 	} else {
 		fmt.Printf("[%s] %s 已经禁用秒传检测，直接上传\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
@@ -450,7 +441,7 @@ StepUploadPrepareUpload:
 			// existed, delete it
 			var fileDeleteResult []*aliyunpan.FileBatchActionResult
 			var err *apierror.ApiError
-			fileDeleteResult, err = utu.PanClient.FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: efi.DriveId, FileId: efi.FileId}})
+			fileDeleteResult, err = utu.PanClient.OpenapiPanClient().FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: efi.DriveId, FileId: efi.FileId}})
 			if err != nil || len(fileDeleteResult) == 0 {
 				result.Err = err
 				result.ResultMessage = "无法删除文件，请稍后重试"
@@ -482,16 +473,7 @@ StepUploadPrepareUpload:
 		ProofVersion:    "v1",
 	}
 
-	uploadOpEntity, apierr = utu.PanClient.CreateUploadFile(appCreateUploadFileParam)
-	if apierr != nil && apierr.Code == apierror.ApiCodeDeviceSessionSignatureInvalid {
-		_, e := utu.PanClient.CreateSession(nil)
-		if e == nil {
-			// retry
-			uploadOpEntity, apierr = utu.PanClient.CreateUploadFile(appCreateUploadFileParam)
-		} else {
-			logger.Verboseln("CreateSession failed")
-		}
-	}
+	uploadOpEntity, apierr = utu.PanClient.OpenapiPanClient().CreateUploadFile(appCreateUploadFileParam)
 	if apierr != nil {
 		result.Err = apierr
 		result.ResultMessage = "创建上传任务失败：" + apierr.Error()
