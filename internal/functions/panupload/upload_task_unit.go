@@ -40,8 +40,8 @@ import (
 )
 
 const (
-	// DefaultCheckPreHashFileSize PreHash计算文件大小门限，默认200MB以上文件才计算
-	DefaultCheckPreHashFileSize = 10 * 1024 * 1024
+	// DefaultCheckPreHashFileSize PreHash计算文件大小门限，默认100MB以上文件才计算
+	DefaultCheckPreHashFileSize = 100 * 1024 * 1024
 )
 
 type (
