@@ -105,7 +105,6 @@ type PanUser struct {
 	OpenapiToken *PanClientToken `json:"openapiToken"`
 
 	// API客户端
-	//panClient  *aliyunpan.PanClient `json:"-"`
 	panClient  *PanClient          `json:"-"`
 	cacheOpMap cachemap.CacheOpMap `json:"-"`
 }

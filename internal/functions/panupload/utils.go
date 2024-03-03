@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,10 +14,13 @@
 package panupload
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
 	"net/url"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -77,4 +80,17 @@ func IsVideoFile(fileName string) bool {
 		}
 	}
 	return false
+}
+
+// CalcFilePreHash 计算文件 PreHash
+func CalcFilePreHash(filePath string) string {
+	localFile, _ := os.Open(filePath)
+	defer localFile.Close()
+	bytes := make([]byte, 1024)
+	localFile.ReadAt(bytes, 0)
+	sha1w := sha1.New()
+	sha1w.Write(bytes)
+	shaBytes := sha1w.Sum(nil)
+	hashCode := hex.EncodeToString(shaBytes)
+	return strings.ToUpper(hashCode)
 }

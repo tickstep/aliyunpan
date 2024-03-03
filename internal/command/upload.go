@@ -280,7 +280,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		return
 	}
 
-	// 打开上传状态
+	// 打开上传状态数据库
 	uploadDatabase, err := panupload.NewUploadingDatabase()
 	if err != nil {
 		fmt.Printf("打开上传未完成数据库错误: %s\n", err)

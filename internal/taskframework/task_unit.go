@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,24 +18,24 @@ import "time"
 type (
 	TaskUnit interface {
 		SetTaskInfo(info *TaskInfo)
-		// 执行任务
+		// Run 执行任务
 		Run() (result *TaskUnitRunResult)
-		// 重试任务执行的方法
+		// OnRetry 重试任务执行的方法
 		// 当达到最大重试次数, 执行失败
 		OnRetry(lastRunResult *TaskUnitRunResult)
-		// 每次执行成功执行的方法
+		// OnSuccess 每次执行成功执行的方法
 		OnSuccess(lastRunResult *TaskUnitRunResult)
-		// 每次执行失败执行的方法
+		// OnFailed 每次执行失败执行的方法
 		OnFailed(lastRunResult *TaskUnitRunResult)
-		// 每次执行结束执行的方法, 不管成功失败
+		// OnComplete 每次执行结束执行的方法, 不管成功失败
 		OnComplete(lastRunResult *TaskUnitRunResult)
-		// 取消下载
+		// OnCancel 取消下载
 		OnCancel(lastRunResult *TaskUnitRunResult)
-		// 重试等待的时间
+		// RetryWait 重试等待的时间
 		RetryWait() time.Duration
 	}
 
-	// 任务单元执行结果
+	// TaskUnitRunResult 任务单元执行结果
 	TaskUnitRunResult struct {
 		Succeed   bool // 是否执行成功
 		NeedRetry bool // 是否需要重试
