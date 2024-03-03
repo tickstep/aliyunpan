@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan-api/aliyunpan_open"
 	"github.com/tickstep/aliyunpan-api/aliyunpan_open/openapi"
+	"github.com/tickstep/aliyunpan-api/aliyunpan_web"
 	"github.com/tickstep/aliyunpan/internal/functions/panlogin"
 	"github.com/tickstep/library-go/expires/cachemap"
 	"github.com/tickstep/library-go/logger"
@@ -162,22 +163,22 @@ doWebLoginAct:
 	// setup webapi client
 	var webUserInfo *aliyunpan.UserInfo
 	var err2 *apierror.ApiError
-	var webPanClient *aliyunpan.PanClient
+	var webPanClient *aliyunpan_web.PanClient
 	if webapiToken != nil && webapiToken.AccessToken != "" {
-		appConfig := aliyunpan.AppConfig{
+		appConfig := aliyunpan_web.AppConfig{
 			AppId:     "25dzX3vbYqktVxyX",
 			DeviceId:  deviceId,
 			UserId:    userId,
 			Nonce:     0,
 			PublicKey: "",
 		}
-		webPanClient = aliyunpan.NewPanClient(aliyunpan.WebLoginToken{
+		webPanClient = aliyunpan_web.NewPanClient(aliyunpan_web.WebLoginToken{
 			AccessTokenType: "Bearer",
 			AccessToken:     webapiToken.AccessToken,
 			RefreshToken:    "",
 			ExpiresIn:       7200,
 			ExpireTime:      webapiToken.GetExpiredTimeCstStr(),
-		}, aliyunpan.AppLoginToken{}, appConfig, aliyunpan.SessionConfig{
+		}, aliyunpan_web.AppLoginToken{}, appConfig, aliyunpan_web.SessionConfig{
 			DeviceName: deviceName,
 			ModelName:  "Windows网页版",
 		})

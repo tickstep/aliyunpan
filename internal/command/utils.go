@@ -16,6 +16,7 @@ package command
 import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan-api/aliyunpan_web"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/functions/panlogin"
 	"github.com/tickstep/aliyunpan/internal/plugins"
@@ -126,12 +127,12 @@ func UnescapeStr(s string) string {
 	return r
 }
 
-func NewWebLoginToken(accessToken string, expired int64) aliyunpan.WebLoginToken {
+func NewWebLoginToken(accessToken string, expired int64) aliyunpan_web.WebLoginToken {
 	webapiToken := &config.PanClientToken{
 		AccessToken: accessToken,
 		Expired:     expired,
 	}
-	return aliyunpan.WebLoginToken{
+	return aliyunpan_web.WebLoginToken{
 		AccessTokenType: "Bearer",
 		AccessToken:     webapiToken.AccessToken,
 		RefreshToken:    "",

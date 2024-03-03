@@ -15,10 +15,10 @@ package command
 
 import (
 	"fmt"
+	"github.com/tickstep/aliyunpan-api/aliyunpan_web"
 	"path"
 	"strings"
 
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
 )
@@ -113,8 +113,8 @@ func RunSave(driveId string, args ...string) {
 		list.NextMarker = list2.NextMarker
 	}
 
-	var params []*aliyunpan.FileSaveParam
-	files := make(map[string]*aliyunpan.ListByShareItem)
+	var params []*aliyunpan_web.FileSaveParam
+	files := make(map[string]*aliyunpan_web.ListByShareItem)
 	for _, item := range list.Items {
 		if item.FileExtension != "" {
 			fmt.Println(" ", item.Name)
@@ -123,7 +123,7 @@ func RunSave(driveId string, args ...string) {
 		}
 		files[item.FileID] = item
 
-		params = append(params, &aliyunpan.FileSaveParam{
+		params = append(params, &aliyunpan_web.FileSaveParam{
 			ShareID:        shareID,
 			FileId:         item.FileID,
 			AutoRename:     true,

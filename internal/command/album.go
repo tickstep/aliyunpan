@@ -18,6 +18,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
+	"github.com/tickstep/aliyunpan-api/aliyunpan_web"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
@@ -335,7 +336,7 @@ func CmdAlbum() cli.Command {
 
 func RunAlbumList() {
 	activeUser := GetActiveUser()
-	records, err := activeUser.PanClient().WebapiPanClient().AlbumListGetAll(&aliyunpan.AlbumListParam{})
+	records, err := activeUser.PanClient().WebapiPanClient().AlbumListGetAll(&aliyunpan_web.AlbumListParam{})
 	if err != nil {
 		fmt.Printf("获取相簿列表失败: %s\n", err)
 		return
@@ -358,7 +359,7 @@ func RunAlbumCreate(name, description string) {
 	}
 
 	activeUser := GetActiveUser()
-	_, err := activeUser.PanClient().WebapiPanClient().AlbumCreate(&aliyunpan.AlbumCreateParam{
+	_, err := activeUser.PanClient().WebapiPanClient().AlbumCreate(&aliyunpan_web.AlbumCreateParam{
 		Name:        name,
 		Description: description,
 	})
@@ -376,7 +377,7 @@ func RunAlbumDelete(nameList []string) {
 	}
 
 	activeUser := GetActiveUser()
-	records, err := activeUser.PanClient().WebapiPanClient().AlbumListGetAll(&aliyunpan.AlbumListParam{})
+	records, err := activeUser.PanClient().WebapiPanClient().AlbumListGetAll(&aliyunpan_web.AlbumListParam{})
 	if err != nil {
 		fmt.Printf("获取相簿列表失败: %s\n", err)
 		return
@@ -386,7 +387,7 @@ func RunAlbumDelete(nameList []string) {
 		for i, name := range nameList {
 			if name == record.Name {
 				nameList = append(nameList[:i], nameList[i+1:]...)
-				_, err := activeUser.PanClient().WebapiPanClient().AlbumDelete(&aliyunpan.AlbumDeleteParam{
+				_, err := activeUser.PanClient().WebapiPanClient().AlbumDelete(&aliyunpan_web.AlbumDeleteParam{
 					AlbumId: record.AlbumId,
 				})
 				if err != nil {
@@ -401,8 +402,8 @@ func RunAlbumDelete(nameList []string) {
 	}
 }
 
-func getAlbumFromName(activeUser *config.PanUser, name string) *aliyunpan.AlbumEntity {
-	records, err := activeUser.PanClient().WebapiPanClient().AlbumListGetAll(&aliyunpan.AlbumListParam{})
+func getAlbumFromName(activeUser *config.PanUser, name string) *aliyunpan_web.AlbumEntity {
+	records, err := activeUser.PanClient().WebapiPanClient().AlbumListGetAll(&aliyunpan_web.AlbumListParam{})
 	if err != nil {
 		fmt.Printf("获取相簿列表失败: %s\n", err)
 		return nil
@@ -431,7 +432,7 @@ func RunAlbumRename(name, newName string) {
 	if record == nil {
 		return
 	}
-	_, err := activeUser.PanClient().WebapiPanClient().AlbumEdit(&aliyunpan.AlbumEditParam{
+	_, err := activeUser.PanClient().WebapiPanClient().AlbumEdit(&aliyunpan_web.AlbumEditParam{
 		AlbumId:     record.AlbumId,
 		Description: record.Description,
 		Name:        newName,
@@ -456,7 +457,7 @@ func RunAlbumListFile(name string) {
 		return
 	}
 
-	fileList, er := activeUser.PanClient().WebapiPanClient().AlbumListFileGetAll(&aliyunpan.AlbumListFileParam{
+	fileList, er := activeUser.PanClient().WebapiPanClient().AlbumListFileGetAll(&aliyunpan_web.AlbumListFileParam{
 		AlbumId: record.AlbumId,
 	})
 	if er != nil {
@@ -482,14 +483,14 @@ func RunAlbumRmFile(name string, nameList []string) {
 		return
 	}
 
-	fileList, er := activeUser.PanClient().WebapiPanClient().AlbumListFileGetAll(&aliyunpan.AlbumListFileParam{
+	fileList, er := activeUser.PanClient().WebapiPanClient().AlbumListFileGetAll(&aliyunpan_web.AlbumListFileParam{
 		AlbumId: album.AlbumId,
 	})
 	if er != nil {
 		fmt.Printf("获取相簿文件列表失败：%s\n", er)
 		return
 	}
-	param := &aliyunpan.AlbumDeleteFileParam{
+	param := &aliyunpan_web.AlbumDeleteFileParam{
 		AlbumId:       album.AlbumId,
 		DriveFileList: []aliyunpan.FileBatchActionParam{},
 	}
@@ -545,7 +546,7 @@ func RunAlbumAddFile(albumName string, filePathList []string, filterOption Album
 	}
 
 	fmt.Printf("正在获取增加的文件信息，该操作可能会非常耗费时间，请耐心等待...\n")
-	param := &aliyunpan.AlbumAddFileParam{
+	param := &aliyunpan_web.AlbumAddFileParam{
 		AlbumId:       album.AlbumId,
 		DriveFileList: []aliyunpan.FileBatchActionParam{},
 	}
@@ -713,7 +714,7 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 			continue
 		}
 		// 获取相簿下的所有文件
-		fileList, er := activeUser.PanClient().WebapiPanClient().AlbumListFileGetAll(&aliyunpan.AlbumListFileParam{
+		fileList, er := activeUser.PanClient().WebapiPanClient().AlbumListFileGetAll(&aliyunpan_web.AlbumListFileParam{
 			AlbumId: record.AlbumId,
 		})
 		if er != nil {

@@ -16,6 +16,7 @@ package command
 import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan-api/aliyunpan_web"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
@@ -110,7 +111,7 @@ func RunXCopy(srcDriveId, dstDriveId string, paths ...string) {
 		copyFileParamList = append(copyFileParamList, mfi.FileId)
 		cacheCleanPaths = append(cacheCleanPaths, path.Dir(mfi.Path))
 	}
-	fccr, er := activeUser.PanClient().WebapiPanClient().FileCrossDriveCopy(&aliyunpan.FileCrossCopyParam{
+	fccr, er := activeUser.PanClient().WebapiPanClient().FileCrossDriveCopy(&aliyunpan_web.FileCrossCopyParam{
 		FromDriveId:    srcDriveId,
 		FromFileIds:    copyFileParamList,
 		ToDriveId:      dstDriveId,

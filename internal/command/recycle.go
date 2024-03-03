@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan-api/aliyunpan_web"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
@@ -157,7 +158,7 @@ func CmdRecycle() cli.Command {
 // RunRecycleList 执行列出回收站文件列表
 func RunRecycleList(driveId string) {
 	panClient := GetActivePanClient()
-	fdl, err := panClient.WebapiPanClient().RecycleBinFileListGetAll(&aliyunpan.RecycleBinFileListParam{
+	fdl, err := panClient.WebapiPanClient().RecycleBinFileListGetAll(&aliyunpan_web.RecycleBinFileListParam{
 		DriveId: driveId,
 		Limit:   100,
 	})
@@ -245,7 +246,7 @@ func RunRecycleClear(driveId string) {
 	panClient := GetActivePanClient()
 
 	// 提交清空回收站异步任务
-	r, err := panClient.WebapiPanClient().RecycleBinFileClear(&aliyunpan.RecycleBinFileClearParam{
+	r, err := panClient.WebapiPanClient().RecycleBinFileClear(&aliyunpan_web.RecycleBinFileClearParam{
 		DriveId: driveId,
 	})
 	if err != nil {
@@ -254,7 +255,7 @@ func RunRecycleClear(driveId string) {
 	}
 
 	for i := 0; i < 10; i++ {
-		ar, err1 := panClient.WebapiPanClient().AsyncTaskQueryStatus(&aliyunpan.AsyncTaskQueryStatusParam{
+		ar, err1 := panClient.WebapiPanClient().AsyncTaskQueryStatus(&aliyunpan_web.AsyncTaskQueryStatusParam{
 			AsyncTaskId: r.AsyncTaskId,
 		})
 		if err1 != nil {
