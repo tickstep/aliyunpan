@@ -439,9 +439,11 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 
 		// 检查同名文件是否存在
 		panFileId := ""
+		panFileSha1Str := ""
 		if panFileInDb, e := f.panFileDb.Get(targetPanFilePath); e == nil {
 			if panFileInDb != nil {
 				panFileId = panFileInDb.FileId
+				panFileSha1Str = panFileInDb.Sha1Hash
 			}
 		} else {
 			efi, apierr := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, targetPanFilePath)
@@ -454,12 +456,26 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			}
 			time.Sleep(5 * time.Second)
 		}
-		if strings.ToUpper(panFileId) == strings.ToUpper(sha1Str) {
-			logger.Verbosef("检测到同名文件，文件内容完全一致，无需重复上传: %s\n", targetPanFilePath)
-			f.syncItem.Status = SyncFileStatusSuccess
-			f.syncItem.StatusUpdateTime = utils.NowTimeStr()
-			f.syncFileDb.Update(f.syncItem)
-			return nil
+		if panFileId != "" {
+			if strings.ToUpper(panFileSha1Str) == strings.ToUpper(sha1Str) {
+				logger.Verbosef("检测到同名文件，文件内容完全一致，无需重复上传: %s\n", targetPanFilePath)
+				f.syncItem.Status = SyncFileStatusSuccess
+				f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+				f.syncFileDb.Update(f.syncItem)
+				return nil
+			} else {
+				// 删除云盘文件
+				dp := []*aliyunpan.FileBatchActionParam{
+					{
+						DriveId: f.syncItem.DriveId,
+						FileId:  panFileId,
+					},
+				}
+				if _, e := f.panClient.OpenapiPanClient().FileDelete(dp); e != nil {
+					logger.Verbosef(" 删除云盘旧文件失败: %s\n", targetPanFilePath)
+					return e
+				}
+			}
 		}
 
 		// 创建文件夹
