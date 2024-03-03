@@ -38,7 +38,6 @@
     - [同步备份文件](#同步备份文件)
   - [更多命令](#更多命令)
 - [常见问题](#常见问题)
-  - [如何获取RefreshToken](#如何获取refreshtoken)
   - [如何开启Debug调试日志](#如何开启debug调试日志)
     - [第一步](#第一步)
     - [第二步](#第二步)
@@ -186,11 +185,12 @@ aliyunpan > help
 ```
 
 ### 登录
-需要先登录，已经登录过的可以跳过此步。   
-RefreshToken获取教程请查看：[如何获取RefreshToken](#如何获取RefreshToken)
+需要先登录，已经登录过的可以跳过此步。登录是在浏览器上进行，你需要进行两次登录。
 ```shell
-aliyunpan > login -RefreshToken=32994cd2c43...4d505fa79
-
+aliyunpan > login
+请在浏览器打开以下链接进行登录，链接有效时间为5分钟。
+注意：你需要进行一次授权一次扫码的两次登录。
+https://openapi.alipan.com/oauth/authorize?client_id=cf9f70e8fc61430f8ec5ab5cadf31375&redirect_uri=https%3A%2F%2Fapi.tickstep.com%2Fauth%2Ftickstep%2Faliyunpan%2Ftoken%2Fopenapi%2F8206f0.....fb5db6b40336%2Fauth&scope=user:base,file:all:read,file:all:write
 阿里云盘登录成功:  tickstep
 aliyunpan:/ tickstep$ 
 ```
@@ -202,7 +202,6 @@ aliyunpan:/ tickstep(备份盘)$ drive
   #   DRIVE ID   网盘名称  
   1    11519221   备份盘   
   2  1311893110   资源库   
-  3    61104421    相册
   
 输入要切换的网盘 # 值 > 2
 切换到网盘：资源库                     
@@ -248,10 +247,6 @@ aliyunpan:/ tickstep$ download IMG_0106.JPG
 下载结束, 时间: 4秒, 数据总量: 1.48MB
 aliyunpan:/ tickstep$ 
 ```
-下载支持两种链接类型：1-默认类型 2-阿里ECS环境类型   
-在普通网络下，下载速度可以达到10MB/s，在阿里ECS（必须是"经典网络"类型的机器）环境下，下载速度单文件可以轻松达到20MB/s，多文件可以达到100MB/s   
-![](./assets/images/download_file_ecs_speed_screenshot.gif)
-![](./assets/images/download_file_speed_screenshot.gif)
 
 ### 上传文件
 ```shell
@@ -270,9 +265,6 @@ aliyunpan:/ tickstep$ upload /Users/tickstep/Downloads/apt.zip /tmp
 
 上传结束, 时间: 18秒, 数据总量: 21.00MB
 ```
-上传支持两种链接类型：1-默认类型 2-阿里ECS环境类型   
-在阿里ECS（必须是"经典网络"类型的机器）环境下，上传速度单文件可以轻松达到30MB/s，多文件可以达到100MB/s   
-![](./assets/images/upload_file_speed_screenshot.gif)
 
 ### 同步备份文件
 同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
@@ -307,18 +299,6 @@ aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir 
 更多更详细的命令请查看手册：[命令手册](docs/manual.md)。
 
 # 常见问题
-## 如何获取RefreshToken
-需要通过浏览器获取refresh_token。这里以Chrome浏览器为例，其他浏览器类似。   
-打开 [阿里云盘网页](https://www.aliyundrive.com/drive) 并进行登录，然后F12按键打开浏览器调试菜单，按照下面步骤进行
-![](./assets/images/how-to-get-refresh-token.png)
-
-或者直接在控制台输入以下命令获取
-```
-JSON.parse(localStorage.getItem("token")).refresh_token
-```
-![](./assets/images/how-to-get-refresh-token-cmd.png)
-
-
 ## 如何开启Debug调试日志
 当需要定位问题，或者提交issue的时候抓取log，则需要开启debug日志。步骤如下：
 
@@ -353,5 +333,5 @@ Web网页端
 
 # 鸣谢
 本项目大量借鉴了以下相关项目的功能&成果   
-> [tickstep/cloudpan189-go](https://github.com/tickstep/cloudpan189-go)
+> [tickstep/cloudpan189-go](https://github.com/tickstep/cloudpan189-go)   
 > [kazutoiris/ali_ecc](https://github.com/kazutoiris/ali_ecc)   
