@@ -85,6 +85,7 @@ func checkLoginExpiredAndRelogin() {
 	} else {
 		// 刷新过期Token并保存到配置文件
 		command.RefreshWebTokenInNeed(activeUser, config.Config.DeviceName)
+		command.RefreshOpenTokenInNeed(activeUser)
 	}
 	command.SaveConfigFunc(nil)
 }

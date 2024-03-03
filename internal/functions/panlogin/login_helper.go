@@ -233,7 +233,7 @@ func (h *LoginHelper) ParseSecureRefreshToken(keyStr, secureRefreshToken string)
 }
 
 // GetWebapiNewToken 获取Webapi Token
-func (h *LoginHelper) GetWebapiNewToken(ticketId, userId string) (*LoginTokenResult, error) {
+func (h *LoginHelper) GetWebapiNewToken(ticketId, userId, oldAccessToken string) (*LoginTokenResult, error) {
 	fullUrl := strings.Builder{}
 	fmt.Fprintf(&fullUrl, "%s/auth/tickstep/aliyunpan/token/webapi/%s/refresh?userId=%s",
 		h.webHost, ticketId, userId)
@@ -242,6 +242,7 @@ func (h *LoginHelper) GetWebapiNewToken(ticketId, userId string) (*LoginTokenRes
 		"accept":       "application/json, text/plain, */*",
 		"content-type": "application/json;charset=UTF-8",
 		"user-agent":   "aliyunpan/" + global.AppVersion,
+		"old-token":    oldAccessToken,
 	}
 	// request
 	client := requester.NewHTTPClient()
@@ -273,7 +274,7 @@ func (h *LoginHelper) GetWebapiNewToken(ticketId, userId string) (*LoginTokenRes
 }
 
 // GetOpenapiNewToken 获取Openapi Token
-func (h *LoginHelper) GetOpenapiNewToken(ticketId, userId string) (*LoginTokenResult, error) {
+func (h *LoginHelper) GetOpenapiNewToken(ticketId, userId, oldAccessToken string) (*LoginTokenResult, error) {
 	fullUrl := strings.Builder{}
 	fmt.Fprintf(&fullUrl, "%s/auth/tickstep/aliyunpan/token/openapi/%s/refresh?userId=%s",
 		h.webHost, ticketId, userId)
@@ -282,6 +283,7 @@ func (h *LoginHelper) GetOpenapiNewToken(ticketId, userId string) (*LoginTokenRe
 		"accept":       "application/json, text/plain, */*",
 		"content-type": "application/json;charset=UTF-8",
 		"user-agent":   "aliyunpan/" + global.AppVersion,
+		"old-token":    oldAccessToken,
 	}
 	// request
 	client := requester.NewHTTPClient()

@@ -141,7 +141,7 @@ doOpenLoginAct:
 	if err != nil {
 		if err.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshOpenToken {
 			tryRefreshOpenToken = false
-			wt, e := loginHelper.GetOpenapiNewToken(ticketId, userId)
+			wt, e := loginHelper.GetOpenapiNewToken(ticketId, userId, openapiToken.AccessToken)
 			if e != nil {
 				logger.Verboseln("get openapi token from server error: ", e)
 				return nil, apierror.NewFailedApiError("get new openapi token error, try login again")
@@ -187,7 +187,7 @@ doWebLoginAct:
 		if err2 != nil {
 			if err2.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshWebToken {
 				tryRefreshWebToken = false
-				wt, e := loginHelper.GetWebapiNewToken(ticketId, userId)
+				wt, e := loginHelper.GetWebapiNewToken(ticketId, userId, webapiToken.AccessToken)
 				if e != nil {
 					logger.Verboseln("get web token from server error: ", e)
 				}
