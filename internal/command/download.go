@@ -46,7 +46,6 @@ type (
 		NoCheck              bool
 		ShowProgress         bool
 		DriveId              string
-		UseInternalUrl       bool     // 是否使用内置链接
 		ExcludeNames         []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行下载，支持正则表达式
 	}
 
@@ -256,7 +255,6 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		MaxRate:                    config.Config.MaxDownloadRate,
 		InstanceStateStorageFormat: downloader.InstanceStateStorageFormatJSON,
 		ShowProgress:               options.ShowProgress,
-		UseInternalUrl:             config.Config.TransferUrlType == 2,
 		ExcludeNames:               options.ExcludeNames,
 	}
 	if cfg.CacheSize == 0 {

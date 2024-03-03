@@ -411,9 +411,6 @@ func (der *Downloader) Execute() error {
 		client.SetTimeout(10 * time.Minute)
 
 		realUrl := durl.Url
-		if der.config.UseInternalUrl {
-			realUrl = durl.InternalUrl
-		}
 		worker := NewWorker(k, der.driveId, der.fileInfo.FileId, realUrl, writer, der.globalSpeedsStat)
 		worker.SetClient(client)
 		worker.SetPanClient(der.panClient)

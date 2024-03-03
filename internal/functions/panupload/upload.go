@@ -38,7 +38,6 @@ type (
 
 		// 网盘上传参数
 		uploadOpEntity *aliyunpan.CreateFileUploadResult
-		useInternalUrl bool
 	}
 
 	EmptyReaderLen64 struct {
@@ -53,13 +52,12 @@ func (e EmptyReaderLen64) Len() int64 {
 	return 0
 }
 
-func NewPanUpload(panClient *config.PanClient, targetPath, driveId string, uploadOpEntity *aliyunpan.CreateFileUploadResult, useInternalUrl bool) uploader.MultiUpload {
+func NewPanUpload(panClient *config.PanClient, targetPath, driveId string, uploadOpEntity *aliyunpan.CreateFileUploadResult) uploader.MultiUpload {
 	return &PanUpload{
 		panClient:      panClient,
 		targetPath:     targetPath,
 		driveId:        driveId,
 		uploadOpEntity: uploadOpEntity,
-		useInternalUrl: useInternalUrl,
 	}
 }
 
@@ -78,9 +76,6 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 
 	// check url expired or not
 	uploadUrl := pu.uploadOpEntity.PartInfoList[partseq].UploadURL
-	if pu.useInternalUrl {
-		uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].InternalUploadURL
-	}
 	if IsUrlExpired(uploadUrl) {
 		// get renew upload url
 		infoList := make([]aliyunpan.FileUploadPartInfoParam, 0)
@@ -183,9 +178,6 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 
 	// 上传一个分片数据
 	uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].UploadURL
-	if pu.useInternalUrl {
-		uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].InternalUploadURL
-	}
 	apiError := pu.panClient.OpenapiPanClient().UploadFileData(uploadUrl, uploadFunc)
 
 	if respErr != nil {
@@ -206,9 +198,6 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 			// 获取新的上传URL重试一次
 			pu.uploadOpEntity.PartInfoList[partseq] = guur.PartInfoList[0]
 			uploadUrl := pu.uploadOpEntity.PartInfoList[partseq].UploadURL
-			if pu.useInternalUrl {
-				uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].InternalUploadURL
-			}
 			apiError = pu.panClient.OpenapiPanClient().UploadFileData(uploadUrl, uploadFunc)
 		} else if respErr.Err == uploader.UploadPartAlreadyExist {
 			// already upload

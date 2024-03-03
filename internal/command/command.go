@@ -24,14 +24,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-type (
-	// 秒传数据项
-	RapidUploadItem struct {
-		FileSha1 string
-		FileSize int64
-		FilePath string // 绝对路径，包含文件名
-	}
-)
+type ()
 
 const (
 	cryptoDescription = `
@@ -128,10 +121,6 @@ func CmdConfig() cli.Command {
 							return nil
 						}
 					}
-					if c.IsSet("transfer_url_type") {
-						config.Config.TransferUrlType = c.Int("transfer_url_type")
-					}
-
 					if c.IsSet("savedir") {
 						config.Config.SaveDir = c.String("savedir")
 					}
@@ -182,11 +171,6 @@ func CmdConfig() cli.Command {
 					cli.StringFlag{
 						Name:  "max_upload_rate",
 						Usage: "限制最大上传速度, 0代表不限制",
-					},
-					cli.IntFlag{
-						Name:  "transfer_url_type",
-						Usage: "上传下载URL类别，1-默认，2-阿里云ECS",
-						Value: 1,
 					},
 					cli.StringFlag{
 						Name:  "savedir",

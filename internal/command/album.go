@@ -652,7 +652,6 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 		MaxRate:                    config.Config.MaxDownloadRate,
 		InstanceStateStorageFormat: downloader.InstanceStateStorageFormatJSON,
 		ShowProgress:               options.ShowProgress,
-		UseInternalUrl:             config.Config.TransferUrlType == 2,
 		ExcludeNames:               options.ExcludeNames,
 	}
 	if cfg.CacheSize == 0 {

@@ -133,7 +133,6 @@ type (
 		StatusUpdateTime string `json:"statusUpdateTime"`
 
 		DriveId           string                            `json:"driveId"`
-		UseInternalUrl    bool                              `json:"useInternalUrl"`
 		DownloadRange     *transfer.Range                   `json:"downloadRange"`
 		DownloadBlockSize int64                             `json:"downloadBlockSize"`
 		UploadRange       *transfer.Range                   `json:"uploadRange"`

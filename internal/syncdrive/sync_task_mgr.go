@@ -19,7 +19,6 @@ type (
 		FileUploadParallel    int   // 文件上传并发数
 		FileDownloadBlockSize int64 // 文件下载分片大小
 		FileUploadBlockSize   int64 // 文件上传分片大小
-		UseInternalUrl        bool  // 是否使用阿里ECS内部链接
 
 		MaxDownloadRate int64 // 限制最大下载速度
 		MaxUploadRate   int64 // 限制最大上传速度

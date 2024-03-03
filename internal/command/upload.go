@@ -65,7 +65,6 @@ type (
 		DriveId        string
 		ExcludeNames   []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行上传，支持正则表达式
 		BlockSize      int64    // 分片大小
-		UseInternalUrl bool     // 是否使用内置链接
 	}
 )
 
@@ -259,7 +258,6 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	if opt.MaxRetry < 0 {
 		opt.MaxRetry = DefaultUploadMaxRetry
 	}
-	opt.UseInternalUrl = config.Config.TransferUrlType == 2
 
 	// 超时时间
 	if opt.MaxTimeoutSec > 0 {
@@ -398,7 +396,6 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 					ShowProgress:      opt.ShowProgress,
 					IsOverwrite:       opt.IsOverwrite,
 					IsSkipSameName:    opt.IsSkipSameName,
-					UseInternalUrl:    opt.UseInternalUrl,
 					GlobalSpeedsStat:  globalSpeedsStat,
 					FileRecorder:      fileRecorder,
 				}, opt.MaxRetry)

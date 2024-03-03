@@ -300,9 +300,6 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	}
 
 	downloadUrl := durl.Url
-	if f.syncItem.UseInternalUrl {
-		downloadUrl = durl.InternalUrl
-	}
 	worker := downloader.NewWorker(0, f.syncItem.PanFile.DriveId, f.syncItem.PanFile.FileId, downloadUrl, writer, nil)
 
 	// 限速
@@ -554,9 +551,6 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		// 检测链接是否过期
 		// check url expired or not
 		uploadUrl := f.syncItem.UploadEntity.PartInfoList[f.syncItem.UploadPartSeq].UploadURL
-		if f.syncItem.UseInternalUrl {
-			uploadUrl = f.syncItem.UploadEntity.PartInfoList[f.syncItem.UploadPartSeq].InternalUploadURL
-		}
 		if panupload.IsUrlExpired(uploadUrl) {
 			// get renew upload url
 			logger.Verbosef("链接过期，获取新的上传链接: %s\n", targetPanFilePath)
@@ -584,7 +578,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 	// 创建分片上传器
 	// 阿里云盘默认就是分片上传，每一个分片对应一个part_info
 	// 但是不支持分片同时上传，必须单线程，并且按照顺序从1开始一个一个上传
-	worker := panupload.NewPanUpload(f.panClient, f.syncItem.getPanFileFullPath(), f.syncItem.DriveId, f.syncItem.UploadEntity, f.syncItem.UseInternalUrl)
+	worker := panupload.NewPanUpload(f.panClient, f.syncItem.getPanFileFullPath(), f.syncItem.DriveId, f.syncItem.UploadEntity)
 
 	// 限速配置
 	var rateLimit *speeds.RateLimit

@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,7 +30,7 @@ var (
 	MaxParallelWorkerCount int = 3
 )
 
-//Config 下载配置
+// Config 下载配置
 type Config struct {
 	Mode                       transfer.RangeGenMode      // 下载Range分配模式
 	MaxParallel                int                        // 最大下载并发量
@@ -41,11 +41,10 @@ type Config struct {
 	InstanceStatePath          string                     // 断点续传信息路径
 	TryHTTP                    bool                       // 是否尝试使用 http 连接
 	ShowProgress               bool                       // 是否展示下载进度条
-	UseInternalUrl             bool                       // 是否使用内置链接
 	ExcludeNames               []string                   // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行下载，支持正则表达式
 }
 
-//NewConfig 返回默认配置
+// NewConfig 返回默认配置
 func NewConfig() *Config {
 	return &Config{
 		MaxParallel: 5,
@@ -53,7 +52,7 @@ func NewConfig() *Config {
 	}
 }
 
-//Fix 修复配置信息, 使其合法
+// Fix 修复配置信息, 使其合法
 func (cfg *Config) Fix() {
 	fixCacheSize(&cfg.CacheSize)
 	if cfg.MaxParallel < 1 {
@@ -61,7 +60,7 @@ func (cfg *Config) Fix() {
 	}
 }
 
-//Copy 拷贝新的配置
+// Copy 拷贝新的配置
 func (cfg *Config) Copy() *Config {
 	newCfg := *cfg
 	return &newCfg

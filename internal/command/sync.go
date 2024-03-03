@@ -297,7 +297,6 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 
 func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64,
 	flag syncdrive.SyncPriorityOption, localDelayTime int, taskStep syncdrive.TaskStep) {
-	useInternalUrl := config.Config.TransferUrlType == 2
 	maxDownloadRate := config.Config.MaxDownloadRate
 	maxUploadRate := config.Config.MaxUploadRate
 	activeUser := GetActiveUser()
@@ -335,10 +334,6 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	}
 
 	fmt.Println("启动同步备份进程")
-	typeUrlStr := "默认链接"
-	if useInternalUrl {
-		typeUrlStr = "阿里ECS内部链接"
-	}
 
 	// 文件同步记录器
 	fileRecorder := log.NewFileRecorder(config.GetLogDir() + "/sync_file_records.csv")
@@ -348,7 +343,6 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 		FileUploadParallel:                fileUploadParallel,
 		FileDownloadBlockSize:             downloadBlockSize,
 		FileUploadBlockSize:               uploadBlockSize,
-		UseInternalUrl:                    useInternalUrl,
 		MaxDownloadRate:                   maxDownloadRate,
 		MaxUploadRate:                     maxUploadRate,
 		SyncPriority:                      flag,
@@ -360,8 +354,8 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	if tasks != nil {
 		syncConfigFile = "(使用命令行配置)"
 	}
-	fmt.Printf("备份配置文件：%s\n链接类型：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",
-		syncConfigFile, typeUrlStr, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
+	fmt.Printf("备份配置文件：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",
+		syncConfigFile, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
 		converter.ConvertFileSize(uploadBlockSize, 2))
 	if _, e := syncMgr.Start(tasks, taskStep); e != nil {
 		fmt.Println("启动任务失败：", e)

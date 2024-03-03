@@ -93,7 +93,6 @@ type PanConfig struct {
 
 	MaxDownloadRate int64 `json:"maxDownloadRate"` // 限制最大下载速度，单位 B/s, 即字节/每秒
 	MaxUploadRate   int64 `json:"maxUploadRate"`   // 限制最大上传速度，单位 B/s, 即字节/每秒
-	TransferUrlType int   `json:"transferUrlType"` // 上传/下载URL类别，1-默认，2-阿里云ECS
 
 	SaveDir string `json:"saveDir"` // 下载储存路径
 
