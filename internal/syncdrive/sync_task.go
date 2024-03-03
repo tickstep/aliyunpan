@@ -54,7 +54,7 @@ type (
 		cancelFunc context.CancelFunc
 
 		panUser   *config.PanUser
-		panClient *aliyunpan.PanClient
+		panClient *config.PanClient
 
 		syncOption SyncOption
 
@@ -157,9 +157,9 @@ func (t *SyncTask) Start(step TaskStep) error {
 			os.MkdirAll(t.LocalFolderPath, 0755)
 		}
 	}
-	if _, er := t.panClient.FileInfoByPath(t.DriveId, t.PanFolderPath); er != nil {
+	if _, er := t.panClient.OpenapiPanClient().FileInfoByPath(t.DriveId, t.PanFolderPath); er != nil {
 		if er.Code == apierror.ApiCodeFileNotFoundCode {
-			t.panClient.MkdirByFullPath(t.DriveId, t.PanFolderPath)
+			t.panClient.OpenapiPanClient().MkdirByFullPath(t.DriveId, t.PanFolderPath)
 		}
 	}
 
@@ -585,7 +585,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context, scanFileOnly bool) {
 		}
 		fullPath += "/" + p
 	}
-	fi, err := t.panClient.FileInfoByPath(t.DriveId, fullPath)
+	fi, err := t.panClient.OpenapiPanClient().FileInfoByPath(t.DriveId, fullPath)
 	if err != nil {
 		return
 	}
@@ -647,7 +647,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context, scanFileOnly bool) {
 				continue
 			}
 			item := obj.(*aliyunpan.FileEntity)
-			files, err1 := t.panClient.FileListGetAll(&aliyunpan.FileListParam{
+			files, err1 := t.panClient.OpenapiPanClient().FileListGetAll(&aliyunpan.FileListParam{
 				DriveId:      t.DriveId,
 				ParentFileId: item.FileId,
 			}, 1500) // 延迟时间避免触发风控

@@ -3,7 +3,6 @@ package syncdrive
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/utils"
@@ -41,7 +40,7 @@ type (
 		syncOption           SyncOption
 		PanUser              *config.PanUser
 		DriveId              string
-		PanClient            *aliyunpan.PanClient
+		PanClient            *config.PanClient
 		SyncConfigFolderPath string
 
 		// useConfigFile 是否使用配置文件启动
@@ -59,7 +58,7 @@ var (
 	ErrSyncTaskListEmpty error = fmt.Errorf("no sync task")
 )
 
-func NewSyncTaskManager(user *config.PanUser, driveId string, panClient *aliyunpan.PanClient, syncConfigFolderPath string,
+func NewSyncTaskManager(user *config.PanUser, driveId string, panClient *config.PanClient, syncConfigFolderPath string,
 	option SyncOption) *SyncTaskManager {
 	return &SyncTaskManager{
 		PanUser:              user,

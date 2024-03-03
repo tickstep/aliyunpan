@@ -28,7 +28,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sync/atomic"
 	"time"
 )
 
@@ -303,24 +302,24 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	maxUploadRate := config.Config.MaxUploadRate
 	activeUser := GetActiveUser()
 	panClient := activeUser.PanClient()
-	panClient.WebapiPanClient().DisableCache()
+	panClient.OpenapiPanClient().DisableCache()
 
-	// pan token expired checker
-	continueFlag := int32(0)
-	atomic.StoreInt32(&continueFlag, 0)
-	defer func() {
-		atomic.StoreInt32(&continueFlag, 1)
-	}()
-	go func(flag *int32) {
-		for atomic.LoadInt32(flag) == 0 {
-			time.Sleep(time.Duration(1) * time.Minute)
-			if RefreshWebTokenInNeed(activeUser, config.Config.DeviceName) {
-				logger.Verboseln("update access token for sync task")
-				userWebToken := NewWebLoginToken(activeUser.WebapiToken.AccessToken, activeUser.WebapiToken.Expired)
-				panClient.WebapiPanClient().UpdateToken(userWebToken)
-			}
-		}
-	}(&continueFlag)
+	//// pan token expired checker
+	//continueFlag := int32(0)
+	//atomic.StoreInt32(&continueFlag, 0)
+	//defer func() {
+	//	atomic.StoreInt32(&continueFlag, 1)
+	//}()
+	//go func(flag *int32) {
+	//	for atomic.LoadInt32(flag) == 0 {
+	//		time.Sleep(time.Duration(1) * time.Minute)
+	//		if RefreshWebTokenInNeed(activeUser, config.Config.DeviceName) {
+	//			logger.Verboseln("update access token for sync task")
+	//			userWebToken := NewWebLoginToken(activeUser.WebapiToken.AccessToken, activeUser.WebapiToken.Expired)
+	//			panClient.WebapiPanClient().UpdateToken(userWebToken)
+	//		}
+	//	}
+	//}(&continueFlag)
 
 	syncFolderRootPath := config.GetSyncDriveDir()
 	if b, e := utils.PathExists(syncFolderRootPath); e == nil {
@@ -356,7 +355,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 		LocalFileModifiedCheckIntervalSec: localDelayTime,
 		FileRecorder:                      fileRecorder,
 	}
-	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient.WebapiPanClient(), syncFolderRootPath, option)
+	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath, option)
 	syncConfigFile := syncMgr.ConfigFilePath()
 	if tasks != nil {
 		syncConfigFile = "(使用命令行配置)"

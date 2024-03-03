@@ -33,7 +33,7 @@ type (
 		panFileDb   PanSyncDb
 		syncFileDb  SyncFileDb
 
-		panClient *aliyunpan.PanClient
+		panClient *config.PanClient
 
 		syncItem        *SyncFileItem
 		maxDownloadRate int64 // 限制最大下载速度
@@ -75,7 +75,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			// save local file info into db
 			var actFile *aliyunpan.FileEntity
 			if f.syncItem.UploadEntity != nil && f.syncItem.UploadEntity.FileId != "" {
-				if file, er := f.panClient.FileInfoById(f.syncItem.DriveId, f.syncItem.UploadEntity.FileId); er == nil {
+				if file, er := f.panClient.OpenapiPanClient().FileInfoById(f.syncItem.DriveId, f.syncItem.UploadEntity.FileId); er == nil {
 					file.Path = f.syncItem.getPanFileFullPath()
 					fItem := NewPanFileItem(file)
 					fItem.ScanTimeAt = utils.NowTimeStr()
@@ -84,7 +84,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 					actFile = file
 				}
 			} else {
-				if file, er := f.panClient.FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
+				if file, er := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
 					file.Path = f.syncItem.getPanFileFullPath()
 					fItem := NewPanFileItem(file)
 					fItem.ScanTimeAt = utils.NowTimeStr()
@@ -237,7 +237,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			// TODO: retry
 			return e
 		} else {
-			if file, er := f.panClient.FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
+			if file, er := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
 				file.Path = f.syncItem.getPanFileFullPath()
 				fItem := NewPanFileItem(file)
 				fItem.ScanTimeAt = utils.NowTimeStr()
@@ -250,7 +250,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 }
 
 func (f *FileActionTask) downloadFile(ctx context.Context) error {
-	durl, apierr := f.panClient.GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+	durl, apierr := f.panClient.OpenapiPanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
 		DriveId: f.syncItem.PanFile.DriveId,
 		FileId:  f.syncItem.PanFile.FileId,
 	})
@@ -332,8 +332,7 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	client.SetKeepAlive(true)
 	client.SetTimeout(10 * time.Minute)
 	worker.SetClient(client)
-	// TODO: need fix
-	//worker.SetPanClient(f.panClient)
+	worker.SetPanClient(f.panClient)
 
 	writeMu := &sync.Mutex{}
 	worker.SetWriteMutex(writeMu)
@@ -445,7 +444,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 				panFileId = panFileInDb.FileId
 			}
 		} else {
-			efi, apierr := f.panClient.FileInfoByPath(f.syncItem.DriveId, targetPanFilePath)
+			efi, apierr := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, targetPanFilePath)
 			if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
 				logger.Verbosef("上传文件错误: %s\n", apierr.String())
 				return apierr
@@ -473,7 +472,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		} else {
 			logger.Verbosef("创建云盘文件夹: %s\n", panDirPath)
 			f.panFolderCreateMutex.Lock()
-			rs, apierr1 := f.panClient.Mkdir(f.syncItem.DriveId, "root", panDirPath)
+			rs, apierr1 := f.panClient.OpenapiPanClient().MkdirByFullPath(f.syncItem.DriveId, panDirPath)
 			f.panFolderCreateMutex.Unlock()
 			if apierr1 != nil || rs.FileId == "" {
 				return apierr1
@@ -482,7 +481,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			logger.Verbosef("创建云盘文件夹成功: %s\n", panDirPath)
 
 			// save into DB
-			if panDirFile, e := f.panClient.FileInfoById(f.syncItem.DriveId, panDirFileId); e == nil {
+			if panDirFile, e := f.panClient.OpenapiPanClient().FileInfoById(f.syncItem.DriveId, panDirFileId); e == nil {
 				panDirFile.Path = panDirPath
 				fItem := NewPanFileItem(panDirFile)
 				fItem.ScanTimeAt = utils.NowTimeStr()
@@ -494,7 +493,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		proofCode := ""
 		localFileEntity, _ := os.Open(localFile.Path.RealPath)
 		localFileInfo, _ := localFileEntity.Stat()
-		proofCode = aliyunpan.CalcProofCode(f.panClient.GetAccessToken(), rio.NewFileReaderAtLen64(localFileEntity), localFileInfo.Size())
+		proofCode = aliyunpan.CalcProofCode(f.panClient.OpenapiPanClient().GetAccessToken(), rio.NewFileReaderAtLen64(localFileEntity), localFileInfo.Size())
 
 		// 自动调整BlockSize大小
 		newBlockSize := utils.ResizeUploadBlockSize(localFile.Length, f.syncItem.UploadBlockSize)
@@ -512,13 +511,13 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			Size:            localFile.Length,
 			ContentHash:     sha1Str,
 			ContentHashName: "sha1",
-			CheckNameMode:   "overwrite", // 覆盖云盘文件
+			CheckNameMode:   "refuse",
 			ParentFileId:    panDirFileId,
 			BlockSize:       f.syncItem.UploadBlockSize,
 			ProofCode:       proofCode,
 			ProofVersion:    "v1",
 		}
-		if uploadOpEntity, err := f.panClient.CreateUploadFile(appCreateUploadFileParam); err != nil {
+		if uploadOpEntity, err := f.panClient.OpenapiPanClient().CreateUploadFile(appCreateUploadFileParam); err != nil {
 			logger.Verbosef("创建云盘上传任务失败: %s\n", panDirPath)
 			return err
 		} else {
@@ -557,7 +556,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 				PartInfoList: infoList,
 				UploadId:     f.syncItem.UploadEntity.UploadId,
 			}
-			newUploadInfo, err1 := f.panClient.GetUploadUrl(refreshUploadParam)
+			newUploadInfo, err1 := f.panClient.OpenapiPanClient().GetUploadUrl(refreshUploadParam)
 			if err1 != nil {
 				return err1
 			}
@@ -569,9 +568,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 	// 创建分片上传器
 	// 阿里云盘默认就是分片上传，每一个分片对应一个part_info
 	// 但是不支持分片同时上传，必须单线程，并且按照顺序从1开始一个一个上传
-	// TODO: need fix
-	//worker := panupload.NewPanUpload(f.panClient, f.syncItem.getPanFileFullPath(), f.syncItem.DriveId, f.syncItem.UploadEntity, f.syncItem.UseInternalUrl)
-	worker := panupload.NewPanUpload(nil, f.syncItem.getPanFileFullPath(), f.syncItem.DriveId, f.syncItem.UploadEntity, f.syncItem.UseInternalUrl)
+	worker := panupload.NewPanUpload(f.panClient, f.syncItem.getPanFileFullPath(), f.syncItem.DriveId, f.syncItem.UploadEntity, f.syncItem.UseInternalUrl)
 
 	// 限速配置
 	var rateLimit *speeds.RateLimit
@@ -678,7 +675,7 @@ func (f *FileActionTask) deletePanFile(ctx context.Context) error {
 	if f.syncItem.PanFile != nil {
 		panFileId = f.syncItem.PanFile.FileId
 	} else {
-		fi, er := f.panClient.FileInfoByPath(f.syncItem.DriveId, panFilePath)
+		fi, er := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, panFilePath)
 		time.Sleep(1 * time.Second)
 		if er != nil {
 			if er.Code == apierror.ApiCodeFileNotFoundCode {
@@ -698,7 +695,7 @@ func (f *FileActionTask) deletePanFile(ctx context.Context) error {
 	// 删除
 	var fileDeleteResult []*aliyunpan.FileBatchActionResult
 	var err *apierror.ApiError = nil
-	fileDeleteResult, err = f.panClient.FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: driveId, FileId: panFileId}})
+	fileDeleteResult, err = f.panClient.OpenapiPanClient().FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: driveId, FileId: panFileId}})
 	time.Sleep(1 * time.Second)
 	if err != nil || len(fileDeleteResult) == 0 {
 		f.syncItem.Status = SyncFileStatusFailed
@@ -748,7 +745,7 @@ func (f *FileActionTask) createPanFolder(ctx context.Context) error {
 	// 创建文件夹
 	logger.Verbosef("创建云盘文件夹: %s\n", panDirPath)
 	f.panFolderCreateMutex.Lock()
-	_, apierr1 := f.panClient.Mkdir(f.syncItem.DriveId, "root", panDirPath)
+	_, apierr1 := f.panClient.OpenapiPanClient().MkdirByFullPath(f.syncItem.DriveId, panDirPath)
 	f.panFolderCreateMutex.Unlock()
 	if apierr1 == nil {
 		logger.Verbosef("创建云盘文件夹成功: %s\n", panDirPath)
