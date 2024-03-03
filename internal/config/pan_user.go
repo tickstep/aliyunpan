@@ -163,7 +163,7 @@ doWebLoginAct:
 	// setup webapi client
 	var webUserInfo *aliyunpan.UserInfo
 	var err2 *apierror.ApiError
-	var webPanClient *aliyunpan_web.PanClient
+	var webPanClient *aliyunpan_web.WebPanClient
 	if webapiToken != nil && webapiToken.AccessToken != "" {
 		appConfig := aliyunpan_web.AppConfig{
 			AppId:     "25dzX3vbYqktVxyX",
@@ -172,7 +172,7 @@ doWebLoginAct:
 			Nonce:     0,
 			PublicKey: "",
 		}
-		webPanClient = aliyunpan_web.NewPanClient(aliyunpan_web.WebLoginToken{
+		webPanClient = aliyunpan_web.NewWebPanClient(aliyunpan_web.WebLoginToken{
 			AccessTokenType: "Bearer",
 			AccessToken:     webapiToken.AccessToken,
 			RefreshToken:    "",
