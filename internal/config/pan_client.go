@@ -29,8 +29,3 @@ func (p *PanClient) WebapiPanClient() *aliyunpan_web.WebPanClient {
 func (p *PanClient) OpenapiPanClient() *aliyunpan_open.OpenPanClient {
 	return p.openapiPanClient
 }
-
-func (p *PanClient) UpdateClient(openClient *aliyunpan_open.OpenPanClient, webClient *aliyunpan_web.WebPanClient) {
-	p.webapiPanClient = webClient
-	p.openapiPanClient = openClient
-}

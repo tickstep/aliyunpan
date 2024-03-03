@@ -102,7 +102,13 @@ func main() {
 			// Token刷新进程，不管是CLI命令行模式，还是直接命令模式，本刷新任务都会执行
 			time.Sleep(time.Duration(1) * time.Minute)
 			//time.Sleep(time.Duration(5) * time.Second)
-			checkLoginExpiredAndRelogin()
+			for _, u := range config.Config.UserList {
+				if u.UserId == config.Config.ActiveUID {
+					if u.PanClient() != nil {
+						checkLoginExpiredAndRelogin()
+					}
+				}
+			}
 		}
 	}()
 

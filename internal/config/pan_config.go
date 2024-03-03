@@ -441,7 +441,7 @@ func (c *PanConfig) ActiveUser() *PanUser {
 				return u
 			}
 		}
-		return &PanUser{}
+		return nil
 	}
 	return c.activeUser
 }
@@ -455,7 +455,7 @@ func (c *PanConfig) SetActiveUser(user *PanUser) *PanUser {
 			u.WebapiToken = user.WebapiToken
 			u.OpenapiToken = user.OpenapiToken
 			u.TicketId = user.TicketId
-			u.PanClient().UpdateClient(user.PanClient().OpenapiPanClient(), user.PanClient().WebapiPanClient())
+			u.UpdateClient(user.PanClient().OpenapiPanClient(), user.PanClient().WebapiPanClient())
 			needToInsert = false
 			break
 		}

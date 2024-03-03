@@ -280,6 +280,18 @@ func (pu *PanUser) PanClient() *PanClient {
 	return pu.panClient
 }
 
+func (pu *PanUser) UpdateClient(openClient *aliyunpan_open.OpenPanClient, webClient *aliyunpan_web.WebPanClient) {
+	if pu.panClient == nil {
+		pu.panClient = &PanClient{
+			webapiPanClient:  webClient,
+			openapiPanClient: openClient,
+		}
+	} else {
+		pu.panClient.webapiPanClient = webClient
+		pu.panClient.openapiPanClient = openClient
+	}
+}
+
 // PathJoin 合并工作目录和相对路径p, 若p为绝对路径则忽略
 func (pu *PanUser) PathJoin(driveId, p string) string {
 	if path.IsAbs(p) {

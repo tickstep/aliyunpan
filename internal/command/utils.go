@@ -304,7 +304,8 @@ func TryLogin() *config.PanUser {
 				config.Config.DeviceId, config.Config.DeviceName,
 				config.Config.ClientId, config.Config.ClientSecret)
 			if cloudUser == nil {
-				fmt.Println("尝试登录失败: ", err)
+				logger.Verboseln("尝试登录失败: ", err)
+				fmt.Println("尝试登录失败，请使用 login 命令进行重新登录")
 				return nil
 			}
 
