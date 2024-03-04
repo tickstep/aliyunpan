@@ -137,12 +137,13 @@ func (der *Downloader) SelectParallel(single bool, maxParallel int, totalSize in
 	} else if isRange {
 		parallel = len(instanceRangeList)
 	} else {
-		parallel = maxParallel
-		if int64(parallel) > totalSize/int64(MinParallelSize) {
+		parallel = maxParallel                                  // 默认为设置为maxParallel个并发线程数
+		if int64(parallel) > totalSize/int64(MinParallelSize) { // 如果文件太小不足切片成maxParallel数量的分片，则计算最接近的分片数量
 			parallel = int(totalSize/int64(MinParallelSize)) + 1
 		}
 	}
 
+	// 其他情况默认使用单线程下载
 	if parallel < 1 {
 		parallel = 1
 	}
@@ -308,7 +309,7 @@ func (der *Downloader) Execute() error {
 	var (
 		isInstance = bii != nil // 是否存在断点信息
 		status     *transfer.DownloadStatus
-		single     = false // 默认开启多线程下载
+		single     = false // 默认开启多线程下载，所以当前single值都为false代表不是单线程下载
 	)
 	if !isInstance {
 		bii = &transfer.DownloadInstanceInfo{}
@@ -330,7 +331,7 @@ func (der *Downloader) Execute() error {
 		defer rl.Stop()
 	}
 
-	// 计算文件下载的线程数
+	// 计算文件下载的并发线程数，计单个文件下载的并发数
 	parallel := der.SelectParallel(single, MaxParallelWorkerCount, status.TotalSize(), bii.Ranges) // 实际的下载并行量
 	blockSize, err := der.SelectBlockSizeAndInitRangeGen(single, status, parallel)                 // 实际的BlockSize
 	if err != nil {

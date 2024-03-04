@@ -27,6 +27,7 @@ var (
 	MinParallelSize int64 = 10 * 1024 * 1024 // 10MB
 
 	// MaxParallelWorkerCount 单个文件下载最大并发线程数量
+	// 阿里云盘规定：并发下载线程数不要超过10，否则会有风控检测处罚的风险
 	MaxParallelWorkerCount int = 3
 )
 
