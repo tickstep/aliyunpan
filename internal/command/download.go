@@ -295,7 +295,6 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("\n[*] 注意：由于阿里云盘接口的限制，当前不支持>100M单个文件的下载。")
 	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s\n\n", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
 
 	var (
