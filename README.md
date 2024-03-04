@@ -333,5 +333,6 @@ Web网页端
 
 # 鸣谢
 本项目大量借鉴了以下相关项目的功能&成果   
+> [tickstep/aliyunpan-api](https://github.com/tickstep/aliyunpan-api)   
 > [tickstep/cloudpan189-go](https://github.com/tickstep/cloudpan189-go)   
 > [kazutoiris/ali_ecc](https://github.com/kazutoiris/ali_ecc)   
