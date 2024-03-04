@@ -83,7 +83,7 @@ aliyunpan help login
 ## 登录阿里云盘帐号
 
 ### 登录
-当前支持在浏览器进行登录，请输入一下命令按照步骤进行即可。
+当前支持在浏览器进行登录，请输入以下命令按照步骤进行即可。
 ```
 aliyunpan login
 ```
@@ -97,10 +97,10 @@ https://openapi.alipan.com/oauth/authorize?client_id=cf9f70e8fc61430f8ec5ab5cadf
 阿里云盘登录成功:  tickstep
 aliyunpan:/ tickstep$ 
 ```
-目前登录全部采用网页登录，由于aliyunpan 融合了阿里官方Open 接口+网页Web端接口，所以你需要进行两次登录。输入 login 命令   
+目前登录全部采用网页登录，由于 aliyunpan 融合了阿里官方Open接口+网页Web端接口，所以你需要进行两次登录。输入 login 命令   
 ![](../assets/images/login-screenshot-1.png)
 
-复制到浏览器打开链接，会自动跳转到阿里 Open 接口授权登录页面，点击允许完成第一次登录   
+复制该链接到浏览器打开，会自动跳转到阿里官方授权登录页面，点击允许完成第一次登录   
 ![](../assets/images/login-screenshot-2.png)
 
 接着页面会自动跳转到网页接口登录页面，使用阿里APP扫码完成第二次登录   
@@ -145,7 +145,7 @@ aliyunpan logout
 程序会进一步确认退出帐号, 防止误操作.
 
 ## 切换网盘
-程序默认工作在文件网盘下，如需切换到相册网盘，可以使用本命令进行切换。
+程序默认工作在文件网盘下，如需切换到资源库网盘，可以使用本命令进行切换。
 ```
 aliyunpan drive <driveId>
 ```
@@ -372,7 +372,7 @@ aliyunpan share
 ```
 
 ### 设置分享文件/目录
-阿里目前之支持少数文件类型的分享，不支持的文件分享会提示分享失败
+阿里目前只支持少数文件类型的分享，不支持的文件分享会提示分享失败
 ```
 aliyunpan share set <文件/目录1> <文件/目录2> ...
 aliyunpan share s <文件/目录1> <文件/目录2> ...
@@ -797,8 +797,8 @@ function syncScanPanFilePrepareCallback(context, params) {
 7.下载的文件进行改名，但是网盘的文件保持不变   
 8.下载的文件路径进行更改，但是网盘的文件保持不变   
 9.下载文件完成后，通过HTTP通知其他服务   
-10.同步备份功能，支持过滤本地文件，或者过滤云盘文件。定制上传或者下载需要同步的文件
-11.Token刷新失败或者过期，发送外部通知（HTTP&邮件）
+10.同步备份功能，支持过滤本地文件，或者过滤云盘文件。定制上传或者下载需要同步的文件   
+11.Token刷新失败或者过期，发送外部通知（HTTP&邮件）   
 
 ### 如何使用
 JS插件的样本文件默认存放在程序所在的plugin/js文件夹下，分为下载(download_handler.js.sample)、上传(upload_handler.js.sample)、同步备份(sync_handler.js.sample)、用户Token(token_handler.js.sample)插件。
@@ -1159,10 +1159,6 @@ aliyunpan config set -max_download_parallel 15
 
 # 组合设置
 aliyunpan config set -max_download_parallel 15 -savedir D:/Downloads
-
-# 设置使用阿里云内部URL链接，专供阿里云ECS环境使用
-# 开启内部URL链接可以使用阿里云ECS私网带宽流量，而不用使用宝贵的公网带宽流量，如果你在阿里ECS环境中使用本工具，建议开启
-aliyunpan config set -transfer_url_type 2
 ```
 
 # 常见问题Q&A
