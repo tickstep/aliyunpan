@@ -23,6 +23,7 @@
     * [重命名文件/目录](#重命名文件目录)
     * [分享文件/目录](#分享文件目录)
         + [设置分享文件/目录](#设置分享文件目录)
+        + [创建快传链接](#创建快传链接)
         + [列出已分享文件/目录](#列出已分享文件目录)
         + [取消分享文件/目录](#取消分享文件目录)
     * [同步备份功能](#同步备份功能)
@@ -374,20 +375,23 @@ aliyunpan share
 ### 设置分享文件/目录
 阿里目前只支持少数文件类型的分享，不支持的文件分享会提示分享失败
 ```
-aliyunpan share set <文件/目录1> <文件/目录2> ...
-aliyunpan share s <文件/目录1> <文件/目录2> ...
+aliyunpan share set -mode 1 <文件/目录1> <文件/目录2> ...
+```
+
+### 创建快传链接
+阿里的快传支持大部分文件的共享，例如zip压缩包，按照如下方式可以创建快传链接
+```
+aliyunpan share set -mode 3 <文件/目录1> <文件/目录2> ...
 ```
 
 ### 列出已分享文件/目录
 ```
 aliyunpan share list
-aliyunpan share l
 ```
 
 ### 取消分享文件/目录
 ```
 aliyunpan share cancel <shareid_1> <shareid_2> ...
-aliyunpan share c <shareid_1> <shareid_2> ...
 ```
 目前只支持通过分享id (shareid) 来取消分享.
 
