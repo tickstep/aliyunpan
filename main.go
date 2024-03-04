@@ -497,7 +497,7 @@ func main() {
 		command.CmdTool(),
 
 		// 相簿
-		command.CmdAlbum(),
+		//command.CmdAlbum(), // 先移除，需要重构&适配
 
 		// 显示命令历史
 		{
