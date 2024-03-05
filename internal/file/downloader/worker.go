@@ -26,7 +26,9 @@ import (
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -295,8 +297,16 @@ func (wer *Worker) Execute() {
 
 	wer.status.statusCode = StatusCodePending
 
-	var resp *http.Response
+	// check url expired or not
+	if IsUrlExpired(wer.url) {
+		logger.Verbosef("download url expired, renew url and reset worker: %d\n", wer.ID())
+		wer.status.statusCode = StatusCodeDownloadUrlExpired
+		wer.err = errors.New("403")
+		return
+	}
 
+	// do download data
+	var resp *http.Response
 	apierr := wer.panClient.OpenapiPanClient().DownloadFileData(wer.url, aliyunpan.FileDownloadRange{
 		Offset: wer.wrange.Begin,
 		End:    wer.wrange.End - 1,
@@ -329,16 +339,23 @@ func (wer *Worker) Execute() {
 		break
 	case 416: //Requested Range Not Satisfiable
 		fallthrough
-	case 403: // Forbidden
-		fallthrough
+	case 403: // 链接过期也会返回403
+		if respBody, e := ioutil.ReadAll(resp.Body); e == nil {
+			respBodyStr := string(respBody)
+			if strings.Contains(respBodyStr, "Request has expired") { // 链接已过期
+				logger.Verboseln("download url return 403 error and expired url response")
+				wer.status.statusCode = StatusCodeDownloadUrlExpired
+				wer.err = errors.New(resp.Status)
+			}
+		}
+		return
 	case 406: // Not Acceptable
 		wer.status.statusCode = StatusCodeNetError
 		wer.err = errors.New(resp.Status)
 		return
 	case 404:
-		wer.status.statusCode = StatusCodeDownloadUrlExpired
-		wer.err = errors.New(resp.Status)
-		return
+		logger.Verboseln("request download url 404 error")
+		fallthrough
 	case 429, 509: // Too Many Requests
 		wer.status.SetStatusCode(StatusCodeTooManyConnections)
 		wer.err = errors.New(resp.Status)

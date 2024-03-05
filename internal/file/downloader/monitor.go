@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +16,8 @@ package downloader
 import (
 	"context"
 	"errors"
-	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
+	"github.com/tickstep/library-go/logger"
 	"sort"
 	"time"
 )
@@ -36,7 +36,7 @@ type (
 		completed       chan struct{}
 		err             error
 		resetController *ResetController
-		isReloadWorker  bool //是否重载worker, 单线程模式不重载
+		isReloadWorker  bool //是否重载worker
 
 		// 临时变量
 		lastAvaliableIndex int
@@ -46,7 +46,7 @@ type (
 	RangeWorkerFunc func(key int, worker *Worker) bool
 )
 
-//NewMonitor 初始化Monitor
+// NewMonitor 初始化Monitor
 func NewMonitor() *Monitor {
 	monitor := &Monitor{}
 	return monitor
@@ -60,16 +60,16 @@ func (mt *Monitor) lazyInit() {
 		mt.status = transfer.NewDownloadStatus()
 	}
 	if mt.resetController == nil {
-		mt.resetController = NewResetController(80)
+		mt.resetController = NewResetController(1000)
 	}
 }
 
-//InitMonitorCapacity 初始化workers, 用于Append
+// InitMonitorCapacity 初始化workers, 用于Append
 func (mt *Monitor) InitMonitorCapacity(capacity int) {
 	mt.workers = make(WorkerList, 0, capacity)
 }
 
-//Append 增加Worker
+// Append 增加Worker
 func (mt *Monitor) Append(worker *Worker) {
 	if worker == nil {
 		return
@@ -77,37 +77,37 @@ func (mt *Monitor) Append(worker *Worker) {
 	mt.workers = append(mt.workers, worker)
 }
 
-//SetWorkers 设置workers, 此操作会覆盖原有的workers
+// SetWorkers 设置workers, 此操作会覆盖原有的workers
 func (mt *Monitor) SetWorkers(workers WorkerList) {
 	mt.workers = workers
 }
 
-//SetStatus 设置DownloadStatus
+// SetStatus 设置DownloadStatus
 func (mt *Monitor) SetStatus(status *transfer.DownloadStatus) {
 	mt.status = status
 }
 
-//SetInstanceState 设置状态
+// SetInstanceState 设置状态
 func (mt *Monitor) SetInstanceState(instanceState *InstanceState) {
 	mt.instanceState = instanceState
 }
 
-//Status 返回DownloadStatus
+// Status 返回DownloadStatus
 func (mt *Monitor) Status() *transfer.DownloadStatus {
 	return mt.status
 }
 
-//Err 返回遇到的错误
+// Err 返回遇到的错误
 func (mt *Monitor) Err() error {
 	return mt.err
 }
 
-//CompletedChan 获取completed chan
+// CompletedChan 获取completed chan
 func (mt *Monitor) CompletedChan() <-chan struct{} {
 	return mt.completed
 }
 
-//GetAvailableWorker 获取空闲的worker
+// GetAvailableWorker 获取空闲的worker
 func (mt *Monitor) GetAvailableWorker() *Worker {
 	workerCount := len(mt.workers)
 	for i := mt.lastAvaliableIndex; i < mt.lastAvaliableIndex+workerCount; i++ {
@@ -121,7 +121,7 @@ func (mt *Monitor) GetAvailableWorker() *Worker {
 	return nil
 }
 
-//GetAllWorkersRange 获取所有worker的范围
+// GetAllWorkersRange 获取所有worker的范围
 func (mt *Monitor) GetAllWorkersRange() transfer.RangeList {
 	allWorkerRanges := make(transfer.RangeList, 0, len(mt.workers))
 	for _, worker := range mt.workers {
@@ -130,7 +130,7 @@ func (mt *Monitor) GetAllWorkersRange() transfer.RangeList {
 	return allWorkerRanges
 }
 
-//NumLeftWorkers 剩余的worker数量
+// NumLeftWorkers 剩余的worker数量
 func (mt *Monitor) NumLeftWorkers() (num int) {
 	for _, worker := range mt.workers {
 		if !worker.Completed() {
@@ -140,12 +140,12 @@ func (mt *Monitor) NumLeftWorkers() (num int) {
 	return
 }
 
-//SetReloadWorker 是否重载worker
+// SetReloadWorker 是否重载worker
 func (mt *Monitor) SetReloadWorker(b bool) {
 	mt.isReloadWorker = b
 }
 
-//IsLeftWorkersAllFailed 剩下的线程是否全部失败
+// IsLeftWorkersAllFailed 剩下的线程是否全部失败
 func (mt *Monitor) IsLeftWorkersAllFailed() bool {
 	failedNum := 0
 	for _, worker := range mt.workers {
@@ -161,7 +161,7 @@ func (mt *Monitor) IsLeftWorkersAllFailed() bool {
 	return failedNum != 0
 }
 
-//registerAllCompleted 全部完成则发送消息
+// registerAllCompleted 全部完成则发送消息
 func (mt *Monitor) registerAllCompleted() {
 	mt.completed = make(chan struct{}, 0)
 	var (
@@ -197,7 +197,7 @@ func (mt *Monitor) registerAllCompleted() {
 	}()
 }
 
-//ResetFailedAndNetErrorWorkers 重设部分网络错误的worker
+// ResetFailedAndNetErrorWorkers 重设部分网络错误的worker
 func (mt *Monitor) ResetFailedAndNetErrorWorkers() {
 	for k := range mt.workers {
 		if !mt.resetController.CanReset() {
@@ -221,7 +221,7 @@ func (mt *Monitor) ResetFailedAndNetErrorWorkers() {
 	}
 }
 
-//RangeWorker 遍历worker
+// RangeWorker 遍历worker
 func (mt *Monitor) RangeWorker(f RangeWorkerFunc) {
 	for k := range mt.workers {
 		if !f(k, mt.workers[k]) {
@@ -230,14 +230,14 @@ func (mt *Monitor) RangeWorker(f RangeWorkerFunc) {
 	}
 }
 
-//Pause 暂停所有的下载
+// Pause 暂停所有的下载
 func (mt *Monitor) Pause() {
 	for k := range mt.workers {
 		mt.workers[k].Pause()
 	}
 }
 
-//Resume 恢复所有的下载
+// Resume 恢复所有的下载
 func (mt *Monitor) Resume() {
 	for k := range mt.workers {
 		mt.workers[k].Resume()
@@ -346,7 +346,7 @@ func (mt *Monitor) ResetWorker(worker *Worker) {
 		// 忽略, 返回
 		return
 	case StatusCodeDownloadUrlExpired: // 下载链接已经过期
-	    worker.RefreshDownloadUrl()
+		worker.RefreshDownloadUrl()
 		break
 	}
 
@@ -357,7 +357,7 @@ func (mt *Monitor) ResetWorker(worker *Worker) {
 	worker.Reset()
 }
 
-//Execute 执行任务
+// Execute 执行任务
 func (mt *Monitor) Execute(cancelCtx context.Context) {
 	if len(mt.workers) == 0 {
 		mt.err = ErrNoWokers

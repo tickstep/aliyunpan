@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -98,4 +98,19 @@ func fixCacheSize(size *int) {
 	if *size < 1024 {
 		*size = 1024
 	}
+}
+
+// IsUrlExpired 下载链接是否已过期。过期返回True
+func IsUrlExpired(urlStr string) bool {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return true
+	}
+	expiredTimeSecStr := u.Query().Get("x-oss-expires")
+	expiredTimeSec, _ := strconv.ParseInt(expiredTimeSecStr, 10, 64)
+	if (expiredTimeSec - time.Now().Unix()) <= 5 { // 小于5秒钟
+		// expired
+		return true
+	}
+	return false
 }

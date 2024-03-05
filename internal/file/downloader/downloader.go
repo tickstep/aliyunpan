@@ -425,8 +425,8 @@ func (der *Downloader) Execute() error {
 
 	der.monitor.SetStatus(status)
 
-	// 服务器不支持断点续传, 或者单线程下载, 都不重载worker
-	der.monitor.SetReloadWorker(parallel > 1)
+	// 阿里云盘支持断点续传，开启重载worker
+	der.monitor.SetReloadWorker(true)
 
 	moniterCtx, moniterCancelFunc := context.WithCancel(context.Background())
 	der.monitorCancelFunc = moniterCancelFunc
