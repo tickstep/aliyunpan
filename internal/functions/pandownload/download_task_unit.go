@@ -14,7 +14,6 @@
 package pandownload
 
 import (
-	"errors"
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
@@ -30,10 +29,8 @@ import (
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
-	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"io"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -69,8 +66,7 @@ type (
 		OriginSaveRootPath string // 文件保存在本地的根目录路径
 		DriveId            string
 
-		fileInfo           *aliyunpan.FileEntity // 文件或目录详情
-		downloadFileSource FileSourceType        // 下载项类型，File-普通文件（备份盘/资源库），Album-相册文件
+		fileInfo *aliyunpan.FileEntity // 文件或目录详情
 
 		// 下载文件记录器
 		FileRecorder *log.FileRecorder
@@ -100,11 +96,6 @@ const (
 	// AlbumFileSource 相册文件
 	AlbumFileSource FileSourceType = "album"
 )
-
-func (dtu *DownloadTaskUnit) SetFileInfo(fileType FileSourceType, info *aliyunpan.FileEntity) {
-	dtu.downloadFileSource = fileType
-	dtu.fileInfo = info
-}
 
 func (dtu *DownloadTaskUnit) SetTaskInfo(info *taskframework.TaskInfo) {
 	dtu.taskInfo = info
@@ -292,20 +283,6 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	return nil
 }
 
-// panHTTPClient 获取包含特定User-Agent的HTTPClient
-func (dtu *DownloadTaskUnit) panHTTPClient() (client *requester.HTTPClient) {
-	client = requester.NewHTTPClient()
-	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-		if len(via) >= 10 {
-			return errors.New("stopped after 10 redirects")
-		}
-		return nil
-	}
-	client.SetTimeout(20 * time.Minute)
-	client.SetKeepAlive(true)
-	return client
-}
-
 // handleError 下载错误处理器
 func (dtu *DownloadTaskUnit) handleError(result *taskframework.TaskUnitRunResult) {
 	switch value := result.Err.(type) {
@@ -457,26 +434,19 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	result = &taskframework.TaskUnitRunResult{}
 	// 获取文件信息
 	var apierr *apierror.ApiError
-	if dtu.downloadFileSource != AlbumFileSource { // 相簿文件信息是传递进来的，无法在这里获取
-		if dtu.fileInfo == nil || dtu.taskInfo.Retry() > 0 {
-			// 没有获取文件信息
-			// 如果是动态添加的下载任务, 是会写入文件信息的
-			// 如果该任务重试过, 则应该再获取一次文件信息
-			dtu.fileInfo, apierr = dtu.PanClient.OpenapiPanClient().FileInfoByPath(dtu.DriveId, dtu.FilePanPath)
-			if apierr != nil {
-				// 如果不是未登录或文件不存在, 则不重试
-				result.ResultMessage = "获取下载路径信息错误"
-				result.Err = apierr
-				dtu.handleError(result)
-				return
-			}
-			time.Sleep(1 * time.Second)
+	if dtu.fileInfo == nil || dtu.taskInfo.Retry() > 0 {
+		// 没有获取文件信息
+		// 如果是动态添加的下载任务, 是会写入文件信息的
+		// 如果该任务重试过, 则应该再获取一次文件信息
+		dtu.fileInfo, apierr = dtu.PanClient.OpenapiPanClient().FileInfoByPath(dtu.DriveId, dtu.FilePanPath)
+		if apierr != nil {
+			// 如果不是未登录或文件不存在, 则不重试
+			result.ResultMessage = "获取下载路径信息错误"
+			result.Err = apierr
+			dtu.handleError(result)
+			return
 		}
-	} else {
-		if dtu.taskInfo.Retry() > 0 {
-			// 延时避免风控
-			time.Sleep(2 * time.Second)
-		}
+		time.Sleep(1 * time.Second)
 	}
 
 	// 输出文件信息
@@ -644,13 +614,10 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		return result
 	}
 
-	// 文件下载成功，更改文件修改时间
-	if dtu.downloadFileSource == AlbumFileSource {
-		// 只有相册文件才需要更改时间
-		if err := os.Chtimes(dtu.SavePath, utils.ParseTimeStr(dtu.fileInfo.CreatedAt), utils.ParseTimeStr(dtu.fileInfo.CreatedAt)); err != nil {
-			logger.Verbosef(err.Error())
-		}
-	}
+	//// 文件下载成功，更改文件修改时间和云盘的同步
+	//if err := os.Chtimes(dtu.SavePath, utils.ParseTimeStr(dtu.fileInfo.CreatedAt), utils.ParseTimeStr(dtu.fileInfo.CreatedAt)); err != nil {
+	//	logger.Verbosef(err.Error())
+	//}
 
 	// 统计下载
 	dtu.DownloadStatistic.AddTotalSize(dtu.fileInfo.FileSize)

@@ -746,8 +746,10 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 				GlobalSpeedsStat:     globalSpeedsStat,
 				FileRecorder:         nil,
 			}
+
+			// TODO: 相册下载需要重构
 			// 设置相簿文件信息
-			unit.SetFileInfo(pandownload.AlbumFileSource, f)
+			//unit.SetFileInfo(pandownload.AlbumFileSource, f)
 
 			// 设置储存的路径
 			if options.SaveTo != "" {
