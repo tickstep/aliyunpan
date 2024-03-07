@@ -85,49 +85,44 @@ func RunMove(driveId string, paths ...string) {
 	cacheCleanPaths = append(cacheCleanPaths, targetFile.Path)
 
 	failedMoveFiles := []*aliyunpan.FileEntity{}
-	moveFileParamList := []*aliyunpan.FileMoveParam{}
-	fileId2FileEntity := map[string]*aliyunpan.FileEntity{}
+	successMoveFiles := []*aliyunpan.FileEntity{}
 	for _, mfi := range opFileList {
-		fileId2FileEntity[mfi.FileId] = mfi
-		moveFileParamList = append(moveFileParamList,
-			&aliyunpan.FileMoveParam{
-				DriveId:        driveId,
-				FileId:         mfi.FileId,
-				ToDriveId:      driveId,
-				ToParentFileId: targetFile.FileId,
-			})
-		cacheCleanPaths = append(cacheCleanPaths, path.Dir(mfi.Path))
-	}
-	fmr, er := activeUser.PanClient().OpenapiPanClient().FileMove(moveFileParamList)
-
-	for _, rs := range fmr {
-		if !rs.Success {
-			failedMoveFiles = append(failedMoveFiles, fileId2FileEntity[rs.FileId])
+		fmr, er := activeUser.PanClient().OpenapiPanClient().FileMove(&aliyunpan.FileMoveParam{
+			DriveId:        driveId,
+			FileId:         mfi.FileId,
+			ToDriveId:      driveId,
+			ToParentFileId: targetFile.FileId,
+		})
+		if er != nil || !fmr.Success {
+			failedMoveFiles = append(failedMoveFiles, mfi)
+		} else {
+			successMoveFiles = append(successMoveFiles, mfi)
 		}
+		cacheCleanPaths = append(cacheCleanPaths, path.Dir(mfi.Path))
 	}
 
 	if len(failedMoveFiles) > 0 {
 		fmt.Println("以下文件移动失败：")
 		for _, f := range failedMoveFiles {
-			fmt.Println(f.FileName)
+			fmt.Println(f.Path)
 		}
 		fmt.Println("")
 	}
-	if er == nil {
+	if len(successMoveFiles) > 0 {
 		pnt := func() {
 			tb := cmdtable.NewTable(os.Stdout)
 			tb.SetHeader([]string{"#", "文件/目录"})
-			for k, rs := range fmr {
-				tb.Append([]string{strconv.Itoa(k + 1), fileId2FileEntity[rs.FileId].Path})
+			for k, rs := range successMoveFiles {
+				tb.Append([]string{strconv.Itoa(k + 1), rs.Path})
 			}
 			tb.Render()
 		}
 		fmt.Println("操作成功, 以下文件已移动到目标目录: ", targetFile.Path)
 		pnt()
-		activeUser.DeleteCache(cacheCleanPaths)
 	} else {
 		fmt.Println("无法移动文件，请稍后重试")
 	}
+	activeUser.DeleteCache(cacheCleanPaths)
 }
 
 func getFileInfo(driveId string, paths ...string) (opFileList []*aliyunpan.FileEntity, targetFile *aliyunpan.FileEntity, failedPaths []string, error error) {
