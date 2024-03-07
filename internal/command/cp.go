@@ -85,9 +85,7 @@ func RunCopy(driveId string, paths ...string) {
 
 	failedCopyFiles := []*aliyunpan.FileEntity{}
 	successCopyFiles := []*aliyunpan.FileEntity{}
-	fileId2FileEntity := map[string]*aliyunpan.FileEntity{}
 	for _, mfi := range opFileList {
-		fileId2FileEntity[mfi.FileId] = mfi
 		_, er := activeUser.PanClient().OpenapiPanClient().FileCopy(&aliyunpan.FileCopyParam{
 			DriveId:        driveId,
 			FileId:         mfi.FileId,
@@ -103,7 +101,7 @@ func RunCopy(driveId string, paths ...string) {
 	if len(failedCopyFiles) > 0 {
 		fmt.Println("以下文件复制失败：")
 		for _, f := range failedCopyFiles {
-			fmt.Println(f.FileName)
+			fmt.Println(f.Path)
 		}
 		fmt.Println("")
 	}
@@ -112,7 +110,7 @@ func RunCopy(driveId string, paths ...string) {
 			tb := cmdtable.NewTable(os.Stdout)
 			tb.SetHeader([]string{"#", "文件/目录"})
 			for k, rs := range successCopyFiles {
-				tb.Append([]string{strconv.Itoa(k + 1), fileId2FileEntity[rs.FileId].Path})
+				tb.Append([]string{strconv.Itoa(k + 1), rs.Path})
 			}
 			tb.Render()
 		}
