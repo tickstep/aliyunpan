@@ -470,10 +470,10 @@ StepUploadPrepareUpload:
 				return
 			}
 			// existed, delete it
-			var fileDeleteResult []*aliyunpan.FileBatchActionResult
+			var fileDeleteResult *aliyunpan.FileBatchActionResult
 			var err *apierror.ApiError
-			fileDeleteResult, err = utu.PanClient.OpenapiPanClient().FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: efi.DriveId, FileId: efi.FileId}})
-			if err != nil || len(fileDeleteResult) == 0 {
+			fileDeleteResult, err = utu.PanClient.OpenapiPanClient().FileDelete(&aliyunpan.FileBatchActionParam{DriveId: efi.DriveId, FileId: efi.FileId})
+			if err != nil || !fileDeleteResult.Success {
 				result.Err = err
 				result.ResultMessage = "无法删除文件，请稍后重试"
 				return

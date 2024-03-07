@@ -462,11 +462,9 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 				return nil
 			} else {
 				// 删除云盘文件
-				dp := []*aliyunpan.FileBatchActionParam{
-					{
-						DriveId: f.syncItem.DriveId,
-						FileId:  panFileId,
-					},
+				dp := &aliyunpan.FileBatchActionParam{
+					DriveId: f.syncItem.DriveId,
+					FileId:  panFileId,
 				}
 				if _, e := f.panClient.OpenapiPanClient().FileDelete(dp); e != nil {
 					logger.Verbosef(" 删除云盘旧文件失败: %s\n", targetPanFilePath)
@@ -703,11 +701,11 @@ func (f *FileActionTask) deletePanFile(ctx context.Context) error {
 	}
 
 	// 删除
-	var fileDeleteResult []*aliyunpan.FileBatchActionResult
+	var fileDeleteResult *aliyunpan.FileBatchActionResult
 	var err *apierror.ApiError = nil
-	fileDeleteResult, err = f.panClient.OpenapiPanClient().FileDelete([]*aliyunpan.FileBatchActionParam{{DriveId: driveId, FileId: panFileId}})
+	fileDeleteResult, err = f.panClient.OpenapiPanClient().FileDelete(&aliyunpan.FileBatchActionParam{DriveId: driveId, FileId: panFileId})
 	time.Sleep(1 * time.Second)
-	if err != nil || len(fileDeleteResult) == 0 {
+	if err != nil || !fileDeleteResult.Success {
 		f.syncItem.Status = SyncFileStatusFailed
 	} else {
 		f.syncItem.Status = SyncFileStatusSuccess

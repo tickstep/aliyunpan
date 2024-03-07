@@ -78,8 +78,7 @@ func RunRemove(driveId string, paths ...string) {
 
 	cacheCleanDirs := []string{}
 	failedRmPaths := make([]string, 0, len(paths))
-	delFileInfos := []*aliyunpan.FileBatchActionParam{}
-	fileId2FileEntity := map[string]*aliyunpan.FileEntity{}
+	successDelFileEntity := []*aliyunpan.FileEntity{}
 
 	for _, p := range paths {
 		absolutePath := path.Clean(activeUser.PathJoin(driveId, p))
@@ -95,28 +94,27 @@ func RunRemove(driveId string, paths ...string) {
 		}
 		for _, f := range fileList {
 			// 删除匹配的文件
-			delFileInfos = append(delFileInfos, &aliyunpan.FileBatchActionParam{
+			fdr, err := activeUser.PanClient().OpenapiPanClient().FileDelete(&aliyunpan.FileBatchActionParam{
 				DriveId: driveId,
 				FileId:  f.FileId,
 			})
-			fileId2FileEntity[f.FileId] = f
+			if err != nil || !fdr.Success {
+				failedRmPaths = append(failedRmPaths, absolutePath)
+			} else {
+				successDelFileEntity = append(successDelFileEntity, f)
+			}
 			cacheCleanDirs = append(cacheCleanDirs, path.Dir(f.Path))
 		}
 	}
 
-	// delete
-	successDelFileEntity := []*aliyunpan.FileEntity{}
-	fdr, err := activeUser.PanClient().OpenapiPanClient().FileDelete(delFileInfos)
-	if fdr != nil {
-		for _, item := range fdr {
-			if !item.Success {
-				failedRmPaths = append(failedRmPaths, fileId2FileEntity[item.FileId].Path)
-			} else {
-				successDelFileEntity = append(successDelFileEntity, fileId2FileEntity[item.FileId])
-			}
+	// output
+	if len(failedRmPaths) > 0 {
+		fmt.Println("以下文件删除失败：")
+		for _, fp := range failedRmPaths {
+			fmt.Println(fp)
 		}
+		fmt.Println("")
 	}
-
 	pnt := func() {
 		tb := cmdtable.NewTable(os.Stdout)
 		tb.SetHeader([]string{"#", "文件/目录"})
@@ -129,10 +127,5 @@ func RunRemove(driveId string, paths ...string) {
 		fmt.Println("操作成功, 以下文件/目录已删除, 可在云盘文件回收站找回: ")
 		pnt()
 		activeUser.DeleteCache(cacheCleanDirs)
-	}
-
-	if len(successDelFileEntity) == 0 && err != nil {
-		fmt.Println("无法删除文件，请稍后重试")
-		return
 	}
 }
