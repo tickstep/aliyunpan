@@ -222,7 +222,7 @@ func RefreshOpenTokenInNeed(activeUser *config.PanUser) bool {
 
 	// refresh expired openapi token
 	if activeUser.PanClient().OpenapiPanClient() != nil {
-		if len(activeUser.OpenapiToken.AccessToken) > 0 {
+		if activeUser.OpenapiToken != nil && len(activeUser.OpenapiToken.AccessToken) > 0 {
 			cz := time.FixedZone("CST", 8*3600) // 东8区
 			expiredTime := time.Unix(activeUser.OpenapiToken.Expired, 0).In(cz)
 			now := time.Now()
