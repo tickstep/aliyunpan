@@ -149,7 +149,7 @@ func RefreshWebTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 
 	// refresh expired web token
 	if activeUser.PanClient().WebapiPanClient() != nil {
-		if len(activeUser.WebapiToken.AccessToken) > 0 {
+		if activeUser.WebapiToken != nil && len(activeUser.WebapiToken.AccessToken) > 0 {
 			cz := time.FixedZone("CST", 8*3600) // 东8区
 			expiredTime := time.Unix(activeUser.WebapiToken.Expired, 0).In(cz)
 			now := time.Now()
