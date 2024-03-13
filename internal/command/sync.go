@@ -165,13 +165,6 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 						syncOpt = syncdrive.SyncPriorityTimestampFirst
 					}
 
-					// 任务类型
-					step := syncdrive.StepSyncFile
-					stepVar := c.String("step")
-					if stepVar == "scan" {
-						step = syncdrive.StepScanFile
-					}
-
 					var task *syncdrive.SyncTask
 					localDir := c.String("ldir")
 					panDir := c.String("pdir")
@@ -227,7 +220,7 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 					//	return nil
 					//}
 
-					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"), step)
+					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"))
 
 					// 释放文件锁
 					//if locker != nil {
@@ -284,11 +277,6 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 						Usage: "local delay time，本地文件修改检测延迟间隔，单位秒。如果本地文件会被频繁修改，例如录制视频文件，配置好该时间可以避免上传未录制好的文件",
 						Value: 3,
 					},
-					cli.StringFlag{
-						Name:  "step",
-						Usage: "task step 任务步骤, 支持两种: scan(只扫描并建立同步数据库),sync(正常启动同步任务)",
-						Value: "sync",
-					},
 				},
 			},
 		},
@@ -296,11 +284,12 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 }
 
 func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64,
-	flag syncdrive.SyncPriorityOption, localDelayTime int, taskStep syncdrive.TaskStep) {
+	flag syncdrive.SyncPriorityOption, localDelayTime int) {
 	maxDownloadRate := config.Config.MaxDownloadRate
 	maxUploadRate := config.Config.MaxUploadRate
 	activeUser := GetActiveUser()
 	panClient := activeUser.PanClient()
+	panClient.OpenapiPanClient().ClearCache()
 	panClient.OpenapiPanClient().DisableCache()
 
 	//// pan token expired checker
@@ -357,44 +346,38 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	fmt.Printf("备份配置文件：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",
 		syncConfigFile, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
 		converter.ConvertFileSize(uploadBlockSize, 2))
-	if _, e := syncMgr.Start(tasks, taskStep); e != nil {
+	if _, e := syncMgr.Start(tasks); e != nil {
 		fmt.Println("启动任务失败：", e)
 		return
 	}
 
-	if taskStep != syncdrive.StepScanFile {
-		_, ok := os.LookupEnv("ALIYUNPAN_DOCKER")
-		if ok {
-			// in docker container
-			// 使用休眠以节省CPU资源
-			fmt.Println("本命令不会退出，程序正在以Docker的方式运行。如需退出请借助Docker提供的方式。")
+	_, ok := os.LookupEnv("ALIYUNPAN_DOCKER")
+	if ok {
+		// in docker container
+		// 使用休眠以节省CPU资源
+		fmt.Println("本命令不会退出，程序正在以Docker的方式运行。如需退出请借助Docker提供的方式。")
+		for {
+			time.Sleep(60 * time.Second)
+		}
+	} else {
+		if global.IsAppInCliMode {
+			// in cmd mode
+			c := ""
+			fmt.Println("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止。")
+			for strings.ToLower(c) != "y" {
+				fmt.Scan(&c)
+			}
+		} else {
+			fmt.Println("本命令不会退出，程序正在以非交互的方式运行。如需退出请借助运行环境提供的方式。")
+			logger.Verboseln("App not in CLI mode, not need to listen to input stream")
 			for {
 				time.Sleep(60 * time.Second)
 			}
-		} else {
-			if global.IsAppInCliMode {
-				// in cmd mode
-				c := ""
-				fmt.Println("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止。")
-				for strings.ToLower(c) != "y" {
-					fmt.Scan(&c)
-				}
-			} else {
-				fmt.Println("本命令不会退出，程序正在以非交互的方式运行。如需退出请借助运行环境提供的方式。")
-				logger.Verboseln("App not in CLI mode, not need to listen to input stream")
-				for {
-					time.Sleep(60 * time.Second)
-				}
-			}
 		}
-
-		fmt.Println("正在停止同步备份任务，请稍等...")
 	}
+
+	fmt.Println("正在停止同步备份任务，请稍等...")
 
 	// stop task
-	syncMgr.Stop(taskStep)
-
-	if taskStep == syncdrive.StepScanFile {
-		fmt.Println("\n已完成文件扫描和同步数据库的构建，可以启动任务同步了")
-	}
+	syncMgr.Stop()
 }

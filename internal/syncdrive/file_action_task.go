@@ -94,8 +94,14 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 				}
 			}
 
-			// recorder
 			if actFile != nil {
+				// save file sha1 to local DB
+				if file, e := f.localFileDb.Get(f.syncItem.getLocalFileFullPath()); e == nil {
+					file.Sha1Hash = actFile.ContentHash
+					f.localFileDb.Update(file)
+				}
+
+				// recorder file
 				f.appendRecord(&log.FileRecordItem{
 					Status:   "成功-上传",
 					TimeStr:  utils.NowTimeStr(),
@@ -437,21 +443,13 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		// 检查同名文件是否存在
 		panFileId := ""
 		panFileSha1Str := ""
-		if panFileInDb, e := f.panFileDb.Get(targetPanFilePath); e == nil {
-			if panFileInDb != nil {
-				panFileId = panFileInDb.FileId
-				panFileSha1Str = panFileInDb.Sha1Hash
-			}
-		} else {
-			efi, apierr := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, targetPanFilePath)
-			if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
-				logger.Verbosef("上传文件错误: %s\n", apierr.String())
-				return apierr
-			}
-			if efi != nil && efi.FileId != "" {
-				panFileId = efi.FileId
-			}
-			time.Sleep(5 * time.Second)
+		efi, apierr := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, targetPanFilePath)
+		if apierr != nil && apierr.Code != apierror.ApiCodeFileNotFoundCode {
+			logger.Verbosef("上传文件错误: %s\n", apierr.String())
+			return apierr
+		}
+		if efi != nil && efi.FileId != "" {
+			panFileId = efi.FileId
 		}
 		if panFileId != "" {
 			if strings.ToUpper(panFileSha1Str) == strings.ToUpper(sha1Str) {
@@ -476,27 +474,25 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		// 创建文件夹
 		panDirPath := filepath.Dir(targetPanFilePath)
 		panDirFileId := ""
-		if panDirItem, er := f.panFileDb.Get(panDirPath); er == nil {
-			if panDirItem != nil && panDirItem.IsFolder() {
-				panDirFileId = panDirItem.FileId
+
+		if dirFile, er2 := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, panDirPath); er2 != nil {
+			if er2.Code == apierror.ApiCodeFileNotFoundCode {
+				logger.Verbosef("创建云盘文件夹: %s\n", panDirPath)
+				f.panFolderCreateMutex.Lock()
+				rs, apierr1 := f.panClient.OpenapiPanClient().MkdirByFullPath(f.syncItem.DriveId, panDirPath)
+				f.panFolderCreateMutex.Unlock()
+				if apierr1 != nil || rs.FileId == "" {
+					return apierr1
+				}
+				panDirFileId = rs.FileId
+				logger.Verbosef("创建云盘文件夹成功: %s\n", panDirPath)
+			} else {
+				logger.Verbosef("上传文件错误: %s\n", apierr.String())
+				return apierr
 			}
 		} else {
-			logger.Verbosef("创建云盘文件夹: %s\n", panDirPath)
-			f.panFolderCreateMutex.Lock()
-			rs, apierr1 := f.panClient.OpenapiPanClient().MkdirByFullPath(f.syncItem.DriveId, panDirPath)
-			f.panFolderCreateMutex.Unlock()
-			if apierr1 != nil || rs.FileId == "" {
-				return apierr1
-			}
-			panDirFileId = rs.FileId
-			logger.Verbosef("创建云盘文件夹成功: %s\n", panDirPath)
-
-			// save into DB
-			if panDirFile, e := f.panClient.OpenapiPanClient().FileInfoById(f.syncItem.DriveId, panDirFileId); e == nil {
-				panDirFile.Path = panDirPath
-				fItem := NewPanFileItem(panDirFile)
-				fItem.ScanTimeAt = utils.NowTimeStr()
-				f.panFileDb.Add(fItem)
+			if dirFile != nil && dirFile.FileId != "" {
+				panDirFileId = dirFile.FileId
 			}
 		}
 
@@ -529,7 +525,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			ProofVersion:    "v1",
 		}
 		if uploadOpEntity, err := f.panClient.OpenapiPanClient().CreateUploadFile(appCreateUploadFileParam); err != nil {
-			logger.Verbosef("创建云盘上传任务失败: %s\n", panDirPath)
+			logger.Verbosef("创建云盘上传任务失败: %s\n", targetPanFilePath)
 			return err
 		} else {
 			f.syncItem.UploadEntity = uploadOpEntity

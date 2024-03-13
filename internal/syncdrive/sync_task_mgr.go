@@ -116,7 +116,7 @@ func (m *SyncTaskManager) ConfigFilePath() string {
 }
 
 // Start 启动同步进程
-func (m *SyncTaskManager) Start(tasks []*SyncTask, step TaskStep) (bool, error) {
+func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
 	if tasks != nil && len(tasks) > 0 {
 		m.syncDriveConfig = &SyncDriveConfig{
 			ConfigVer:    "1.0",
@@ -173,7 +173,7 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask, step TaskStep) (bool, error) 
 		}
 		task.LocalFolderPath = path.Clean(task.LocalFolderPath)
 		task.PanFolderPath = path.Clean(task.PanFolderPath)
-		if e := task.Start(step); e != nil {
+		if e := task.Start(); e != nil {
 			logger.Verboseln(e)
 			fmt.Printf("启动同步任务[%s]出错: %s\n", task.Id, e.Error())
 			continue
@@ -190,16 +190,11 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask, step TaskStep) (bool, error) 
 }
 
 // Stop 停止同步进程
-func (m *SyncTaskManager) Stop(step TaskStep) (bool, error) {
+func (m *SyncTaskManager) Stop() (bool, error) {
 	// stop task one by one
 	for _, task := range m.syncDriveConfig.SyncTaskList {
 		var e error
-		if step == StepScanFile {
-			e = task.WaitToStop() // 阻塞直到停止
-		} else {
-			e = task.Stop()
-		}
-
+		e = task.Stop()
 		if e != nil {
 			logger.Verboseln(e)
 			fmt.Println("stop sync task error: ", task.NameLabel())

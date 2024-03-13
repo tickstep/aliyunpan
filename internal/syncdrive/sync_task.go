@@ -20,8 +20,9 @@ import (
 )
 
 type (
-	TaskStep string
-	SyncMode string
+	TaskStep  string
+	SyncMode  string
+	CycleMode string
 
 	// SyncTask 同步任务
 	SyncTask struct {
@@ -39,6 +40,8 @@ type (
 		PanFolderPath string `json:"panFolderPath"`
 		// Mode 同步模式
 		Mode SyncMode `json:"mode"`
+		// CycleMode 循环模式，OneTime-运行一次，InfiniteLoop-无限循环模式
+		CycleModeType CycleMode `json:"cycleModeType"`
 		// Priority 优先级选项
 		Priority SyncPriorityOption `json:"priority"`
 		// LastSyncTime 上一次同步时间
@@ -59,6 +62,8 @@ type (
 		syncOption SyncOption
 
 		fileActionTaskManager *FileActionTaskManager
+		resourceMutex         *sync.Mutex
+		scanLoopIsDone        bool // 本次扫描对比文件进程是否已经完成
 
 		plugin      plugins.Plugin
 		pluginMutex *sync.Mutex
@@ -72,6 +77,11 @@ const (
 	DownloadOnly SyncMode = "download"
 	// SyncTwoWay 双向同步，本地和云盘文件完全保持一致
 	SyncTwoWay SyncMode = "sync"
+
+	// CycleOneTime 只运行一次
+	CycleOneTime CycleMode = "OneTime"
+	// CycleInfiniteLoop 无限循环模式
+	CycleInfiniteLoop CycleMode = "InfiniteLoop"
 
 	// StepScanFile 任务步骤，扫描文件建立同步数据库
 	StepScanFile TaskStep = "scan"
@@ -130,7 +140,7 @@ func (t *SyncTask) setupDb() error {
 
 // Start 启动同步任务
 // 扫描本地和云盘文件信息并存储到本地数据库
-func (t *SyncTask) Start(step TaskStep) error {
+func (t *SyncTask) Start() error {
 	if t.ctx != nil {
 		return fmt.Errorf("task have starting")
 	}
@@ -169,6 +179,9 @@ func (t *SyncTask) Start(step TaskStep) error {
 	if t.fileActionTaskManager == nil {
 		t.fileActionTaskManager = NewFileActionTaskManager(t)
 	}
+	if t.resourceMutex == nil {
+		t.resourceMutex = &sync.Mutex{}
+	}
 
 	if t.plugin == nil {
 		pluginManger := plugins.NewPluginManager(config.GetPluginDir())
@@ -184,18 +197,18 @@ func (t *SyncTask) Start(step TaskStep) error {
 	t.ctx, cancel = context.WithCancel(context.Background())
 	t.cancelFunc = cancel
 
-	go t.scanLocalFile(t.ctx, step == StepScanFile)
-	go t.scanPanFile(t.ctx, step == StepScanFile)
-
-	// 如果只扫描文件建立同步数据库，则无需进行文件对比这一步
-	if step != StepScanFile {
-		// start file sync manager
-		if e := t.fileActionTaskManager.Start(); e != nil {
-			return e
-		}
+	t.SetScanLoopFlag(false)
+	if t.Mode == UploadOnly {
+		go t.scanLocalFile(t.ctx)
+	} else if t.Mode == DownloadOnly {
+		go t.scanPanFile(t.ctx, false)
 	} else {
-		// delay
-		time.Sleep(1 * time.Second)
+		return fmt.Errorf("异常：不支持的同步模式。")
+	}
+
+	// 启动文件执行进程
+	if e := t.fileActionTaskManager.Start(); e != nil {
+		return e
 	}
 	return nil
 }
@@ -240,6 +253,20 @@ func (t *SyncTask) Stop() error {
 	// record the sync time
 	t.LastSyncTime = utils.NowTimeStr()
 	return nil
+}
+
+// IsScanLoopDone 获取文件扫描进程状态
+func (t *SyncTask) IsScanLoopDone() bool {
+	t.resourceMutex.Lock()
+	defer t.resourceMutex.Unlock()
+	return t.scanLoopIsDone
+}
+
+// SetScanLoopFlag 设置文件扫描进程状态标记
+func (t *SyncTask) SetScanLoopFlag(done bool) {
+	t.resourceMutex.Lock()
+	defer t.resourceMutex.Unlock()
+	t.scanLoopIsDone = done
 }
 
 // panSyncDbFullPath 云盘文件数据库
@@ -341,8 +368,8 @@ func (t *SyncTask) skipLocalFile(file *LocalFileItem) bool {
 	return false
 }
 
-// scanLocalFile 本地文件循环扫描进程
-func (t *SyncTask) scanLocalFile(ctx context.Context, scanFileOnly bool) {
+// scanLocalFile 本地文件扫描进程。上传备份模式是以本地文件为扫描对象，并对比云盘端对应目录文件，以决定是否需要上传新文件到云盘
+func (t *SyncTask) scanLocalFile(ctx context.Context) {
 	t.wg.AddDelta()
 	defer t.wg.Done()
 
@@ -372,6 +399,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context, scanFileOnly bool) {
 		t.localFileDb.Add(newLocalFileItem(fi, fullPath))
 	}
 
+	// 文件夹队列
 	folderQueue := collection.NewFifoQueue()
 	rootFolder, err := os.Stat(t.LocalFolderPath)
 	if err != nil {
@@ -381,18 +409,13 @@ func (t *SyncTask) scanLocalFile(ctx context.Context, scanFileOnly bool) {
 		fileInfo: rootFolder,
 		path:     t.LocalFolderPath,
 	})
-	startTimeOfThisLoop := time.Now().Unix()
 	delayTimeCount := int64(0)
-	isLocalFolderModify := false
-
-	// 触发一次文件对比任务
-	t.fileActionTaskManager.AddLocalFolderModifyCount()
 
 	for {
 		select {
 		case <-ctx.Done():
 			// cancel routine & done
-			logger.Verboseln("local file routine done")
+			logger.Verboseln("local file routine done, exit loop")
 			return
 		default:
 			// 采用广度优先遍历(BFS)进行文件遍历
@@ -401,49 +424,34 @@ func (t *SyncTask) scanLocalFile(ctx context.Context, scanFileOnly bool) {
 				delayTimeCount -= 1
 				continue
 			} else if delayTimeCount == 0 {
-				delayTimeCount -= 1
-				startTimeOfThisLoop = time.Now().Unix()
-				logger.Verboseln("do scan local file process at ", utils.NowTimeStr())
-			}
-
-			// check local sync dir
-			if t.Mode == SyncTwoWay {
-				// check local disk unplug issue
-				if b, e := utils.PathExists(t.LocalFolderPath); e == nil {
-					if !b {
-						// maybe the local disk unplug, check
-						fmt.Println("异常：本地同步目录不存在，本任务已经停止。如需继续同步请手动删除同步数据库再重试。")
-						return
-					}
+				// 确认文件执行进程是否已完成
+				if !t.fileActionTaskManager.IsExecuteLoopIsDone() {
+					time.Sleep(1 * time.Second)
+					continue // 需要等待文件上传进程完成才能开启新一轮扫描
 				}
+				delayTimeCount -= 1
+				logger.Verboseln("start scan local file process at ", utils.NowTimeStr())
+				t.SetScanLoopFlag(false)
+				t.fileActionTaskManager.StartFileActionTaskExecutor()
 			}
 
 			obj := folderQueue.Pop()
 			if obj == nil {
-				// label discard file from DB
-				if t.discardLocalFileDb(t.LocalFolderPath, startTimeOfThisLoop) {
-					logger.Verboseln("notify local folder modify, need to do file action task")
-					t.fileActionTaskManager.AddLocalFolderModifyCount()
-					t.fileActionTaskManager.AddPanFolderModifyCount()
-					isLocalFolderModify = false // 重置标记
-				}
+				// 没有其他文件夹需要扫描了，已完成了一次全量文件夹的扫描了
+				t.SetScanLoopFlag(true)
 
-				if scanFileOnly {
-					// 全盘扫描文件一次，建立好文件同步数据库，然后退出
+				if t.CycleModeType == CycleOneTime {
+					// 只运行一次，全盘扫描一次后退出任务循环
+					logger.Verboseln("file scan task is finish, exit normally")
 					return
 				}
 
-				// restart scan loop over again
+				// 无限循环模式，继续下一次扫描
 				folderQueue.Push(&folderItem{
 					fileInfo: rootFolder,
 					path:     t.LocalFolderPath,
 				})
 				delayTimeCount = TimeSecondsOf30Seconds
-				if isLocalFolderModify {
-					logger.Verboseln("notify local folder modify, need to do file action task")
-					t.fileActionTaskManager.AddLocalFolderModifyCount()
-					isLocalFolderModify = false // 重置标记
-				}
 				continue
 			}
 			item := obj.(*folderItem)
@@ -454,65 +462,87 @@ func (t *SyncTask) scanLocalFile(ctx context.Context, scanFileOnly bool) {
 			if len(files) == 0 {
 				continue
 			}
+			localFileScanList := LocalFileList{}
 			localFileAppendList := LocalFileList{}
-			for _, file := range files {
+			for _, file := range files { // 逐个确认目录下面的每个文件的情况
 				if strings.HasSuffix(file.Name(), DownloadingFileSuffix) {
-					// 下载中文件，跳过
+					// 下载中的文件，跳过
 					continue
 				}
 
+				// 检查JS插件
 				localFile := newLocalFileItem(file, item.path+"/"+file.Name())
 				if t.skipLocalFile(localFile) {
 					fmt.Println("插件禁止扫描本地文件: ", localFile.Path)
 					continue
 				}
 
-				if scanFileOnly {
-					fmt.Println("扫描本地文件：" + item.path + "/" + file.Name())
-				}
-
-				localFileInDb, _ := t.localFileDb.Get(localFile.Path)
-				if localFileInDb == nil {
-					// append
-					localFile.ScanTimeAt = utils.NowTimeStr()
-					localFileAppendList = append(localFileAppendList, localFile)
-					logger.Verboseln("add local file to db: ", utils.ObjectToJsonStr(localFile, false))
-					isLocalFolderModify = true
-				} else {
-					// update newest info into DB
-					if localFile.UpdateTimeUnix() > localFileInDb.UpdateTimeUnix() || localFile.FileSize != localFileInDb.FileSize {
-						localFileInDb.Sha1Hash = ""
-						isLocalFolderModify = true
-					}
-
-					localFileInDb.UpdatedAt = localFile.UpdatedAt
-					localFileInDb.CreatedAt = localFile.CreatedAt
-					localFileInDb.FileSize = localFile.FileSize
-					localFileInDb.FileType = localFile.FileType
-					localFileInDb.ScanTimeAt = utils.NowTimeStr()
-					localFileInDb.ScanStatus = ScanStatusNormal
-					logger.Verboseln("update local file to db: ", utils.ObjectToJsonStr(localFileInDb, false))
-					if _, er := t.localFileDb.Update(localFileInDb); er != nil {
-						logger.Verboseln("local db update error ", er)
-					}
-				}
-
-				// for next term scan
+				logger.Verboseln("扫描到本地文件：" + item.path + "/" + file.Name())
+				// 文件夹需要增加到扫描队列
 				if file.IsDir() {
 					folderQueue.Push(&folderItem{
 						fileInfo: file,
 						path:     item.path + "/" + file.Name(),
 					})
 				}
-			}
 
+				// 查询本地扫描数据库
+				localFileInDb, _ := t.localFileDb.Get(localFile.Path)
+				if localFileInDb == nil {
+					// 记录不存在，直接增加到本地数据库队列
+					localFileAppendList = append(localFileAppendList, localFile)
+				} else {
+					// 记录存在，查看文件SHA1是否更改
+					if localFile.UpdateTimeUnix() == localFileInDb.UpdateTimeUnix() && localFile.FileSize == localFileInDb.FileSize {
+						// 文件大小没变，文件修改时间没变，假定文件内容也没变
+						localFile.Sha1Hash = localFileInDb.Sha1Hash
+					} else {
+						// 文件已修改，更新文件信息到扫描数据库
+						localFileInDb.Sha1Hash = localFile.Sha1Hash
+						localFileInDb.UpdatedAt = localFile.UpdatedAt
+						localFileInDb.CreatedAt = localFile.CreatedAt
+						localFileInDb.FileSize = localFile.FileSize
+						localFileInDb.FileType = localFile.FileType
+						localFileInDb.ScanTimeAt = utils.NowTimeStr()
+						localFileInDb.ScanStatus = ScanStatusNormal
+						logger.Verboseln("update local file to db: ", utils.ObjectToJsonStr(localFileInDb, false))
+						if _, er := t.localFileDb.Update(localFileInDb); er != nil {
+							logger.Verboseln("local db update error ", er)
+						}
+					}
+				}
+				localFileScanList = append(localFileScanList, localFile)
+			}
 			if len(localFileAppendList) > 0 {
 				//fmt.Println(utils.ObjectToJsonStr(localFileAppendList))
 				if _, er := t.localFileDb.AddFileList(localFileAppendList); er != nil {
-					logger.Verboseln("add files to local file db error {}", er)
+					logger.Verboseln("add new files to local file db error {}", er)
 				}
 			}
-			time.Sleep(500 * time.Millisecond)
+
+			// 获取云盘对应目录下的文件清单
+			panFileInfo, er := t.panClient.OpenapiPanClient().FileInfoByPath(t.DriveId, GetPanFileFullPathFromLocalPath(item.path, t.LocalFolderPath, t.PanFolderPath))
+			if er != nil {
+				logger.Verboseln("query pan file info error: ", er)
+				// do nothing
+				continue
+			}
+			panFileList, er2 := t.panClient.OpenapiPanClient().FileListGetAll(&aliyunpan.FileListParam{
+				DriveId:      t.DriveId,
+				ParentFileId: panFileInfo.FileId,
+			}, 1500) // 延迟时间避免触发风控
+			if er2 != nil {
+				logger.Verboseln("query pan file list error: ", er)
+				continue
+			}
+			panFileScanList := PanFileList{}
+			for _, pf := range panFileList {
+				pf.Path = path.Join(GetPanFileFullPathFromLocalPath(item.path, t.LocalFolderPath, t.PanFolderPath), pf.FileName)
+				panFileScanList = append(panFileScanList, NewPanFileItem(pf))
+			}
+
+			// 对比文件
+			t.fileActionTaskManager.doFileDiffRoutine(localFileScanList, panFileScanList)
 		}
 	}
 }
@@ -597,12 +627,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context, scanFileOnly bool) {
 	folderQueue := collection.NewFifoQueue()
 	rootPanFile := fi
 	folderQueue.Push(rootPanFile)
-	startTimeOfThisLoop := time.Now().Unix()
 	delayTimeCount := int64(0)
-	isPanFolderModify := false
-
-	// 触发一次文件对比任务
-	t.fileActionTaskManager.AddPanFolderModifyCount()
 
 	for {
 		select {
@@ -618,18 +643,17 @@ func (t *SyncTask) scanPanFile(ctx context.Context, scanFileOnly bool) {
 				continue
 			} else if delayTimeCount == 0 {
 				delayTimeCount -= 1
-				startTimeOfThisLoop = time.Now().Unix()
 				logger.Verboseln("do scan pan file process at ", utils.NowTimeStr())
 			}
 			obj := folderQueue.Pop()
 			if obj == nil {
 				// label discard file from DB
-				if t.discardPanFileDb(t.PanFolderPath, startTimeOfThisLoop) {
-					logger.Verboseln("notify pan folder modify, need to do file action task")
-					t.fileActionTaskManager.AddPanFolderModifyCount()
-					t.fileActionTaskManager.AddLocalFolderModifyCount()
-					isPanFolderModify = false
-				}
+				//if t.discardPanFileDb(t.PanFolderPath, startTimeOfThisLoop) {
+				//	logger.Verboseln("notify pan folder modify, need to do file action task")
+				//	t.fileActionTaskManager.AddPanFolderModifyCount()
+				//	t.fileActionTaskManager.AddLocalFolderModifyCount()
+				//	isPanFolderModify = false
+				//}
 
 				if scanFileOnly {
 					// 全盘扫描文件一次，建立好文件同步数据库，然后退出
@@ -639,11 +663,11 @@ func (t *SyncTask) scanPanFile(ctx context.Context, scanFileOnly bool) {
 				// restart scan loop over again
 				folderQueue.Push(rootPanFile)
 				delayTimeCount = TimeSecondsOf2Minute
-				if isPanFolderModify {
-					logger.Verboseln("notify pan folder modify, need to do file action task")
-					t.fileActionTaskManager.AddPanFolderModifyCount()
-					isPanFolderModify = false
-				}
+				//if isPanFolderModify {
+				//	logger.Verboseln("notify pan folder modify, need to do file action task")
+				//	t.fileActionTaskManager.AddPanFolderModifyCount()
+				//	isPanFolderModify = false
+				//}
 				continue
 			}
 			item := obj.(*aliyunpan.FileEntity)
@@ -675,12 +699,9 @@ func (t *SyncTask) scanPanFile(ctx context.Context, scanFileOnly bool) {
 					panFile.ScanTimeAt = utils.NowTimeStr()
 					panFileList = append(panFileList, panFile)
 					logger.Verboseln("add pan file to db: ", utils.ObjectToJsonStr(panFile, false))
-					isPanFolderModify = true
 				} else {
 					// update newest info into DB
 					if strings.ToLower(file.ContentHash) != strings.ToLower(panFileInDb.Sha1Hash) {
-						isPanFolderModify = true
-
 						panFileInDb.DomainId = file.DomainId
 						panFileInDb.FileId = file.FileId
 						panFileInDb.FileType = file.FileType
