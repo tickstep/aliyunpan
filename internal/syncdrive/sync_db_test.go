@@ -2,63 +2,14 @@ package syncdrive
 
 import (
 	"fmt"
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
-	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/internal/utils"
-	"github.com/tickstep/library-go/logger"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
-
-func TestPanSyncDb(t *testing.T) {
-	// get access token
-	refreshToken := "d77420e4daa...9d384d7c44508"
-	webToken, err := aliyunpan.GetAccessTokenFromRefreshToken(refreshToken)
-	if err != nil {
-		fmt.Println("get acccess token error")
-		return
-	}
-
-	// pan client
-	panClient := aliyunpan.NewPanClient(*webToken, aliyunpan.AppLoginToken{}, aliyunpan.AppConfig{
-		AppId:     "25dzX3vbYqktVxyX",
-		DeviceId:  "E75459EXhOTkI5ZI6S3qDHA3",
-		UserId:    "",
-		Nonce:     0,
-		PublicKey: "",
-	}, aliyunpan.SessionConfig{
-		DeviceName: "Chrome浏览器",
-		ModelName:  "Windows网页版",
-	})
-
-	// get user info
-	ui, err := panClient.GetUserInfo()
-	if err != nil {
-		fmt.Println("get user info error")
-		return
-	}
-	fmt.Println("当前登录用户：" + ui.Nickname)
-
-	b := NewPanSyncDb("D:\\smb\\feny\\goprojects\\dev\\pan.db")
-	b.Open()
-	defer b.Close()
-	// do some file operation
-	panClient.FilesDirectoriesRecurseList(ui.FileDriveId, "/Parallels Desktop", func(depth int, _ string, fd *aliyunpan.FileEntity, apiError *apierror.ApiError) bool {
-		if apiError != nil {
-			logger.Verbosef("%s\n", apiError)
-			return true
-		}
-		fmt.Println("add file：" + fd.String())
-		b.Add(NewPanFileItem(fd))
-		time.Sleep(2 * time.Second)
-		return true
-	})
-}
 
 func TestGet(t *testing.T) {
 	b := NewPanSyncDb("D:\\smb\\feny\\goprojects\\dev\\pan.db")
