@@ -348,7 +348,8 @@ func (item *SyncFileItem) getPanFileFullPath() string {
 	localRootPath := strings.ReplaceAll(item.LocalFolderPath, "\\", "/")
 
 	relativePath := strings.TrimPrefix(localPath, localRootPath)
-	return path.Join(path.Clean(item.PanFolderPath), relativePath)
+	panPath := path.Join(path.Clean(item.PanFolderPath), relativePath)
+	return strings.ReplaceAll(panPath, "\\", "/")
 }
 
 // getLocalFullPath 获取本地文件的路径

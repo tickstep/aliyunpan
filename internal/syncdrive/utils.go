@@ -13,7 +13,8 @@ func GetPanFileFullPathFromLocalPath(localFilePath, localRootPath, panRootPath s
 	localRootPath = strings.ReplaceAll(localRootPath, "\\", "/")
 
 	relativePath := strings.TrimPrefix(localFilePath, localRootPath)
-	return path.Join(path.Clean(panRootPath), relativePath)
+	panPath := path.Join(path.Clean(panRootPath), relativePath)
+	return strings.ReplaceAll(panPath, "\\", "/")
 }
 
 // GetLocalFileFullPathFromPanPath 获取本地文件的路径

@@ -444,6 +444,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		// 尝试创建文件夹
 		panDirPath := filepath.Dir(targetPanFilePath)
 		panDirFileId := ""
+		logger.Verbosef("检测云盘文件夹: %s\n", panDirPath)
 		if dirFile, er2 := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, panDirPath); er2 != nil {
 			if er2.Code == apierror.ApiCodeFileNotFoundCode {
 				logger.Verbosef("创建云盘文件夹: %s\n", panDirPath)
@@ -456,7 +457,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 				panDirFileId = rs.FileId
 				logger.Verbosef("创建云盘文件夹成功: %s\n", panDirPath)
 			} else {
-				logger.Verbosef("创建云盘文件夹错误: %s\n", er2.String())
+				logger.Verbosef("查询云盘文件夹错误: %s\n", er2.String())
 				return er2
 			}
 		} else {

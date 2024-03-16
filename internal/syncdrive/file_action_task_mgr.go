@@ -494,6 +494,7 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 			// cancel routine & done
 			logger.Verboseln("file executor routine done")
 			downloadWaitGroup.Wait()
+			uploadWaitGroup.Wait()
 			return
 		default:
 			actionIsEmptyOfThisTerm := true
