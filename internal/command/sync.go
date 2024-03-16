@@ -37,16 +37,14 @@ func CmdSync() cli.Command {
 		Usage:     "同步备份功能(Beta)",
 		UsageText: cmder.App().Name + " sync",
 		Description: `
-    备份功能。支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
+    备份功能。支持备份本地文件到云盘，备份云盘文件到本地两种模式。支持JavaScript插件对备份文件进行过滤。
     指定本地目录和对应的一个网盘目录，以备份文件。网盘目录必须和本地目录独占使用，不要用作其他用途，不然备份可能会有问题。
 
-	备份功能支持以下三种模式：
+	备份功能支持以下两种模式：
 	1. upload 
        备份本地文件，即上传本地文件到网盘，始终保持本地文件有一个完整的备份在网盘
 	2. download 
        备份云盘文件，即下载网盘文件到本地，始终保持网盘的文件有一个完整的备份在本地
-	3. sync（慎用！！！双向备份过程会删除文件）
-       双向备份，保持网盘文件和本地文件严格一致
 
 	请输入以下命令查看如何配置和启动：
     aliyunpan sync start -h
@@ -73,8 +71,7 @@ func CmdSync() cli.Command {
    "name": "设计文档备份",
    "localFolderPath": "D:/tickstep/Documents/设计文档",
    "panFolderPath": "/sync_drive/我的文档",
-   "mode": "upload",
-   "priority": "time"
+   "mode": "upload"
   }
  ]
 }
@@ -82,8 +79,7 @@ func CmdSync() cli.Command {
 name - 任务名称
 localFolderPath - 本地目录
 panFolderPath - 网盘目录
-mode - 模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
-priority - 优先级，只对双向同步备份模式有效。选项支持三种: time-时间优先，local-本地优先，pan-网盘优先
+mode - 模式，支持两种: upload(备份本地文件到云盘),download(备份云盘文件到本地)
     
 	例子:
 	1. 查看帮助
@@ -95,23 +91,16 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 	3. 使用命令行配置启动同步备份服务，将云盘目录 /sync_drive/我的文档 中的文件备份下载到本地目录 D:\tickstep\Documents\设计文档
 	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "download"
 
-	4. 使用命令行配置启动同步备份服务，将云盘目录 /sync_drive/我的文档 和本地目录 D:\tickstep\Documents\设计文档 的文件进行双向同步
-       同时配置同步优先选项为本地文件优先，并显示同步过程的日志
-	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "sync" -pri "local" -log true
-
-	5. 使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份到云盘目录 /sync_drive/我的文档
+	4. 使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份到云盘目录 /sync_drive/我的文档
        同时配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
 	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "upload" -dp 2 -up 1 -dbs 256 -ubs 1024
     
-	6. 使用配置文件启动同步备份服务，使用配置文件可以支持同时启动多个备份任务。配置文件必须存在，否则启动失败。
+	5. 使用配置文件启动同步备份服务，使用配置文件可以支持同时启动多个备份任务。配置文件必须存在，否则启动失败。
 	aliyunpan sync start
 
-	7. 使用配置文件启动同步备份服务，并配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
+	6. 使用配置文件启动同步备份服务，并配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
 	aliyunpan sync start -dp 2 -up 1 -dbs 256 -ubs 1024
 
-	8. 当你本地同步目录文件非常多，或者云盘同步目录文件非常多，为了后期更快更精准同步文件，可以先进行文件扫描并构建同步数据库，然后再正常启动同步任务。如下所示：
-	aliyunpan sync start -step scan
-	aliyunpan sync start
 `,
 				Action: func(c *cli.Context) error {
 					if config.Config.ActiveUser() == nil {
@@ -227,7 +216,7 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 					},
 					cli.StringFlag{
 						Name:  "mode",
-						Usage: "备份模式, 支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)",
+						Usage: "备份模式, 支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地)",
 						Value: "upload",
 					},
 					cli.StringFlag{
