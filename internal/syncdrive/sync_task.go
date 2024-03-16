@@ -209,7 +209,7 @@ func (t *SyncTask) Start() error {
 	} else if t.Mode == DownloadOnly {
 		go t.scanPanFile(t.ctx)
 	} else {
-		return fmt.Errorf("异常：暂不支持的该模式。")
+		return fmt.Errorf("异常：暂不支持该模式。")
 	}
 
 	return nil
@@ -476,6 +476,12 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 				localFile := newLocalFileItem(file, item.path+"/"+file.Name())
 				if t.skipLocalFile(localFile) {
 					fmt.Println("插件禁止扫描本地文件: ", localFile.Path)
+					continue
+				}
+
+				// 跳过软链接文件
+				if IsSymlinkFile(file) {
+					logger.Verboseln("软链接文件，跳过：" + item.path + "/" + file.Name())
 					continue
 				}
 

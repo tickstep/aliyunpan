@@ -1,6 +1,8 @@
 package syncdrive
 
 import (
+	"io/fs"
+	"os"
 	"path"
 	"strings"
 )
@@ -21,4 +23,12 @@ func GetLocalFileFullPathFromPanPath(panFilePath, localRootPath, panRootPath str
 
 	relativePath := strings.TrimPrefix(panFilePath, panRootPath)
 	return path.Join(path.Clean(localRootPath), relativePath)
+}
+
+// IsSymlinkFile 是否是软链接文件
+func IsSymlinkFile(file fs.FileInfo) bool {
+	if file.Mode()&os.ModeSymlink != 0 {
+		return true
+	}
+	return false
 }
