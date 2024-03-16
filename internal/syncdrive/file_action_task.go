@@ -383,8 +383,34 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 
 				// 存储状态
 				f.syncFileDb.Update(f.syncItem)
+			} else if worker.GetStatus().StatusCode() == downloader.StatusCodeDownloadUrlExpired {
+				logger.Verboseln("download url expired: ", f.syncItem.PanFile.Path)
+				// 下载链接过期，获取新的链接
+				newUrl, apierr1 := f.panClient.OpenapiPanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+					DriveId: f.syncItem.PanFile.DriveId,
+					FileId:  f.syncItem.PanFile.FileId,
+				})
+				time.Sleep(time.Duration(3) * time.Second)
+				if apierr1 != nil {
+					if apierr1.Code == apierror.ApiCodeFileNotFoundCode || apierr1.Code == apierror.ApiCodeForbiddenFileInTheRecycleBin {
+						f.syncItem.Status = SyncFileStatusNotExisted
+						f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+						f.syncFileDb.Update(f.syncItem)
+						return fmt.Errorf("文件不存在")
+					}
+					logger.Verbosef("ERROR: get download url error: %s, %s\n", f.syncItem.PanFile.Path, apierr.Error())
+					return apierr
+				}
+				if newUrl == nil || newUrl.Url == "" {
+					logger.Verbosef("无法获取有效的下载链接: %+v\n", durl)
+					f.syncItem.Status = SyncFileStatusFailed
+					f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+					f.syncFileDb.Update(f.syncItem)
+					return fmt.Errorf("无法获取有效的下载链接")
+				}
+				logger.Verboseln("query new download url: ", newUrl.Url)
+				worker.SetUrl(newUrl.Url)
 			}
-			// TODO: 下载链接过期处理
 		}
 	}
 }

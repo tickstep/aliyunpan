@@ -146,6 +146,11 @@ func (wer *Worker) SetDownloadStatus(downloadStatus *transfer.DownloadStatus) {
 	wer.downloadStatus = downloadStatus
 }
 
+// SetUrl 更新新的下载路径
+func (wer *Worker) SetUrl(newUrl string) {
+	wer.url = newUrl
+}
+
 // GetStatus 返回下载状态
 func (wer *Worker) GetStatus() WorkerStatuser {
 	// 空接口与空指针不等价
