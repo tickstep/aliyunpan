@@ -62,7 +62,7 @@ IOSBuild() {
   cd "$output/$1"
   export CC=/usr/local/go/misc/ios/clangwrap.sh GOOS=ios GOARCH=arm64 GOARM=7 CGO_ENABLED=1
   $go build -ldflags "-X main.Version=$version -s -w" -o $name github.com/tickstep/aliyunpan
-  jtool --sign --inplace --ent ../../entitlements.xml $name
+  jtool2 --sign --inplace --ent ../../entitlements.xml $name
   cd ../..
   RicePack $1 $name
   Pack $1 "ios"
@@ -112,7 +112,7 @@ Build $name-$version"-darwin-macos-arm64" darwin arm64
 ############### Windows ###############
 Build $name-$version"-windows-x86" windows 386
 Build $name-$version"-windows-x64" windows amd64
-Build $name-$version"-windows-arm" windows arm
+Build $name-$version"-windows-arm64" windows arm64
 
 ############### Linux ###############
 # x64/x86
