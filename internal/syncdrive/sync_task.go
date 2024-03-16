@@ -32,6 +32,8 @@ type (
 		Id string `json:"id"`
 		// UserId 账号ID
 		UserId string `json:"userId"`
+		// DriveName 网盘名称，backup-备份盘，resource-资源盘
+		DriveName string `json:"driveName"`
 		// DriveId 网盘ID，目前支持文件网盘
 		DriveId string `json:"-"`
 		// LocalFolderPath 本地目录
@@ -41,9 +43,9 @@ type (
 		// Mode 同步模式
 		Mode SyncMode `json:"mode"`
 		// CycleMode 循环模式，OneTime-运行一次，InfiniteLoop-无限循环模式
-		CycleModeType CycleMode `json:"cycleModeType"`
+		CycleModeType CycleMode `json:"-"`
 		// Priority 优先级选项
-		Priority SyncPriorityOption `json:"priority"`
+		Priority SyncPriorityOption `json:"-"`
 		// LastSyncTime 上一次同步时间
 		LastSyncTime string `json:"lastSyncTime"`
 
@@ -119,6 +121,11 @@ func (t *SyncTask) String() string {
 	}
 	builder.WriteString("本地目录: " + t.LocalFolderPath + "\n")
 	builder.WriteString("云盘目录: " + t.PanFolderPath + "\n")
+	driveName := "备份盘"
+	if strings.ToLower(t.DriveName) == "resource" {
+		driveName = "资源盘"
+	}
+	builder.WriteString("目标网盘: " + driveName + "\n")
 	return builder.String()
 }
 

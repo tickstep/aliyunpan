@@ -9,6 +9,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"io/ioutil"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -38,7 +39,6 @@ type (
 		syncDriveConfig      *SyncDriveConfig
 		syncOption           SyncOption
 		PanUser              *config.PanUser
-		DriveId              string
 		PanClient            *config.PanClient
 		SyncConfigFolderPath string
 
@@ -57,11 +57,10 @@ var (
 	ErrSyncTaskListEmpty error = fmt.Errorf("no sync task")
 )
 
-func NewSyncTaskManager(user *config.PanUser, driveId string, panClient *config.PanClient, syncConfigFolderPath string,
+func NewSyncTaskManager(user *config.PanUser, panClient *config.PanClient, syncConfigFolderPath string,
 	option SyncOption) *SyncTaskManager {
 	return &SyncTaskManager{
 		PanUser:              user,
-		DriveId:              driveId,
 		PanClient:            panClient,
 		SyncConfigFolderPath: syncConfigFolderPath,
 		syncOption:           option,
@@ -80,6 +79,7 @@ func (m *SyncTaskManager) parseConfigFile() error {
 	   "localFolderPath": "D:\\smb\\datadisk\\game",
 	   "panFolderPath": "/sync_drive/game",
 	   "mode": "sync",
+	   "driveName": "backup",
 	   "lastSyncTime": ""
 	  }
 	 ]
@@ -139,6 +139,16 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
 		if len(task.Id) == 0 {
 			task.Id = utils.UuidStr()
 		}
+		// check driveId
+		if strings.ToLower(task.DriveName) == "backup" {
+			task.DriveId = m.PanUser.DriveList.GetFileDriveId()
+		} else if strings.ToLower(task.DriveName) == "resource" {
+			task.DriveId = m.PanUser.DriveList.GetResourceDriveId()
+		}
+		if len(task.DriveId) == 0 {
+			task.DriveId = m.PanUser.DriveList.GetFileDriveId()
+		}
+
 		// check userId
 		if len(task.UserId) > 0 {
 			if task.UserId != m.PanUser.UserId {
@@ -161,7 +171,6 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
 			continue
 		}
 		task.panUser = m.PanUser
-		task.DriveId = m.DriveId
 		task.syncDbFolderPath = m.SyncConfigFolderPath
 		task.panClient = m.PanClient
 		task.syncOption = m.syncOption

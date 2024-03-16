@@ -71,7 +71,8 @@ func CmdSync() cli.Command {
    "name": "设计文档备份",
    "localFolderPath": "D:/tickstep/Documents/设计文档",
    "panFolderPath": "/sync_drive/我的文档",
-   "mode": "upload"
+   "mode": "upload",
+   "driveName": "backup"
   }
  ]
 }
@@ -80,13 +81,14 @@ name - 任务名称
 localFolderPath - 本地目录
 panFolderPath - 网盘目录
 mode - 模式，支持两种: upload(备份本地文件到云盘),download(备份云盘文件到本地)
+driveName - 网盘名称，backup(备份盘)，resource(资源盘)
     
 	例子:
 	1. 查看帮助
 	aliyunpan sync start -h
     
-	2. 使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份上传到云盘目录 /sync_drive/我的文档
-	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "upload"
+	2. 使用命令行配置启动同步备份服务，将本地目录 D:\tickstep\Documents\设计文档 中的文件备份上传到"备份盘"的云盘目录 /sync_drive/我的文档
+	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "upload" -drive "backup"
 
 	3. 使用命令行配置启动同步备份服务，将云盘目录 /sync_drive/我的文档 中的文件备份下载到本地目录 D:\tickstep\Documents\设计文档
 	aliyunpan sync start -ldir "D:\tickstep\Documents\设计文档" -pdir "/sync_drive/我的文档" -mode "download"
@@ -158,6 +160,7 @@ mode - 模式，支持两种: upload(备份本地文件到云盘),download(备�
 					localDir := c.String("ldir")
 					panDir := c.String("pdir")
 					mode := c.String("mode")
+					driveName := c.String("drive")
 					if localDir != "" && panDir != "" {
 						// make path absolute
 						if !utils.IsLocalAbsPath(localDir) {
@@ -199,6 +202,18 @@ mode - 模式，支持两种: upload(备份本地文件到云盘),download(备�
 						task.Id = utils.Md5Str(task.LocalFolderPath)
 						task.Priority = syncOpt
 						task.UserId = activeUser.UserId
+
+						// drive id
+						task.DriveName = driveName
+						if strings.ToLower(task.DriveName) == "backup" {
+							task.DriveId = activeUser.DriveList.GetFileDriveId()
+						} else if strings.ToLower(task.DriveName) == "resource" {
+							task.DriveId = activeUser.DriveList.GetResourceDriveId()
+						}
+						if len(task.DriveId) == 0 {
+							task.DriveName = "backup"
+							task.DriveId = activeUser.DriveList.GetFileDriveId()
+						}
 					}
 
 					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"))
@@ -206,6 +221,10 @@ mode - 模式，支持两种: upload(备份本地文件到云盘),download(备�
 					return nil
 				},
 				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "drive",
+						Usage: "drive name, 网盘名称，backup(备份盘)，resource(资源盘)",
+					},
 					cli.StringFlag{
 						Name:  "ldir",
 						Usage: "local dir, 本地文件夹完整路径",
@@ -310,7 +329,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 		LocalFileModifiedCheckIntervalSec: localDelayTime,
 		FileRecorder:                      fileRecorder,
 	}
-	syncMgr := syncdrive.NewSyncTaskManager(activeUser, activeUser.DriveList.GetFileDriveId(), panClient, syncFolderRootPath, option)
+	syncMgr := syncdrive.NewSyncTaskManager(activeUser, panClient, syncFolderRootPath, option)
 	syncConfigFile := syncMgr.ConfigFilePath()
 	if tasks != nil {
 		syncConfigFile = "(使用命令行配置)"
