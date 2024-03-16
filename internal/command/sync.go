@@ -212,20 +212,8 @@ priority - 优先级，只对双向同步备份模式有效。选项支持三种
 						task.UserId = activeUser.UserId
 					}
 
-					// 获取同步文件锁，保证同步操作单实例
-					//locker := filelocker.NewFileLocker(config.GetLockerDir() + "/aliyunpan-sync")
-					//if e := filelocker.LockFile(locker, 0755, true, 5*time.Second); e != nil {
-					//	logger.Verboseln(e)
-					//	fmt.Println("本应用其他实例正在执行同步，请先停止或者等待其完成")
-					//	return nil
-					//}
-
 					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"))
 
-					// 释放文件锁
-					//if locker != nil {
-					//	filelocker.UnlockFile(locker)
-					//}
 					return nil
 				},
 				Flags: []cli.Flag{

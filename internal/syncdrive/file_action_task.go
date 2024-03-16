@@ -77,19 +77,11 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 			if f.syncItem.UploadEntity != nil && f.syncItem.UploadEntity.FileId != "" {
 				if file, er := f.panClient.OpenapiPanClient().FileInfoById(f.syncItem.DriveId, f.syncItem.UploadEntity.FileId); er == nil {
 					file.Path = f.syncItem.getPanFileFullPath()
-					fItem := NewPanFileItem(file)
-					fItem.ScanTimeAt = utils.NowTimeStr()
-					f.panFileDb.Add(fItem)
-
 					actFile = file
 				}
 			} else {
 				if file, er := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
 					file.Path = f.syncItem.getPanFileFullPath()
-					fItem := NewPanFileItem(file)
-					fItem.ScanTimeAt = utils.NowTimeStr()
-					f.panFileDb.Add(fItem)
-
 					actFile = file
 				}
 			}
@@ -174,83 +166,83 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 		}
 	}
 
-	if f.syncItem.Action == SyncFileActionDeleteLocal {
-		f.prompt("删除本地文件：" + f.syncItem.getLocalFileFullPath())
-		if e := f.deleteLocalFile(ctx); e != nil {
-			// TODO: retry
-			return e
-		} else {
-			// clear DB
-			f.localFileDb.Delete(f.syncItem.getLocalFileFullPath())
-			f.panFileDb.Delete(f.syncItem.getPanFileFullPath())
-
-			// recorder
-			f.appendRecord(&log.FileRecordItem{
-				Status:   "成功-删除本地文件",
-				TimeStr:  utils.NowTimeStr(),
-				FileSize: 0,
-				FilePath: f.syncItem.getLocalFileFullPath(),
-			})
-		}
-	}
-
-	if f.syncItem.Action == SyncFileActionDeletePan {
-		f.prompt("删除云盘文件：" + f.syncItem.getPanFileFullPath())
-		if e := f.deletePanFile(ctx); e != nil {
-			// TODO: retry
-			return e
-		} else {
-			// clear DB
-			f.localFileDb.Delete(f.syncItem.getLocalFileFullPath())
-			f.panFileDb.Delete(f.syncItem.getPanFileFullPath())
-
-			// recorder
-			f.appendRecord(&log.FileRecordItem{
-				Status:   "成功-删除云盘文件",
-				TimeStr:  utils.NowTimeStr(),
-				FileSize: 0,
-				FilePath: f.syncItem.getPanFileFullPath(),
-			})
-		}
-	}
-
-	if f.syncItem.Action == SyncFileActionCreateLocalFolder {
-		f.prompt("创建本地文件夹：" + f.syncItem.getLocalFileFullPath())
-		if e := f.createLocalFolder(ctx); e != nil {
-			// TODO: retry
-			return e
-		} else {
-			if file, er := os.Stat(f.syncItem.getLocalFileFullPath()); er == nil {
-				f.localFileDb.Add(&LocalFileItem{
-					FileName:      file.Name(),
-					FileSize:      file.Size(),
-					FileType:      "folder",
-					CreatedAt:     file.ModTime().Format("2006-01-02 15:04:05"),
-					UpdatedAt:     file.ModTime().Format("2006-01-02 15:04:05"),
-					FileExtension: "",
-					Sha1Hash:      f.syncItem.PanFile.Sha1Hash,
-					Path:          f.syncItem.getLocalFileFullPath(),
-					ScanTimeAt:    utils.NowTimeStr(),
-					ScanStatus:    ScanStatusNormal,
-				})
-			}
-		}
-	}
-
-	if f.syncItem.Action == SyncFileActionCreatePanFolder {
-		f.prompt("创建云盘文件夹：" + f.syncItem.getPanFileFullPath())
-		if e := f.createPanFolder(ctx); e != nil {
-			// TODO: retry
-			return e
-		} else {
-			if file, er := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
-				file.Path = f.syncItem.getPanFileFullPath()
-				fItem := NewPanFileItem(file)
-				fItem.ScanTimeAt = utils.NowTimeStr()
-				f.panFileDb.Add(fItem)
-			}
-		}
-	}
+	//if f.syncItem.Action == SyncFileActionDeleteLocal {
+	//	f.prompt("删除本地文件：" + f.syncItem.getLocalFileFullPath())
+	//	if e := f.deleteLocalFile(ctx); e != nil {
+	//		// TODO: retry
+	//		return e
+	//	} else {
+	//		// clear DB
+	//		f.localFileDb.Delete(f.syncItem.getLocalFileFullPath())
+	//		f.panFileDb.Delete(f.syncItem.getPanFileFullPath())
+	//
+	//		// recorder
+	//		f.appendRecord(&log.FileRecordItem{
+	//			Status:   "成功-删除本地文件",
+	//			TimeStr:  utils.NowTimeStr(),
+	//			FileSize: 0,
+	//			FilePath: f.syncItem.getLocalFileFullPath(),
+	//		})
+	//	}
+	//}
+	//
+	//if f.syncItem.Action == SyncFileActionDeletePan {
+	//	f.prompt("删除云盘文件：" + f.syncItem.getPanFileFullPath())
+	//	if e := f.deletePanFile(ctx); e != nil {
+	//		// TODO: retry
+	//		return e
+	//	} else {
+	//		// clear DB
+	//		f.localFileDb.Delete(f.syncItem.getLocalFileFullPath())
+	//		f.panFileDb.Delete(f.syncItem.getPanFileFullPath())
+	//
+	//		// recorder
+	//		f.appendRecord(&log.FileRecordItem{
+	//			Status:   "成功-删除云盘文件",
+	//			TimeStr:  utils.NowTimeStr(),
+	//			FileSize: 0,
+	//			FilePath: f.syncItem.getPanFileFullPath(),
+	//		})
+	//	}
+	//}
+	//
+	//if f.syncItem.Action == SyncFileActionCreateLocalFolder {
+	//	f.prompt("创建本地文件夹：" + f.syncItem.getLocalFileFullPath())
+	//	if e := f.createLocalFolder(ctx); e != nil {
+	//		// TODO: retry
+	//		return e
+	//	} else {
+	//		if file, er := os.Stat(f.syncItem.getLocalFileFullPath()); er == nil {
+	//			f.localFileDb.Add(&LocalFileItem{
+	//				FileName:      file.Name(),
+	//				FileSize:      file.Size(),
+	//				FileType:      "folder",
+	//				CreatedAt:     file.ModTime().Format("2006-01-02 15:04:05"),
+	//				UpdatedAt:     file.ModTime().Format("2006-01-02 15:04:05"),
+	//				FileExtension: "",
+	//				Sha1Hash:      f.syncItem.PanFile.Sha1Hash,
+	//				Path:          f.syncItem.getLocalFileFullPath(),
+	//				ScanTimeAt:    utils.NowTimeStr(),
+	//				ScanStatus:    ScanStatusNormal,
+	//			})
+	//		}
+	//	}
+	//}
+	//
+	//if f.syncItem.Action == SyncFileActionCreatePanFolder {
+	//	f.prompt("创建云盘文件夹：" + f.syncItem.getPanFileFullPath())
+	//	if e := f.createPanFolder(ctx); e != nil {
+	//		// TODO: retry
+	//		return e
+	//	} else {
+	//		if file, er := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, f.syncItem.getPanFileFullPath()); er == nil {
+	//			file.Path = f.syncItem.getPanFileFullPath()
+	//			fItem := NewPanFileItem(file)
+	//			fItem.ScanTimeAt = utils.NowTimeStr()
+	//			f.panFileDb.Add(fItem)
+	//		}
+	//	}
+	//}
 
 	return nil
 }

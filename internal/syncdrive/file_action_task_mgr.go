@@ -86,9 +86,8 @@ func (f *FileActionTaskManager) setExecuteLoopFlag(done bool) {
 	f.executeLoopIsDone = done
 }
 
-// Start 启动文件动作任务管理进程
-// 通过对本地数据库的对比，决策对文件进行下载、上传、删除等动作
-func (f *FileActionTaskManager) Start() error {
+// InitMgr 初始化文件动作任务管理进程
+func (f *FileActionTaskManager) InitMgr() error {
 	if f.ctx != nil {
 		return fmt.Errorf("task have starting")
 	}
@@ -281,7 +280,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 			// 校验SHA1是否相同
 			if strings.ToLower(panFile.Sha1Hash) == strings.ToLower(localFile.Sha1Hash) {
 				// do nothing
-				logger.Verboseln("file is the same, no need to update file: ", localFile.Path)
+				logger.Verboseln("file is the same, no need to upload file: ", localFile.Path)
 				continue
 			}
 			uploadLocalFile := &FileActionTask{
@@ -300,7 +299,12 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 			}
 			f.addToSyncDb(uploadLocalFile)
 		} else if f.task.Mode == DownloadOnly {
-			// TODO: 对比pan数据库记录，是否文件有更改
+			// 校验SHA1是否相同
+			if strings.ToLower(panFile.Sha1Hash) == strings.ToLower(localFile.Sha1Hash) {
+				// do nothing
+				logger.Verboseln("file is the same, no need to download file: ", localFile.Path)
+				continue
+			}
 			downloadPanFile := &FileActionTask{
 				syncItem: &SyncFileItem{
 					Action:            SyncFileActionDownload,
@@ -318,6 +322,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 			f.addToSyncDb(downloadPanFile)
 		} else if f.task.Mode == SyncTwoWay {
 			// TODO: no support yet
+			logger.Verboseln("not support sync mode")
 		}
 	}
 }
@@ -483,8 +488,6 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 
 	downloadWaitGroup := waitgroup.NewWaitGroup(f.syncOption.FileDownloadParallel)
 	uploadWaitGroup := waitgroup.NewWaitGroup(f.syncOption.FileUploadParallel)
-	localFileWaitGroup := waitgroup.NewWaitGroup(1)
-	panFileWaitGroup := waitgroup.NewWaitGroup(1)
 
 	for {
 		select {
@@ -535,94 +538,6 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 							f.doPluginCallback(downloadItem.syncItem, "fail")
 						}
 						downloadWaitGroup.Done()
-					}()
-				}
-			}
-
-			// delete local
-			deleteLocalItem := f.getFromSyncDb(SyncFileActionDeleteLocal)
-			if deleteLocalItem != nil {
-				actionIsEmptyOfThisTerm = false
-				if localFileWaitGroup.Parallel() < 1 {
-					localFileWaitGroup.AddDelta()
-					f.fileInProcessQueue.PushUnique(deleteLocalItem.syncItem)
-					go func() {
-						if e := deleteLocalItem.DoAction(ctx); e == nil {
-							// success
-							f.fileInProcessQueue.Remove(deleteLocalItem.syncItem)
-							f.doPluginCallback(deleteLocalItem.syncItem, "success")
-						} else {
-							// retry?
-							f.fileInProcessQueue.Remove(deleteLocalItem.syncItem)
-							f.doPluginCallback(deleteLocalItem.syncItem, "fail")
-						}
-						localFileWaitGroup.Done()
-					}()
-				}
-			}
-
-			// delete pan
-			deletePanItem := f.getFromSyncDb(SyncFileActionDeletePan)
-			if deletePanItem != nil {
-				actionIsEmptyOfThisTerm = false
-				if panFileWaitGroup.Parallel() < 1 {
-					panFileWaitGroup.AddDelta()
-					f.fileInProcessQueue.PushUnique(deletePanItem.syncItem)
-					go func() {
-						if e := deletePanItem.DoAction(ctx); e == nil {
-							// success
-							f.fileInProcessQueue.Remove(deletePanItem.syncItem)
-							f.doPluginCallback(deletePanItem.syncItem, "success")
-						} else {
-							// retry?
-							f.fileInProcessQueue.Remove(deletePanItem.syncItem)
-							f.doPluginCallback(deletePanItem.syncItem, "fail")
-						}
-						panFileWaitGroup.Done()
-					}()
-				}
-			}
-
-			// create local folder
-			createLocalFolderItem := f.getFromSyncDb(SyncFileActionCreateLocalFolder)
-			if createLocalFolderItem != nil {
-				actionIsEmptyOfThisTerm = false
-				if localFileWaitGroup.Parallel() < 1 {
-					localFileWaitGroup.AddDelta()
-					f.fileInProcessQueue.PushUnique(createLocalFolderItem.syncItem)
-					go func() {
-						if e := createLocalFolderItem.DoAction(ctx); e == nil {
-							// success
-							f.fileInProcessQueue.Remove(createLocalFolderItem.syncItem)
-							f.doPluginCallback(createLocalFolderItem.syncItem, "success")
-						} else {
-							// retry?
-							f.fileInProcessQueue.Remove(createLocalFolderItem.syncItem)
-							f.doPluginCallback(createLocalFolderItem.syncItem, "fail")
-						}
-						localFileWaitGroup.Done()
-					}()
-				}
-			}
-
-			// create pan folder
-			createPanFolderItem := f.getFromSyncDb(SyncFileActionCreatePanFolder)
-			if createPanFolderItem != nil {
-				actionIsEmptyOfThisTerm = false
-				if panFileWaitGroup.Parallel() < 1 {
-					panFileWaitGroup.AddDelta()
-					f.fileInProcessQueue.PushUnique(createPanFolderItem.syncItem)
-					go func() {
-						if e := createPanFolderItem.DoAction(ctx); e == nil {
-							// success
-							f.fileInProcessQueue.Remove(createPanFolderItem.syncItem)
-							f.doPluginCallback(createPanFolderItem.syncItem, "success")
-						} else {
-							// retry?
-							f.fileInProcessQueue.Remove(createPanFolderItem.syncItem)
-							f.doPluginCallback(createPanFolderItem.syncItem, "fail")
-						}
-						panFileWaitGroup.Done()
 					}()
 				}
 			}
