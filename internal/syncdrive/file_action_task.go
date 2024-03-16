@@ -441,21 +441,76 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 	targetPanFilePath := f.syncItem.getPanFileFullPath()
 
 	if f.syncItem.UploadEntity == nil {
+		// 尝试创建文件夹
+		panDirPath := filepath.Dir(targetPanFilePath)
+		panDirFileId := ""
+		if dirFile, er2 := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, panDirPath); er2 != nil {
+			if er2.Code == apierror.ApiCodeFileNotFoundCode {
+				logger.Verbosef("创建云盘文件夹: %s\n", panDirPath)
+				f.panFolderCreateMutex.Lock()
+				rs, apierr1 := f.panClient.OpenapiPanClient().MkdirByFullPath(f.syncItem.DriveId, panDirPath)
+				f.panFolderCreateMutex.Unlock()
+				if apierr1 != nil || rs.FileId == "" {
+					return apierr1
+				}
+				panDirFileId = rs.FileId
+				logger.Verbosef("创建云盘文件夹成功: %s\n", panDirPath)
+			} else {
+				logger.Verbosef("创建云盘文件夹错误: %s\n", er2.String())
+				return er2
+			}
+		} else {
+			if dirFile != nil && dirFile.FileId != "" {
+				panDirFileId = dirFile.FileId
+			}
+		}
+
 		// 计算文件SHA1
 		sha1Str := ""
-
+		proofCode := ""
+		contentHashName := "sha1"
 		if f.syncItem.LocalFile.Sha1Hash != "" {
 			sha1Str = f.syncItem.LocalFile.Sha1Hash
 		} else {
-			logger.Verbosef("正在计算文件SHA1: %s\n", localFile.Path)
-			if localFile.Length == 0 {
-				sha1Str = aliyunpan.DefaultZeroSizeFileContentHash
-			} else {
-				localFile.Sum(localfile.CHECKSUM_SHA1)
-				sha1Str = localFile.SHA1
+			// 正常上传流程，检测是否能秒传
+			preHashMatch := true
+			if f.syncItem.LocalFile.FileSize >= panupload.DefaultCheckPreHashFileSize {
+				// 大文件，先计算 PreHash，用于检测是否可能支持秒传
+				preHash := panupload.CalcFilePreHash(f.syncItem.LocalFile.Path)
+				if len(preHash) > 0 {
+					if b, er := f.panClient.OpenapiPanClient().CheckUploadFilePreHash(&aliyunpan.FileUploadCheckPreHashParam{
+						DriveId:      f.syncItem.DriveId,
+						Name:         f.syncItem.LocalFile.FileName,
+						Size:         f.syncItem.LocalFile.FileSize,
+						ParentFileId: panDirFileId,
+						PreHash:      preHash,
+					}); er == nil {
+						preHashMatch = b
+					}
+				}
 			}
-			f.syncItem.LocalFile.Sha1Hash = sha1Str
-			f.syncFileDb.Update(f.syncItem)
+			if preHashMatch {
+				// 再计算完整文件SHA1
+				logger.Verbosef("正在计算文件SHA1: %s\n", localFile.Path)
+				if localFile.Length == 0 {
+					sha1Str = aliyunpan.DefaultZeroSizeFileContentHash
+				} else {
+					localFile.Sum(localfile.CHECKSUM_SHA1)
+					sha1Str = localFile.SHA1
+				}
+				f.syncItem.LocalFile.Sha1Hash = sha1Str
+				f.syncFileDb.Update(f.syncItem)
+
+				// 计算proof code
+				localFileEntity, _ := os.Open(localFile.Path.RealPath)
+				localFileInfo, _ := localFileEntity.Stat()
+				proofCode = aliyunpan.CalcProofCode(f.panClient.OpenapiPanClient().GetAccessToken(), rio.NewFileReaderAtLen64(localFileEntity), localFileInfo.Size())
+			} else {
+				// 无需计算 sha1，直接上传
+				logger.Verboseln("PreHash not match, upload file directly")
+				sha1Str = ""
+				contentHashName = ""
+			}
 		}
 
 		// 检查同名文件是否存在
@@ -489,37 +544,6 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			}
 		}
 
-		// 创建文件夹
-		panDirPath := filepath.Dir(targetPanFilePath)
-		panDirFileId := ""
-
-		if dirFile, er2 := f.panClient.OpenapiPanClient().FileInfoByPath(f.syncItem.DriveId, panDirPath); er2 != nil {
-			if er2.Code == apierror.ApiCodeFileNotFoundCode {
-				logger.Verbosef("创建云盘文件夹: %s\n", panDirPath)
-				f.panFolderCreateMutex.Lock()
-				rs, apierr1 := f.panClient.OpenapiPanClient().MkdirByFullPath(f.syncItem.DriveId, panDirPath)
-				f.panFolderCreateMutex.Unlock()
-				if apierr1 != nil || rs.FileId == "" {
-					return apierr1
-				}
-				panDirFileId = rs.FileId
-				logger.Verbosef("创建云盘文件夹成功: %s\n", panDirPath)
-			} else {
-				logger.Verbosef("上传文件错误: %s\n", apierr.String())
-				return apierr
-			}
-		} else {
-			if dirFile != nil && dirFile.FileId != "" {
-				panDirFileId = dirFile.FileId
-			}
-		}
-
-		// 计算proof code
-		proofCode := ""
-		localFileEntity, _ := os.Open(localFile.Path.RealPath)
-		localFileInfo, _ := localFileEntity.Stat()
-		proofCode = aliyunpan.CalcProofCode(f.panClient.OpenapiPanClient().GetAccessToken(), rio.NewFileReaderAtLen64(localFileEntity), localFileInfo.Size())
-
 		// 自动调整BlockSize大小
 		newBlockSize := utils.ResizeUploadBlockSize(localFile.Length, f.syncItem.UploadBlockSize)
 		if newBlockSize != f.syncItem.UploadBlockSize {
@@ -535,7 +559,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			Name:            filepath.Base(targetPanFilePath),
 			Size:            localFile.Length,
 			ContentHash:     sha1Str,
-			ContentHashName: "sha1",
+			ContentHashName: contentHashName,
 			CheckNameMode:   "refuse",
 			ParentFileId:    panDirFileId,
 			BlockSize:       f.syncItem.UploadBlockSize,

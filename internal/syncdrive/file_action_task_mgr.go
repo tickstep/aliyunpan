@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	mapset "github.com/deckarep/golang-set"
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/internal/config"
-	"github.com/tickstep/aliyunpan/internal/localfile"
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
@@ -256,26 +254,27 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 		// 本地文件和云盘文件SHA1不一样
 		// 不同模式同步策略不一样
 		if f.task.Mode == UploadOnly {
-			// 计算本地文件SHA1
-			if localFile.Sha1Hash == "" {
-				// calc sha1
-				if localFile.FileSize == 0 {
-					localFile.Sha1Hash = aliyunpan.DefaultZeroSizeFileContentHash
-				} else {
-					fileSum := localfile.NewLocalFileEntity(localFile.Path)
-					err := fileSum.OpenPath()
-					if err != nil {
-						logger.Verbosef("文件不可读, 错误信息: %s, 跳过...\n", err)
-						continue
-					}
-					fileSum.Sum(localfile.CHECKSUM_SHA1) // block operation
-					localFile.Sha1Hash = fileSum.SHA1
-					fileSum.Close()
-				}
 
-				// save sha1 to local DB
-				f.task.localFileDb.Update(localFile)
-			}
+			// 不再这里计算SHA1，待到上传的时候再计算
+			//if localFile.Sha1Hash == "" {
+			//	// 计算本地文件SHA1
+			//	if localFile.FileSize == 0 {
+			//		localFile.Sha1Hash = aliyunpan.DefaultZeroSizeFileContentHash
+			//	} else {
+			//		fileSum := localfile.NewLocalFileEntity(localFile.Path)
+			//		err := fileSum.OpenPath()
+			//		if err != nil {
+			//			logger.Verbosef("文件不可读, 错误信息: %s, 跳过...\n", err)
+			//			continue
+			//		}
+			//		fileSum.Sum(localfile.CHECKSUM_SHA1) // block operation
+			//		localFile.Sha1Hash = fileSum.SHA1
+			//		fileSum.Close()
+			//	}
+			//
+			//	// save sha1 to local DB
+			//	f.task.localFileDb.Update(localFile)
+			//}
 
 			// 校验SHA1是否相同
 			if strings.ToLower(panFile.Sha1Hash) == strings.ToLower(localFile.Sha1Hash) {
