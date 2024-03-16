@@ -144,15 +144,15 @@ mode - 模式，支持两种: upload(备份本地文件到云盘),download(备�
 						uploadBlockSize = aliyunpan.DefaultChunkSize
 					}
 
-					opt := c.String("pri")
 					var syncOpt syncdrive.SyncPriorityOption = syncdrive.SyncPriorityTimestampFirst
-					if opt == "local" {
-						syncOpt = syncdrive.SyncPriorityLocalFirst
-					} else if opt == "pan" {
-						syncOpt = syncdrive.SyncPriorityPanFirst
-					} else {
-						syncOpt = syncdrive.SyncPriorityTimestampFirst
-					}
+					//opt := c.String("pri")
+					//if opt == "local" {
+					//	syncOpt = syncdrive.SyncPriorityLocalFirst
+					//} else if opt == "pan" {
+					//	syncOpt = syncdrive.SyncPriorityPanFirst
+					//} else {
+					//	syncOpt = syncdrive.SyncPriorityTimestampFirst
+					//}
 
 					var task *syncdrive.SyncTask
 					localDir := c.String("ldir")
@@ -216,13 +216,8 @@ mode - 模式，支持两种: upload(备份本地文件到云盘),download(备�
 					},
 					cli.StringFlag{
 						Name:  "mode",
-						Usage: "备份模式, 支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地)",
+						Usage: "备份模式, 支持两种: upload(备份本地文件到云盘),download(备份云盘文件到本地)",
 						Value: "upload",
-					},
-					cli.StringFlag{
-						Name:  "pri",
-						Usage: "优先级priority，只对双向同步备份模式有效。当网盘和本地存在同名文件，优先使用哪个，选项支持三种: time-时间优先，local-本地优先，pan-网盘优先",
-						Value: "time",
 					},
 					cli.IntFlag{
 						Name:  "dp",
