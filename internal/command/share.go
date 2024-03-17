@@ -51,19 +51,19 @@ func CmdShare() cli.Command {
 示例:
 
     创建文件 1.mp4 的分享链接 
-	aliyunpan share set 1.mp4
+	aliyunpan share set -mode 1 1.mp4
 
     创建 /我的视频/ 目录下所有mp4文件的分享链接，支持通配符
-	aliyunpan share set /我的视频/*.mp4
+	aliyunpan share set -mode 1 /我的视频/*.mp4
 
     创建文件 1.mp4 的分享链接，并指定分享密码为2333
-	aliyunpan share set -sharePwd 2333 1.mp4
+	aliyunpan share set -mode 1 -sharePwd 2333 1.mp4
 
     创建文件 1.mp4 的分享链接，并指定有效期为1天
-	aliyunpan share set -time 1 1.mp4
+	aliyunpan share set -mode 1 -time 1 1.mp4
 
     创建文件 1.mp4 的快传链接
-	aliyunpan share set -mode 3 1.mp4
+	aliyunpan share set 1.mp4
 `,
 				Action: func(c *cli.Context) error {
 					if c.NArg() < 1 {
