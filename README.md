@@ -264,18 +264,11 @@ aliyunpan:/ tickstep$ upload /Users/tickstep/Downloads/apt.zip /tmp
 ```
 
 ### 同步备份文件
-同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
-
-***注意：如果同步目录下有非常多的文件，最好在首次备份前先运行一次scan任务，等scan任务完成并建立起同步数据库后，再正常启动同步任务。这样同步任务可以更加快速同步并且能有效避免同步重复文件。***
-
-
+同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。   
+   
 例如：将本地目录 `/tickstep/Documents/设计文档` 中的文件备份上传到云盘目录 `/备份盘/我的文档`
 ```shell
-首次运行建议先扫描并构建同步数据库，如下：
-aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload" -step scan
-
-然后再正常启动同步任务，如下：
-aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload"
+aliyunpan:/ tickstep$ sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload" -drive "backup"
 
 启动同步备份进程
 备份配置文件：(使用命令行配置)
