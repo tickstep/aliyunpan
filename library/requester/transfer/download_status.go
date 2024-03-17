@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -48,7 +48,7 @@ type (
 	}
 )
 
-//NewDownloadStatus 初始化DownloadStatus
+// NewDownloadStatus 初始化DownloadStatus
 func NewDownloadStatus() *DownloadStatus {
 	return &DownloadStatus{
 		startTime: time.Now(),
@@ -60,22 +60,22 @@ func (ds *DownloadStatus) SetRateLimit(rl *speeds.RateLimit) {
 	ds.rateLimit = rl
 }
 
-//SetTotalSize 返回总大小
+// SetTotalSize 设置总大小
 func (ds *DownloadStatus) SetTotalSize(size int64) {
 	ds.totalSize = size
 }
 
-//AddDownloaded 增加已下载数据量
+// AddDownloaded 增加已下载数据量
 func (ds *DownloadStatus) AddDownloaded(d int64) {
 	atomic.AddInt64(&ds.downloaded, d)
 }
 
-//AddTotalSize 增加总大小 (不支持多线程)
+// AddTotalSize 增加总大小 (不支持多线程)
 func (ds *DownloadStatus) AddTotalSize(size int64) {
 	ds.totalSize += size
 }
 
-//AddSpeedsDownloaded 增加已下载数据量, 用于统计速度
+// AddSpeedsDownloaded 增加已下载数据量, 用于统计速度
 func (ds *DownloadStatus) AddSpeedsDownloaded(d int64) {
 	if ds.rateLimit != nil {
 		ds.rateLimit.Add(d)
@@ -83,24 +83,24 @@ func (ds *DownloadStatus) AddSpeedsDownloaded(d int64) {
 	ds.speedsStat.Add(d)
 }
 
-//SetMaxSpeeds 设置最大速度, 原子操作
+// SetMaxSpeeds 设置最大速度, 原子操作
 func (ds *DownloadStatus) SetMaxSpeeds(speeds int64) {
 	if speeds > atomic.LoadInt64(&ds.maxSpeeds) {
 		atomic.StoreInt64(&ds.maxSpeeds, speeds)
 	}
 }
 
-//ClearMaxSpeeds 清空统计最大速度, 原子操作
+// ClearMaxSpeeds 清空统计最大速度, 原子操作
 func (ds *DownloadStatus) ClearMaxSpeeds() {
 	atomic.StoreInt64(&ds.maxSpeeds, 0)
 }
 
-//TotalSize 返回总大小
+// TotalSize 返回总大小
 func (ds *DownloadStatus) TotalSize() int64 {
 	return ds.totalSize
 }
 
-//Downloaded 返回已下载数据量
+// Downloaded 返回已下载数据量
 func (ds *DownloadStatus) Downloaded() int64 {
 	return atomic.LoadInt64(&ds.downloaded)
 }
@@ -110,22 +110,22 @@ func (ds *DownloadStatus) UpdateSpeeds() {
 	atomic.StoreInt64(&ds.tmpSpeeds, ds.speedsStat.GetSpeeds())
 }
 
-//SpeedsPerSecond 返回每秒速度
+// SpeedsPerSecond 返回每秒速度
 func (ds *DownloadStatus) SpeedsPerSecond() int64 {
 	return atomic.LoadInt64(&ds.tmpSpeeds)
 }
 
-//MaxSpeeds 返回最大速度
+// MaxSpeeds 返回最大速度
 func (ds *DownloadStatus) MaxSpeeds() int64 {
 	return atomic.LoadInt64(&ds.maxSpeeds)
 }
 
-//TimeElapsed 返回花费的时间
+// TimeElapsed 返回花费的时间
 func (ds *DownloadStatus) TimeElapsed() (elapsed time.Duration) {
 	return time.Since(ds.startTime)
 }
 
-//TimeLeft 返回预计剩余时间
+// TimeLeft 返回预计剩余时间
 func (ds *DownloadStatus) TimeLeft() (left time.Duration) {
 	speeds := atomic.LoadInt64(&ds.tmpSpeeds)
 	if speeds <= 0 {

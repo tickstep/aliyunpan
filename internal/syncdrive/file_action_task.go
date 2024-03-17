@@ -2,6 +2,7 @@ package syncdrive
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
@@ -18,6 +19,7 @@ import (
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio"
 	"github.com/tickstep/library-go/requester/rio/speeds"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -47,12 +49,6 @@ type (
 	}
 )
 
-func (f *FileActionTask) prompt(msg string) {
-	if LogPrompt {
-		fmt.Println("[" + utils.NowTimeStr() + "] " + msg)
-	}
-}
-
 func (f *FileActionTask) HashCode() string {
 	postfix := ""
 	if f.syncItem.Action == SyncFileActionDownload {
@@ -66,7 +62,7 @@ func (f *FileActionTask) HashCode() string {
 func (f *FileActionTask) DoAction(ctx context.Context) error {
 	logger.Verboseln("file action task：", utils.ObjectToJsonStr(f.syncItem, false))
 	if f.syncItem.Action == SyncFileActionUpload {
-		f.prompt("上传文件：" + f.syncItem.getLocalFileFullPath())
+		PromptPrintln("上传文件：" + f.syncItem.getLocalFileFullPath())
 		if e := f.uploadFile(ctx); e != nil {
 			// TODO: retry / cleanup downloading file
 			return e
@@ -105,7 +101,7 @@ func (f *FileActionTask) DoAction(ctx context.Context) error {
 	}
 
 	if f.syncItem.Action == SyncFileActionDownload {
-		f.prompt("下载文件：" + f.syncItem.getPanFileFullPath())
+		PromptPrintln("下载文件：" + f.syncItem.getPanFileFullPath())
 		if e := f.downloadFile(ctx); e != nil {
 			// TODO: retry / cleanup downloading file
 			return e
@@ -291,37 +287,56 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	defer file.Close()
 	if f.syncItem.PanFile.FileSize == 0 {
 		// zero file
-		f.syncItem.Status = SyncFileStatusDownloading
+		f.syncItem.Status = SyncFileStatusSuccess
 		f.syncItem.StatusUpdateTime = utils.NowTimeStr()
 		f.syncFileDb.Update(f.syncItem)
 		return nil
+	}
+	if f.syncItem.DownloadRange == nil {
+		f.syncItem.DownloadRange = &transfer.Range{
+			Begin: 0,
+			End:   f.syncItem.DownloadBlockSize,
+		}
 	}
 
 	downloadUrl := durl.Url
 	worker := downloader.NewWorker(0, f.syncItem.PanFile.DriveId, f.syncItem.PanFile.FileId, downloadUrl, writer, nil)
 
+	status := &transfer.DownloadStatus{}
+	status.AddDownloaded(f.syncItem.DownloadRange.Begin)
+	status.SetTotalSize(f.syncItem.PanFile.FileSize)
 	// 限速
 	if f.maxDownloadRate > 0 {
 		rl := speeds.NewRateLimit(f.maxDownloadRate)
 		defer rl.Stop()
-		status := &transfer.DownloadStatus{}
 		status.SetRateLimit(rl)
-		worker.SetDownloadStatus(status)
-
-		//go func() {
-		//	for {
-		//		time.Sleep(1000 * time.Millisecond)
-		//		builder := &strings.Builder{}
-		//		status.UpdateSpeeds()
-		//		fmt.Fprintf(builder, "\r↓ %s/%s %s/s ............",
-		//			converter.ConvertFileSize(status.Downloaded(), 2),
-		//			converter.ConvertFileSize(status.TotalSize(), 2),
-		//			converter.ConvertFileSize(status.SpeedsPerSecond(), 2),
-		//		)
-		//		fmt.Print(builder.String())
-		//	}
-		//}()
 	}
+	worker.SetDownloadStatus(status)
+	completed := make(chan struct{}, 0)
+	rand.Seed(time.Now().UnixNano())
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-completed:
+				return
+			case <-ticker.C:
+				time.Sleep(time.Duration(rand.Intn(10)*33) * time.Millisecond) // 延迟随机时间
+				builder := &strings.Builder{}
+				status.UpdateSpeeds()
+				downloadedPercentage := fmt.Sprintf("%.2f%%", float64(status.Downloaded())/float64(status.TotalSize())*100)
+				fmt.Fprintf(builder, "\r下载到本地:%s ↓ %s/%s(%s) %s/s............",
+					f.syncItem.getLocalFileFullPath(),
+					converter.ConvertFileSize(status.Downloaded(), 2),
+					converter.ConvertFileSize(status.TotalSize(), 2),
+					downloadedPercentage,
+					converter.ConvertFileSize(status.SpeedsPerSecond(), 2),
+				)
+				PromptPrint(builder.String())
+			}
+		}
+	}()
 
 	client := requester.NewHTTPClient()
 	client.SetKeepAlive(true)
@@ -333,12 +348,6 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 	worker.SetWriteMutex(writeMu)
 	worker.SetTotalSize(f.syncItem.PanFile.FileSize)
 	worker.SetAcceptRange("bytes")
-	if f.syncItem.DownloadRange == nil {
-		f.syncItem.DownloadRange = &transfer.Range{
-			Begin: 0,
-			End:   f.syncItem.DownloadBlockSize,
-		}
-	}
 	worker.SetRange(f.syncItem.DownloadRange) // 分片
 
 	// update status
@@ -350,8 +359,9 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			// cancel routine & done
-			logger.Verboseln("file download routine done")
-			return nil
+			logger.Verboseln("file download routine cancel")
+			close(completed)
+			return errors.New("file download routine cancel")
 		default:
 			logger.Verboseln("do file download process")
 			if f.syncItem.DownloadRange.End > f.syncItem.PanFile.FileSize {
@@ -361,6 +371,10 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 
 			// 检查上次执行是否有下载已完成
 			if f.syncItem.DownloadRange.Begin == f.syncItem.PanFile.FileSize {
+				f.syncItem.Status = SyncFileStatusSuccess
+				f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+				f.syncFileDb.Update(f.syncItem)
+				close(completed)
 				return nil
 			}
 
@@ -371,9 +385,11 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 			if worker.GetStatus().StatusCode() == downloader.StatusCodeSuccessed {
 				if f.syncItem.DownloadRange.End == f.syncItem.PanFile.FileSize {
 					// finished
-					f.syncItem.Status = SyncFileStatusDownloading
+					f.syncItem.Status = SyncFileStatusSuccess
 					f.syncItem.StatusUpdateTime = utils.NowTimeStr()
 					f.syncFileDb.Update(f.syncItem)
+					close(completed)
+					PromptPrintln("下载完毕：" + f.syncItem.getLocalFileFullPath())
 					return nil
 				}
 
@@ -635,13 +651,18 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		}
 	}
 
+	// 标记上传状态
+	f.syncItem.Status = SyncFileStatusUploading
+	f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+	f.syncFileDb.Update(f.syncItem)
+
 	worker.Precreate()
 	for {
 		select {
 		case <-ctx.Done():
 			// cancel routine & done
-			logger.Verboseln("file upload routine done")
-			return nil
+			logger.Verboseln("file upload routine cancel")
+			return errors.New("file upload routine cancel")
 		default:
 			logger.Verboseln("do file upload process")
 			if f.syncItem.UploadRange.End > f.syncItem.LocalFile.FileSize {

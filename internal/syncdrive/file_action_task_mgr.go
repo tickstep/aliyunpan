@@ -560,7 +560,7 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 						} else {
 							prompt = "完成全部文件的同步，等待下一次扫描"
 						}
-						PromptOutput(prompt)
+						PromptPrintln(prompt)
 						return
 					}
 				}

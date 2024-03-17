@@ -2,7 +2,6 @@ package syncdrive
 
 import (
 	"fmt"
-	"github.com/tickstep/aliyunpan/internal/utils"
 	"io/fs"
 	"os"
 	"path"
@@ -36,8 +35,16 @@ func IsSymlinkFile(file fs.FileInfo) bool {
 	return false
 }
 
-func PromptOutput(msg string) {
+// PromptPrintln 输出提示消息到控制台
+func PromptPrintln(msg string) {
 	if LogPrompt {
-		fmt.Println("[" + utils.NowTimeStr() + "] " + msg)
+		//fmt.Println("[" + utils.NowTimeStr() + "] " + msg)
+		fmt.Println(msg)
+	}
+}
+
+func PromptPrint(msg string) {
+	if LogPrompt {
+		fmt.Print(msg)
 	}
 }
