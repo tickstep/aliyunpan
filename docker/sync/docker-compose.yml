@@ -6,17 +6,17 @@ services:
     container_name: aliyunpan-sync
     restart: always
     volumes:
+      # （必须）映射的本地目录
       - ./data:/home/app/data:rw
       # （可选）可以指定JS插件sync_handler.js用于过滤文件，详见插件说明
       #- ./plugin/js/sync_handler.js:/home/app/config/plugin/js/sync_handler.js
       # （推荐）挂载sync_drive同步数据库到本地，这样即使容器销毁，同步数据库还可以用于以后使用
       #- ./sync_drive:/home/app/config/sync_drive
+      # （必须）映射token凭据文件
+      - /your/file/path/for/aliyunpan_config.json:/home/app/config/aliyunpan_config.json
     environment:
+      # 时区，东8区
       - TZ=Asia/Shanghai
-      # refresh token
-      - ALIYUNPAN_REFRESH_TOKEN=8bf31a...7628a8ad5a0975bf2d9
-      # 上传下载链接类型：1-默认 2-阿里ECS环境
-      - ALIYUNPAN_TRANSFER_URL_TYPE=1
       # 下载文件并发数
       - ALIYUNPAN_DOWNLOAD_PARALLEL=2
       # 上传文件并发数
@@ -25,17 +25,13 @@ services:
       - ALIYUNPAN_DOWNLOAD_BLOCK_SIZE=1024
       # 上传数据块大小，单位为KB，默认为10240KB，建议范围1024KB~10240KB
       - ALIYUNPAN_UPLOAD_BLOCK_SIZE=10240
-      # 指定网盘文件夹作为备份目录，不要指定根目录
+      # 指定网盘文件夹作为备份目标目录，不要指定根目录
       - ALIYUNPAN_PAN_DIR=/my_sync_dir
-      # 备份模式：upload(备份本地文件到云盘), download(备份云盘文件到本地), sync(双向同步备份，慎用！！！)
+      # 备份模式：upload(备份本地文件到云盘), download(备份云盘文件到本地)
       - ALIYUNPAN_SYNC_MODE=upload
-      # 优先级，只对双向同步备份模式有效。选项支持三种: time-时间优先，local-本地优先，pan-网盘优先
-      - ALIYUNPAN_SYNC_PRIORITY=time
+      # 网盘：backup(备份盘), resource(资源盘)
+      - ALIYUNPAN_SYNC_DRIVE=backup
       # 是否显示文件备份过程日志，true-显示，false-不显示
       - ALIYUNPAN_SYNC_LOG=true
       # 本地文件修改检测延迟间隔，单位秒。如果本地文件会被频繁修改，例如录制视频文件，配置好该时间可以避免上传未录制好的文件
       - ALIYUNPAN_LOCAL_DELAY_TIME=3
-      # 任务步骤, 支持两种: scan(只扫描并建立同步数据库),sync(正常启动同步任务)
-      - ALIYUNPAN_TASK_STEP=sync
-      # 登录设备的ID，默认为空，程序会自动生成一个ID
-      - ALIYUNPAN_DEVICE_ID=
