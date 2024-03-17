@@ -299,7 +299,7 @@ func (c *PanConfig) initDefaultConfig() {
 	c.DeviceId = RandomDeviceId() // 生成默认客户端ID
 	c.DeviceName = DefaultDeviceName
 	c.ClientId = DefaultClientId
-	c.FileRecordConfig = "1" // 默认开启
+	c.FileRecordConfig = "2" // 默认关闭
 	c.PreferIPType = "ipv4"  // 默认优先IPv4
 }
 
