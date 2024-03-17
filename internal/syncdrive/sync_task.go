@@ -461,7 +461,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					fileInfo: rootFolder,
 					path:     t.LocalFolderPath,
 				})
-				delayTimeCount = TimeSecondsOf30Seconds
+				delayTimeCount = TimeSecondsOfOneMinute
 				continue
 			}
 			item := obj.(*folderItem)
@@ -483,7 +483,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 				// 检查JS插件
 				localFile := newLocalFileItem(file, item.path+"/"+file.Name())
 				if t.skipLocalFile(localFile) {
-					fmt.Println("插件禁止扫描本地文件: ", localFile.Path)
+					PromptPrintln("插件禁止扫描本地文件: " + localFile.Path)
 					continue
 				}
 
@@ -493,7 +493,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					continue
 				}
 
-				logger.Verboseln("扫描到本地文件：" + item.path + "/" + file.Name())
+				PromptPrintln("扫描到本地文件：" + item.path + "/" + file.Name())
 				// 文件夹需要增加到扫描队列
 				if file.IsDir() {
 					folderQueue.Push(&folderItem{
@@ -682,7 +682,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 
 				// 无限循环模式，继续下一次扫描
 				folderQueue.Push(rootPanFile)
-				delayTimeCount = TimeSecondsOf30Seconds
+				delayTimeCount = TimeSecondsOfOneMinute
 				continue
 			}
 			item := obj.(*aliyunpan.FileEntity)
@@ -703,11 +703,11 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 
 				// 检查JS插件
 				if t.skipPanFile(panFile) {
-					logger.Verboseln("插件禁止扫描云盘文件: ", panFile.Path)
+					PromptPrintln("插件禁止扫描云盘文件: " + panFile.Path)
 					continue
 				}
 
-				fmt.Println("扫描到云盘文件：" + file.Path)
+				PromptPrintln("扫描到云盘文件：" + file.Path)
 				panFile.ScanTimeAt = utils.NowTimeStr()
 				panFileScanList = append(panFileScanList, panFile)
 				logger.Verboseln("scan pan file: ", utils.ObjectToJsonStr(panFile, false))

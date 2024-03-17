@@ -598,6 +598,7 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			f.syncItem.Status = SyncFileStatusSuccess
 			f.syncItem.StatusUpdateTime = utils.NowTimeStr()
 			f.syncFileDb.Update(f.syncItem)
+			PromptPrintln("上传完毕：" + f.syncItem.getPanFileFullPath())
 			return nil
 		}
 	} else {
@@ -633,23 +634,54 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 	// 但是不支持分片同时上传，必须单线程，并且按照顺序从1开始一个一个上传
 	worker := panupload.NewPanUpload(f.panClient, f.syncItem.getPanFileFullPath(), f.syncItem.DriveId, f.syncItem.UploadEntity)
 
-	// 限速配置
-	var rateLimit *speeds.RateLimit
-	if f.maxUploadRate > 0 {
-		rateLimit = speeds.NewRateLimit(f.maxUploadRate)
-	}
-
-	// 上传客户端
-	uploadClient := requester.NewHTTPClient()
-	uploadClient.SetTimeout(0)
-	uploadClient.SetKeepAlive(true)
-
+	// 初始化上传Range
 	if f.syncItem.UploadRange == nil {
 		f.syncItem.UploadRange = &transfer.Range{
 			Begin: 0,
 			End:   f.syncItem.UploadBlockSize,
 		}
 	}
+
+	// 限速配置
+	var rateLimit *speeds.RateLimit
+	if f.maxUploadRate > 0 {
+		rateLimit = speeds.NewRateLimit(f.maxUploadRate)
+	}
+	// 速度指示器
+	speedsStat := &speeds.Speeds{}
+	// 进度指示器
+	status := &uploader.UploadStatus{}
+	status.SetTotalSize(f.syncItem.LocalFile.FileSize)
+	completed := make(chan struct{}, 0)
+	rand.Seed(time.Now().UnixNano())
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-completed:
+				return
+			case <-ticker.C:
+				status.SetUploaded(f.syncItem.UploadRange.Begin)
+				time.Sleep(time.Duration(rand.Intn(10)*33) * time.Millisecond) // 延迟随机时间
+				builder := &strings.Builder{}
+				uploadedPercentage := fmt.Sprintf("%.2f%%", float64(status.Uploaded())/float64(status.TotalSize())*100)
+				fmt.Fprintf(builder, "\r上传到网盘:%s ↑ %s/%s(%s) %s/s............",
+					f.syncItem.getPanFileFullPath(),
+					converter.ConvertFileSize(status.Uploaded(), 2),
+					converter.ConvertFileSize(status.TotalSize(), 2),
+					uploadedPercentage,
+					converter.ConvertFileSize(speedsStat.GetSpeeds(), 2),
+				)
+				PromptPrint(builder.String())
+			}
+		}
+	}()
+
+	// 上传客户端
+	uploadClient := requester.NewHTTPClient()
+	uploadClient.SetTimeout(0)
+	uploadClient.SetKeepAlive(true)
 
 	// 标记上传状态
 	f.syncItem.Status = SyncFileStatusUploading
@@ -662,13 +694,14 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 		case <-ctx.Done():
 			// cancel routine & done
 			logger.Verboseln("file upload routine cancel")
+			close(completed)
 			return errors.New("file upload routine cancel")
 		default:
 			logger.Verboseln("do file upload process")
 			if f.syncItem.UploadRange.End > f.syncItem.LocalFile.FileSize {
 				f.syncItem.UploadRange.End = f.syncItem.LocalFile.FileSize
 			}
-			fileReader := uploader.NewBufioSplitUnit(rio.NewFileReaderAtLen64(localFile.GetFile()), *f.syncItem.UploadRange, nil, rateLimit, nil)
+			fileReader := uploader.NewBufioSplitUnit(rio.NewFileReaderAtLen64(localFile.GetFile()), *f.syncItem.UploadRange, speedsStat, rateLimit, nil)
 
 			if uploadDone, terr := worker.UploadFile(ctx, f.syncItem.UploadPartSeq, f.syncItem.UploadRange.Begin, f.syncItem.UploadRange.End, fileReader, uploadClient); terr == nil {
 				if uploadDone {
@@ -681,6 +714,8 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 						f.syncItem.Status = SyncFileStatusSuccess
 						f.syncItem.StatusUpdateTime = utils.NowTimeStr()
 						f.syncFileDb.Update(f.syncItem)
+						close(completed)
+						PromptPrintln("上传完毕：" + f.syncItem.getPanFileFullPath())
 						return nil
 					}
 

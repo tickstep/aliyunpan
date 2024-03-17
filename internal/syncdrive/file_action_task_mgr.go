@@ -555,7 +555,7 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 						prompt := ""
 						if f.task.Mode == UploadOnly {
 							prompt = "完成全部文件的同步上传，等待下一次扫描"
-						} else if f.task.Mode == UploadOnly {
+						} else if f.task.Mode == DownloadOnly {
 							prompt = "完成全部文件的同步下载，等待下一次扫描"
 						} else {
 							prompt = "完成全部文件的同步，等待下一次扫描"
