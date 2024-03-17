@@ -431,10 +431,6 @@ aliyunpan sync start
 
 使用配置文件启动同步备份服务，并配置下载并发为2，上传并发为1，下载分片大小为256KB，上传分片大小为1MB
 aliyunpan sync start -dp 2 -up 1 -dbs 256 -ubs 1024
-
-当你本地同步目录文件非常多，或者云盘同步目录文件非常多，为了后期更快更精准同步文件，可以先进行文件扫描并构建同步数据库，然后再正常启动同步任务。如下所示：
-aliyunpan sync start -step scan
-aliyunpan sync start
 ```
 
 ### 备份配置文件说明
@@ -450,13 +446,15 @@ aliyunpan sync start
    "name": "设计文档备份",
    "localFolderPath": "D:/tickstep/Documents/设计文档",
    "panFolderPath": "/备份盘/我的文档",
-   "mode": "upload"
+   "mode": "upload",
+   "driveName": "backup"
   },
   {
    "name": "手机图片备份",
    "localFolderPath": "D:/tickstep/Photos/手机图片",
    "panFolderPath": "/备份盘/手机图片",
-   "mode": "upload"
+   "mode": "upload",
+   "driveName": "resource"
   }
  ]
 }
@@ -465,7 +463,8 @@ aliyunpan sync start
 name - 任务名称
 localFolderPath - 本地目录
 panFolderPath - 网盘目录
-mode - 模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+mode - 模式，支持: upload(备份本地文件到云盘),download(备份云盘文件到本地)
+driveName - 网盘，支持：backup(备份盘), resource(资源盘)
 ```
 
 ### 命令行启动
@@ -473,12 +472,13 @@ mode - 模式，支持三种: upload(备份本地文件到云盘),download(备�
 
 ```
 使用命令行配置启动同步备份服务，将本地目录 /tickstep/Documents/设计文档 中的文件备份上传到云盘目录 /备份盘/我的文档
-./aliyunpan sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload"
+./aliyunpan sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload" -drive "backup"
 
 参数说明
 ldir：本地目录
 pdir：云盘目录
-mode：备份模式，支持：upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+mode：备份模式，支持：upload(备份本地文件到云盘),download(备份云盘文件到本地)
+drive - 网盘，支持：backup(备份盘), resource(资源盘)
 
 --------------------------------------------------------------
 正常会有以下的输出：
@@ -508,15 +508,9 @@ cd /path/to/aliyunpan/folder
 
 chmod +x ./aliyunpan
 
-# 指定refresh token用于登录
-./aliyunpan login -RefreshToken=9078907....adg9087
-
-# 上传下载链接类型：1-默认 2-阿里ECS环境
-./aliyunpan config set -transfer_url_type 1
-
 # 指定配置参数并进行启动
 # 支持的模式：upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
-./aliyunpan sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload"
+./aliyunpan sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload" -drive "backup"
 ```
 
 增加脚本执行权限
@@ -576,14 +570,13 @@ D:\Program Files\aliyunpan>alisync stop
 
 1. 直接运行
 ```
-docker run -d --name=aliyunpan-sync --restart=always -v "<your local dir>:/home/app/data" -e TZ="Asia/Shanghai" -e ALIYUNPAN_REFRESH_TOKEN="<your refreshToken>" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_TASK_STEP="sync" tickstep/aliyunpan-sync:<tag>
- 
+docker run -d --name=aliyunpan-sync --restart=always -v "<your aliyunpan_config.json>:/home/app/config/aliyunpan_config.json" -v "<your local dir>:/home/app/data" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_SYNC_DRIVE="backup" tickstep/aliyunpan-sync:<tag> 
   
-<your local dir>：本地目录绝对路径，例如：/tickstep/Documents/设计文档
-ALIYUNPAN_PAN_DIR：云盘目录
-ALIYUNPAN_REFRESH_TOKEN：RefreshToken
-ALIYUNPAN_SYNC_MODE：备份模式，支持三种: upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
-ALIYUNPAN_TASK_STEP：任务步骤, 支持两种: scan(只扫描并建立同步数据库),sync(正常启动同步任务)。如果你同步目录文件非常多，首次运行最好先跑一次scan步骤，然后再正常启动文件同步任务
+<your aliyunpan_config.json>: 用户已经登录成功并保存好的aliyunpan_config.json凭据文件
+<your local dir>：本地目标目录，绝对路径，例如：/tickstep/Documents/设计文档
+ALIYUNPAN_PAN_DIR：云盘目标目录，绝对路径
+ALIYUNPAN_SYNC_MODE：备份模式，支持两种: upload(备份本地文件到云盘),download(备份云盘文件到本地)
+ALIYUNPAN_SYNC_DRIVE: 网盘，支持两种：backup(备份盘), resource(资源盘)
 ```
 
 2. docker-compose运行   
@@ -597,18 +590,17 @@ services:
     container_name: aliyunpan-sync
     restart: always
     volumes:
-      # 指定本地备份目录绝对路径：/tickstep/Documents/设计文档
-      - /tickstep/Documents/设计文档:/home/app/data:rw
-      # （可选）可以指定JS插件sync_handler.js用于过滤文件，详见下面的插件说明
+      # （必须）映射的本地目录
+      - ./data:/home/app/data:rw
+      # （可选）可以指定JS插件sync_handler.js用于过滤文件，详见插件说明
       #- ./plugin/js/sync_handler.js:/home/app/config/plugin/js/sync_handler.js
-      # （推荐）挂载sync_drive同步数据库到本地
+      # （推荐）挂载sync_drive同步数据库到本地，这样即使容器销毁，同步数据库还可以用于以后使用
       #- ./sync_drive:/home/app/config/sync_drive
+      # （必须）映射token凭据文件
+      - /your/file/path/for/aliyunpan_config.json:/home/app/config/aliyunpan_config.json
     environment:
+      # 时区，东8区
       - TZ=Asia/Shanghai
-      # refresh token
-      - ALIYUNPAN_REFRESH_TOKEN=41804446a...bf7f069cab2
-      # 上传下载链接类型：1-默认 2-阿里ECS环境
-      - ALIYUNPAN_TRANSFER_URL_TYPE=1
       # 下载文件并发数
       - ALIYUNPAN_DOWNLOAD_PARALLEL=2
       # 上传文件并发数
@@ -617,18 +609,16 @@ services:
       - ALIYUNPAN_DOWNLOAD_BLOCK_SIZE=1024
       # 上传数据块大小，单位为KB，默认为10240KB，建议范围1024KB~10240KB
       - ALIYUNPAN_UPLOAD_BLOCK_SIZE=10240
-      # 指定网盘文件夹作为备份目录，不要指定根目录
-      - ALIYUNPAN_PAN_DIR=/备份盘/我的文档
-      # 备份模式：upload(备份本地文件到云盘), download(备份云盘文件到本地), sync(双向同步备份)
+      # 指定网盘文件夹作为备份目标目录，不要指定根目录
+      - ALIYUNPAN_PAN_DIR=/my_sync_dir
+      # 备份模式：upload(备份本地文件到云盘), download(备份云盘文件到本地)
       - ALIYUNPAN_SYNC_MODE=upload
-      # 优先级，只对双向同步备份模式有效。选项支持三种: time-时间优先，local-本地优先，pan-网盘优先
-      - ALIYUNPAN_SYNC_PRIORITY=time
+      # 网盘：backup(备份盘), resource(资源盘)
+      - ALIYUNPAN_SYNC_DRIVE=backup
       # 是否显示文件备份过程日志，true-显示，false-不显示
       - ALIYUNPAN_SYNC_LOG=true
       # 本地文件修改检测延迟间隔，单位秒。如果本地文件会被频繁修改，例如录制视频文件，配置好该时间可以避免上传未录制好的文件
-      - ALIYUNPAN_LOCAL_DELAY_TIME=3
-      # 任务步骤, 支持两种: scan(只扫描并建立同步数据库),sync(正常启动同步任务)
-      - ALIYUNPAN_TASK_STEP=sync      
+      - ALIYUNPAN_LOCAL_DELAY_TIME=3   
 ```
 
 3. sync_handler.js插件说明   

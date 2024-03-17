@@ -40,7 +40,7 @@ func CmdSync() cli.Command {
     备份功能。支持备份本地文件到云盘，备份云盘文件到本地两种模式。支持JavaScript插件对备份文件进行过滤。
     指定本地目录和对应的一个网盘目录，以备份文件。网盘目录必须和本地目录独占使用，不要用作其他用途，不然备份可能会有问题。
 
-	备份功能支持以下两种模式：
+	备份功能支持以下模式：
 	1. upload 
        备份本地文件，即上传本地文件到网盘，始终保持本地文件有一个完整的备份在网盘
 	2. download 
@@ -224,6 +224,7 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 					cli.StringFlag{
 						Name:  "drive",
 						Usage: "drive name, 网盘名称，backup(备份盘)，resource(资源盘)",
+						Value: "backup",
 					},
 					cli.StringFlag{
 						Name:  "ldir",
