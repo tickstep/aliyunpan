@@ -135,7 +135,8 @@ func (f *FileActionTaskManager) getPanPathFromLocalPath(localPath string) string
 	localRootPath := path.Clean(strings.ReplaceAll(f.task.LocalFolderPath, "\\", "/"))
 
 	relativePath := strings.TrimPrefix(localPath, localRootPath)
-	return path.Join(path.Clean(f.task.PanFolderPath), relativePath)
+	panPath := path.Join(path.Clean(f.task.PanFolderPath), relativePath)
+	return strings.ReplaceAll(panPath, "\\", "/")
 }
 
 // getLocalPathFromPanPath 通过网盘文件路径获取对应的本地文件的对应路径
@@ -551,6 +552,15 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 					if uploadWaitGroup.Parallel() == 0 && downloadWaitGroup.Parallel() == 0 { // 如果也没有进行中的异步任务
 						f.setExecuteLoopFlag(true)
 						logger.Verboseln("file execute task is finish, exit normally")
+						prompt := ""
+						if f.task.Mode == UploadOnly {
+							prompt = "完成全部文件的同步上传，等待下一次扫描"
+						} else if f.task.Mode == UploadOnly {
+							prompt = "完成全部文件的同步下载，等待下一次扫描"
+						} else {
+							prompt = "完成全部文件的同步，等待下一次扫描"
+						}
+						PromptOutput(prompt)
 						return
 					}
 				}

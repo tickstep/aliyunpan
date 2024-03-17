@@ -442,6 +442,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 				logger.Verboseln("start scan local file process at ", utils.NowTimeStr())
 				t.SetScanLoopFlag(false)
 				t.fileActionTaskManager.StartFileActionTaskExecutor()
+				PromptOutput("开始进行文件扫描...")
 			}
 
 			obj := folderQueue.Pop()
@@ -666,6 +667,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 				logger.Verboseln("start scan pan file process at ", utils.NowTimeStr())
 				t.SetScanLoopFlag(false)
 				t.fileActionTaskManager.StartFileActionTaskExecutor()
+				PromptOutput("开始进行文件扫描...")
 			}
 			obj := folderQueue.Pop()
 			if obj == nil {
