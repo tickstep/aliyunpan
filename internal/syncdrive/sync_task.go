@@ -119,12 +119,20 @@ func (t *SyncTask) String() string {
 		}
 		builder.WriteString("优先选项: " + priority + "\n")
 	}
-	policy := "增量备份"
+	policy := ""
 	if t.Policy == SyncPolicyExclusive {
-		policy = "排他备份（上传&删除）"
+		if t.Mode == Upload {
+			policy = "排他备份（上传&删除）"
+		} else if t.Mode == Download {
+			policy = "排他备份（下载&删除）"
+		}
 	}
 	if t.Policy == SyncPolicyIncrement {
-		policy = "增量备份（只上传）"
+		if t.Mode == Upload {
+			policy = "增量备份（只上传）"
+		} else if t.Mode == Download {
+			policy = "增量备份（只下载）"
+		}
 	}
 	builder.WriteString("同步策略: " + policy + "\n")
 	builder.WriteString("本地目录: " + t.LocalFolderPath + "\n")

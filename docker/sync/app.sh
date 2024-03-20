@@ -19,6 +19,7 @@ else
       "localFolderPath": "$ALIYUNPAN_LOCAL_DIR",
       "panFolderPath": "$ALIYUNPAN_PAN_DIR",
       "mode": "$ALIYUNPAN_SYNC_MODE",
+      "policy": "$ALIYUNPAN_SYNC_POLICY",
       "driveName": "$ALIYUNPAN_SYNC_DRIVE",
       "lastSyncTime": "2022-06-12 19:28:20"
      }

@@ -81,7 +81,7 @@ func CmdSync() cli.Command {
 name - 任务名称
 localFolderPath - 本地目录
 panFolderPath - 网盘目录
-mode - 模式，支持两种: upload(备份本地文件到云盘),download(备份云盘文件到本地)
+mode - 备份模式，支持两种: upload(备份本地文件到云盘),download(备份云盘文件到本地)
 policy - 备份策略, 支持两种: exclusive(排他备份文件，目标目录多余的文件会被删除),increment(增量备份文件，目标目录多余的文件不会被删除)
 driveName - 网盘名称，backup(备份盘)，resource(资源盘)
     
