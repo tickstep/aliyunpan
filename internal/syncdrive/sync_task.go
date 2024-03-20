@@ -20,9 +20,9 @@ import (
 )
 
 type (
-	TaskStep  string
-	SyncMode  string
-	CycleMode string
+	SyncMode   string
+	SyncPolicy string
+	CycleMode  string
 
 	// SyncTask 同步任务
 	SyncTask struct {
@@ -40,8 +40,10 @@ type (
 		LocalFolderPath string `json:"localFolderPath"`
 		// PanFolderPath 云盘目录
 		PanFolderPath string `json:"panFolderPath"`
-		// Mode 同步模式
+		// Mode 备份模式
 		Mode SyncMode `json:"mode"`
+		// Policy 备份策略
+		Policy SyncPolicy `json:"policy"`
 		// CycleMode 循环模式，OneTime-运行一次，InfiniteLoop-无限循环模式
 		CycleModeType CycleMode `json:"-"`
 		// Priority 优先级选项
@@ -73,24 +75,22 @@ type (
 )
 
 const (
-	// UploadOnly 单向上传，即备份本地文件到云盘
-	UploadOnly SyncMode = "upload"
-	// DownloadOnly 只下载，即备份云盘文件到本地
-	DownloadOnly SyncMode = "download"
+	// Upload 上传，即备份本地文件到云盘
+	Upload SyncMode = "upload"
+	// Download 下载，即备份云盘文件到本地
+	Download SyncMode = "download"
 	// SyncTwoWay 双向同步，本地和云盘文件完全保持一致
 	SyncTwoWay SyncMode = "sync"
+
+	// SyncPolicyExclusive 备份策略，排他备份，保证本地和云盘一比一备份，目标目录多余的文件会被删除
+	SyncPolicyExclusive SyncPolicy = "exclusive"
+	// SyncPolicyIncrement 备份策略，增量备份，只会增量备份文件，目标目录多余的（旧的）文件不会被删除
+	SyncPolicyIncrement SyncPolicy = "increment"
 
 	// CycleOneTime 只运行一次
 	CycleOneTime CycleMode = "OneTime"
 	// CycleInfiniteLoop 无限循环模式
 	CycleInfiniteLoop CycleMode = "InfiniteLoop"
-
-	// StepScanFile 任务步骤，扫描文件建立同步数据库
-	StepScanFile TaskStep = "scan"
-	// StepDiffFile 任务步骤，对比文件
-	StepDiffFile TaskStep = "diff"
-	// StepSyncFile 任务步骤，同步文件
-	StepSyncFile TaskStep = "sync"
 )
 
 func (t *SyncTask) NameLabel() string {
@@ -101,11 +101,11 @@ func (t *SyncTask) String() string {
 	builder := &strings.Builder{}
 	builder.WriteString("任务: " + t.NameLabel() + "\n")
 	mode := "双向备份"
-	if t.Mode == UploadOnly {
-		mode = "备份本地文件（只上传）"
+	if t.Mode == Upload {
+		mode = "备份本地文件（上传）"
 	}
-	if t.Mode == DownloadOnly {
-		mode = "备份云盘文件（只下载）"
+	if t.Mode == Download {
+		mode = "备份云盘文件（下载）"
 	}
 	builder.WriteString("同步模式: " + mode + "\n")
 	if t.Mode == SyncTwoWay {
@@ -119,6 +119,14 @@ func (t *SyncTask) String() string {
 		}
 		builder.WriteString("优先选项: " + priority + "\n")
 	}
+	policy := "增量备份"
+	if t.Policy == SyncPolicyExclusive {
+		policy = "排他备份（上传&删除）"
+	}
+	if t.Policy == SyncPolicyIncrement {
+		policy = "增量备份（只上传）"
+	}
+	builder.WriteString("同步策略: " + policy + "\n")
 	builder.WriteString("本地目录: " + t.LocalFolderPath + "\n")
 	builder.WriteString("云盘目录: " + t.PanFolderPath + "\n")
 	driveName := "备份盘"
@@ -209,11 +217,16 @@ func (t *SyncTask) Start() error {
 		return e
 	}
 
+	// 策略
+	if t.Policy == "" {
+		t.Policy = SyncPolicyIncrement
+	}
+
 	// 启动文件扫描进程
 	t.SetScanLoopFlag(false)
-	if t.Mode == UploadOnly {
+	if t.Mode == Upload {
 		go t.scanLocalFile(t.ctx)
-	} else if t.Mode == DownloadOnly {
+	} else if t.Mode == Download {
 		go t.scanPanFile(t.ctx)
 	} else {
 		return fmt.Errorf("异常：暂不支持该模式。")
@@ -333,7 +346,7 @@ func (t *SyncTask) discardLocalFileDb(filePath string, startTimeUnix int64) bool
 	}
 	for _, file := range files {
 		if file.ScanTimeAt == "" || file.ScanTimeUnix() < startTimeUnix {
-			if t.Mode == DownloadOnly {
+			if t.Mode == Download {
 				// delete discard local file info directly
 				t.localFileDb.Delete(file.Path)
 				logger.Verboseln("label discard local file from DB: ", utils.ObjectToJsonStr(file, false))
@@ -572,7 +585,7 @@ func (t *SyncTask) discardPanFileDb(filePath string, startTimeUnix int64) bool {
 	}
 	for _, file := range files {
 		if file.ScanTimeUnix() < startTimeUnix {
-			if t.Mode == UploadOnly {
+			if t.Mode == Upload {
 				// delete discard pan file info directly
 				t.panFileDb.Delete(file.Path)
 				logger.Verboseln("delete discard pan file from DB: ", utils.ObjectToJsonStr(file, false))

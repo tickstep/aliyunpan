@@ -180,6 +180,9 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
 			task.Priority = SyncPriorityTimestampFirst
 			task.syncOption.SyncPriority = SyncPriorityTimestampFirst
 		}
+		if task.Policy == "" {
+			task.Policy = SyncPolicyIncrement
+		}
 		task.LocalFolderPath = path.Clean(task.LocalFolderPath)
 		task.PanFolderPath = path.Clean(task.PanFolderPath)
 		if e := task.Start(); e != nil {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	mapset "github.com/deckarep/golang-set"
+	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/utils"
@@ -171,7 +173,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 	// download file from pan drive
 	if panFilesNeedToDownload != nil {
 		for _, file := range panFilesNeedToDownload {
-			if f.task.Mode == DownloadOnly {
+			if f.task.Mode == Download {
 				syncItem := &SyncFileItem{
 					Action:            SyncFileActionDownload,
 					Status:            SyncFileStatusCreate,
@@ -195,6 +197,13 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 					}
 					f.addToSyncDb(fileActionTask)
 				}
+			} else if f.task.Mode == Upload {
+				if f.task.Policy == SyncPolicyExclusive {
+					// 需要删除云盘多余的文件
+					if f.deletePanFile(file) == nil {
+						PromptPrintln("成功删除云盘多余文件：" + file.Path)
+					}
+				}
 			}
 		}
 	}
@@ -202,7 +211,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 	// upload file to pan drive
 	if localFilesNeedToUpload != nil {
 		for _, file := range localFilesNeedToUpload {
-			if f.task.Mode == UploadOnly {
+			if f.task.Mode == Upload {
 				// check local file modified or not
 				if file.IsFile() {
 					if f.syncOption.LocalFileModifiedCheckIntervalSec > 0 {
@@ -238,6 +247,13 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 					}
 					f.addToSyncDb(fileActionTask)
 				}
+			} else if f.task.Mode == Download {
+				if f.task.Policy == SyncPolicyExclusive {
+					// 需要删除云盘多余的文件
+					if f.deleteLocalFile(file) == nil {
+						PromptPrintln("成功删除本地多余文件：" + file.Path)
+					}
+				}
 			}
 		}
 	}
@@ -254,7 +270,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 
 		// 本地文件和云盘文件SHA1不一样
 		// 不同模式同步策略不一样
-		if f.task.Mode == UploadOnly {
+		if f.task.Mode == Upload {
 
 			// 不再这里计算SHA1，待到上传的时候再计算
 			//if localFile.Sha1Hash == "" {
@@ -298,7 +314,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 				},
 			}
 			f.addToSyncDb(uploadLocalFile)
-		} else if f.task.Mode == DownloadOnly {
+		} else if f.task.Mode == Download {
 			// 校验SHA1是否相同
 			if strings.ToLower(panFile.Sha1Hash) == strings.ToLower(localFile.Sha1Hash) {
 				// do nothing
@@ -327,7 +343,7 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 	}
 }
 
-// 创建本地文件夹
+// createLocalFolder 创建本地文件夹
 func (f *FileActionTaskManager) createLocalFolder(panFileItem *PanFileItem) error {
 	panPath := panFileItem.Path
 	panPath = strings.ReplaceAll(panPath, "\\", "/")
@@ -366,6 +382,37 @@ func (f *FileActionTaskManager) createPanFolder(localFileItem *LocalFileItem) er
 	} else {
 		return apierr1
 	}
+}
+
+// deleteLocalFile 删除本地文件
+func (f *FileActionTaskManager) deleteLocalFile(localFileItem *LocalFileItem) error {
+	localFilePath := localFileItem.Path
+	logger.Verbosef("正在删除本地文件: %s\n", localFilePath)
+	var e error
+	if localFileItem.IsFolder() {
+		e = os.RemoveAll(localFilePath)
+	} else {
+		e = os.Remove(localFilePath)
+	}
+	if e == nil {
+		logger.Verbosef("删除本地文件成功: %s\n", localFilePath)
+		return nil
+	}
+	return e
+}
+
+// deletePanFile 删除云盘文件
+func (f *FileActionTaskManager) deletePanFile(panFileItem *PanFileItem) error {
+	logger.Verbosef("正在删除云盘文件: %s\n", panFileItem.Path)
+	var fileDeleteResult *aliyunpan.FileBatchActionResult
+	var err *apierror.ApiError = nil
+	fileDeleteResult, err = f.task.panClient.OpenapiPanClient().FileDeleteCompletely(&aliyunpan.FileBatchActionParam{DriveId: panFileItem.DriveId, FileId: panFileItem.FileId})
+	time.Sleep(1 * time.Second)
+	if err == nil && fileDeleteResult.Success {
+		logger.Verbosef("删除云盘文件成功: %s\n", panFileItem.Path)
+		return nil
+	}
+	return err
 }
 
 func (f *FileActionTaskManager) addToSyncDb(fileTask *FileActionTask) {
@@ -553,9 +600,9 @@ func (f *FileActionTaskManager) fileActionTaskExecutor(ctx context.Context) {
 						f.setExecuteLoopFlag(true)
 						logger.Verboseln("file execute task is finish, exit normally")
 						prompt := ""
-						if f.task.Mode == UploadOnly {
+						if f.task.Mode == Upload {
 							prompt = "完成全部文件的同步上传，等待下一次扫描"
-						} else if f.task.Mode == DownloadOnly {
+						} else if f.task.Mode == Download {
 							prompt = "完成全部文件的同步下载，等待下一次扫描"
 						} else {
 							prompt = "完成全部文件的同步，等待下一次扫描"

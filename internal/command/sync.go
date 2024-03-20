@@ -72,6 +72,7 @@ func CmdSync() cli.Command {
    "localFolderPath": "D:/tickstep/Documents/设计文档",
    "panFolderPath": "/sync_drive/我的文档",
    "mode": "upload",
+   "policy"： "increment"，
    "driveName": "backup"
   }
  ]
@@ -81,6 +82,7 @@ name - 任务名称
 localFolderPath - 本地目录
 panFolderPath - 网盘目录
 mode - 模式，支持两种: upload(备份本地文件到云盘),download(备份云盘文件到本地)
+policy - 备份策略, 支持两种: exclusive(排他备份文件，目标目录多余的文件会被删除),increment(增量备份文件，目标目录多余的文件不会被删除)
 driveName - 网盘名称，backup(备份盘)，resource(资源盘)
     
 	例子:
@@ -160,6 +162,7 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 					localDir := c.String("ldir")
 					panDir := c.String("pdir")
 					mode := c.String("mode")
+					policy := c.String("policy")
 					driveName := c.String("drive")
 					if localDir != "" && panDir != "" {
 						// make path absolute
@@ -188,15 +191,22 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 						task = &syncdrive.SyncTask{}
 						task.LocalFolderPath = path.Clean(strings.ReplaceAll(localDir, "\\", "/"))
 						task.PanFolderPath = panDir
-						task.Mode = syncdrive.UploadOnly
-						if mode == string(syncdrive.UploadOnly) {
-							task.Mode = syncdrive.UploadOnly
-						} else if mode == string(syncdrive.DownloadOnly) {
-							task.Mode = syncdrive.DownloadOnly
+						task.Mode = syncdrive.Upload
+						if mode == string(syncdrive.Upload) {
+							task.Mode = syncdrive.Upload
+						} else if mode == string(syncdrive.Download) {
+							task.Mode = syncdrive.Download
 						} else if mode == string(syncdrive.SyncTwoWay) {
 							task.Mode = syncdrive.SyncTwoWay
 						} else {
-							task.Mode = syncdrive.UploadOnly
+							task.Mode = syncdrive.Upload
+						}
+						if policy == string(syncdrive.SyncPolicyExclusive) {
+							task.Policy = syncdrive.SyncPolicyExclusive
+						} else if policy == string(syncdrive.SyncPolicyIncrement) {
+							task.Policy = syncdrive.SyncPolicyIncrement
+						} else {
+							task.Policy = syncdrive.SyncPolicyIncrement
 						}
 						task.Name = path.Base(task.LocalFolderPath)
 						task.Id = utils.Md5Str(task.LocalFolderPath)
@@ -238,6 +248,11 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 						Name:  "mode",
 						Usage: "备份模式, 支持两种: upload(备份本地文件到云盘),download(备份云盘文件到本地)",
 						Value: "upload",
+					},
+					cli.StringFlag{
+						Name:  "policy",
+						Usage: "备份策略, 支持两种: exclusive(排他备份文件，目标目录多余的文件会被删除),increment(增量备份文件，目标目录多余的文件不会被删除)",
+						Value: "increment",
 					},
 					cli.IntFlag{
 						Name:  "dp",
