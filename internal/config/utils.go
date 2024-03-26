@@ -17,11 +17,13 @@ import (
 	"encoding/hex"
 	"github.com/olekukonko/tablewriter"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
+	"github.com/tickstep/aliyunpan/library/nets"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/crypto"
 	"github.com/tickstep/library-go/ids"
 	"github.com/tickstep/library-go/logger"
 	"math/rand"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -134,4 +136,31 @@ func RandomDeviceId() string {
 		str.WriteByte(byte(STR_SET[rand.Intn(len(STR_SET))]))
 	}
 	return str.String()
+}
+
+// ParseLocalAddress 解析网络接口配置为对应的本地IP地址
+func ParseLocalAddress(localAddrs string) []string {
+	allLocalAddress, _ := nets.GetLocalNetInterfaceAddress()
+	localAddrNames := strings.Split(localAddrs, ",")
+	ips := []string{}
+	for _, addr := range localAddrNames {
+		if addr == "" {
+			continue
+		}
+		if net.ParseIP(addr) == nil {
+			// maybe local interface name
+			if localAddr := allLocalAddress.GetByName(addr); localAddr != nil {
+				if localAddr.IPv4 != "" {
+					ips = append(ips, localAddr.IPv4)
+				}
+				if localAddr.IPv6 != "" {
+					ips = append(ips, localAddr.IPv6)
+				}
+			}
+		} else {
+			// ip
+			ips = append(ips, addr)
+		}
+	}
+	return ips
 }

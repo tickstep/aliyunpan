@@ -198,10 +198,6 @@ func (c *PanConfig) init() error {
 	if c.Proxy != "" {
 		requester.SetGlobalProxy(c.Proxy)
 	}
-	// 设置本地网卡地址
-	if c.LocalAddrs != "" {
-		requester.SetLocalTCPAddrList(strings.Split(c.LocalAddrs, ",")...)
-	}
 
 	// 设置域名解析策略 IPv4 or IPv6
 	t := requester.IPAny
@@ -211,6 +207,15 @@ func (c *PanConfig) init() error {
 		t = requester.IPv6
 	}
 	requester.SetPreferIPType(t)
+
+	// 设置本地网卡地址
+	if c.LocalAddrs != "" {
+		ips := ParseLocalAddress(c.LocalAddrs)
+		if len(ips) > 0 {
+			logger.Verboseln("bind local address list: ", ips)
+			requester.SetLocalTCPAddrList(ips...)
+		}
+	}
 
 	return nil
 }
