@@ -116,13 +116,14 @@ winget install tickstep.aliyunpan --silent
 ![](./assets/images/sync_command-basic_logic.jpg)
 
 ```
-docker run -d --name=aliyunpan-sync --restart=always -v "<your aliyunpan_config.json>:/home/app/config/aliyunpan_config.json" -v "<your local dir>:/home/app/data" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_SYNC_DRIVE="backup" tickstep/aliyunpan-sync:v0.3.0 
+docker run -d --name=aliyunpan-sync --restart=always -v "<your aliyunpan_config.json>:/home/app/config/aliyunpan_config.json" -v "<your local dir>:/home/app/data" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_SYNC_DRIVE="backup" -e ALIYUNPAN_SYNC_LOG="true" tickstep/aliyunpan-sync:v0.3.0 
   
 <your aliyunpan_config.json>: 用户已经登录成功并保存好的aliyunpan_config.json凭据文件
 <your local dir>：本地目标目录，绝对路径，例如：/tickstep/Documents/设计文档
 ALIYUNPAN_PAN_DIR：云盘目标目录，绝对路径
 ALIYUNPAN_SYNC_MODE：备份模式，支持: upload(备份本地文件到云盘),download(备份云盘文件到本地)
 ALIYUNPAN_SYNC_DRIVE: 网盘，支持：backup(备份盘), resource(资源盘)
+ALIYUNPAN_SYNC_LOG: 同步日志，true-开启同步日志显示，false-关闭同步日志
 ```
 更详情文档请参考dockerhub网址：[tickstep/aliyunpan-sync](https://hub.docker.com/r/tickstep/aliyunpan-sync)
 

@@ -541,8 +541,8 @@ $ nohup ./sync.sh >/dev/null 2>&1 &
   <log mode="roll"></log>
 </service>
 ```
-4. 将alisync.exe和alisync.xml存放在你PC上aliyunpan.exe工具所在目录，例如：
-   ![](../assets/images/win10-alisync-service.png)
+4. 将alisync.exe和alisync.xml存放在你PC上aliyunpan.exe工具所在目录，例如：   
+![](../assets/images/win10-alisync-service.png)
 5. CMD命令行启动程序
 ```
 # 安装服务（只需要第一次安装，后面不用再安装）
@@ -570,13 +570,14 @@ D:\Program Files\aliyunpan>alisync stop
 
 1. 直接运行
 ```
-docker run -d --name=aliyunpan-sync --restart=always -v "<your aliyunpan_config.json>:/home/app/config/aliyunpan_config.json" -v "<your local dir>:/home/app/data" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_SYNC_DRIVE="backup" tickstep/aliyunpan-sync:<tag> 
+docker run -d --name=aliyunpan-sync --restart=always -v "<your aliyunpan_config.json>:/home/app/config/aliyunpan_config.json" -v "<your local dir>:/home/app/data" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_SYNC_DRIVE="backup" -e ALIYUNPAN_SYNC_LOG="true" tickstep/aliyunpan-sync:<tag> 
   
 <your aliyunpan_config.json>: 用户已经登录成功并保存好的aliyunpan_config.json凭据文件
 <your local dir>：本地目标目录，绝对路径，例如：/tickstep/Documents/设计文档
 ALIYUNPAN_PAN_DIR：云盘目标目录，绝对路径
 ALIYUNPAN_SYNC_MODE：备份模式，支持两种: upload(备份本地文件到云盘),download(备份云盘文件到本地)
 ALIYUNPAN_SYNC_DRIVE: 网盘，支持两种：backup(备份盘), resource(资源盘)
+ALIYUNPAN_SYNC_LOG: 同步日志，true-开启同步日志显示，false-关闭同步日志
 ```
 
 2. docker-compose运行   
