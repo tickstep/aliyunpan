@@ -246,7 +246,7 @@ func RefreshOpenTokenInNeed(activeUser *config.PanUser) bool {
 				}
 				if wt != nil {
 					params.Result = "success"
-					params.OldToken = activeUser.WebapiToken.AccessToken
+					params.OldToken = activeUser.OpenapiToken.AccessToken
 					params.NewToken = wt.AccessToken
 
 					// update for user
