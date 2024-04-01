@@ -411,6 +411,9 @@ func (c *PanConfig) ActiveUser() *PanUser {
 					u.panClient = user.panClient
 					u.Nickname = user.Nickname
 
+					if u.ActiveDriveId == "" {
+						u.ActiveDriveId = user.DriveList.GetFileDriveId()
+					}
 					u.DriveList = user.DriveList
 					// check workdir valid or not
 					if user.IsFileDriveActive() {

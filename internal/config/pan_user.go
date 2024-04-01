@@ -119,9 +119,9 @@ func SetupUserByCookie(openapiToken, webapiToken *PanClientToken, ticketId, user
 	if openapiToken == nil {
 		return nil, apierror.NewFailedApiError("openapi token is empty")
 	}
-	if webapiToken == nil {
-		return nil, apierror.NewFailedApiError("webapi token is empty")
-	}
+	//if webapiToken == nil {
+	//	return nil, apierror.NewFailedApiError("webapi token is empty")
+	//}
 
 doOpenLoginAct:
 	// setup openapi client
