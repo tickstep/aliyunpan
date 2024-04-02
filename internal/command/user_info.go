@@ -46,7 +46,7 @@ func CmdSu() cli.Command {
 
 	示例:
 	aliyunpan su
-	aliyunpan su <uid or name>
+	aliyunpan su <uid>
 `,
 		Category: "阿里云盘账号",
 		Before:   ReloadConfigFunc,
@@ -94,7 +94,7 @@ func CmdSu() cli.Command {
 				cli.ShowCommandHelp(c, c.Command.Name)
 			}
 
-			switchedUser, err := config.Config.SwitchUser(uid, inputData)
+			switchedUser, err := config.Config.SwitchUser(uid)
 			if err != nil {
 				fmt.Printf("切换用户失败, %s\n", err)
 				return nil

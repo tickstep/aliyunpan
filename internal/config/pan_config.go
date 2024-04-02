@@ -424,6 +424,9 @@ func (c *PanConfig) ActiveUser() *PanUser {
 							u.WorkdirFileEntity = *aliyunpan.NewFileEntityForRootDir()
 						} else {
 							u.WorkdirFileEntity = *fe
+							if u.Workdir == "" {
+								u.Workdir = "/"
+							}
 						}
 					} else if user.IsResourceDriveActive() {
 						fe, err1 := u.PanClient().OpenapiPanClient().FileInfoByPath(u.ActiveDriveId, u.ResourceWorkdir)
@@ -433,6 +436,9 @@ func (c *PanConfig) ActiveUser() *PanUser {
 							u.ResourceWorkdirFileEntity = *aliyunpan.NewFileEntityForRootDir()
 						} else {
 							u.ResourceWorkdirFileEntity = *fe
+							if u.ResourceWorkdir == "" {
+								u.ResourceWorkdir = "/"
+							}
 						}
 					} else if user.IsAlbumDriveActive() {
 						fe, err1 := u.PanClient().WebapiPanClient().FileInfoByPath(u.ActiveDriveId, u.AlbumWorkdir)
@@ -442,6 +448,9 @@ func (c *PanConfig) ActiveUser() *PanUser {
 							u.AlbumWorkdirFileEntity = *aliyunpan.NewFileEntityForRootDir()
 						} else {
 							u.AlbumWorkdirFileEntity = *fe
+							if u.AlbumWorkdir == "" {
+								u.AlbumWorkdir = "/"
+							}
 						}
 					}
 				}
@@ -463,7 +472,9 @@ func (c *PanConfig) SetActiveUser(user *PanUser) *PanUser {
 			u.WebapiToken = user.WebapiToken
 			u.OpenapiToken = user.OpenapiToken
 			u.TicketId = user.TicketId
-			u.UpdateClient(user.PanClient().OpenapiPanClient(), user.PanClient().WebapiPanClient())
+			if u.PanClient() != nil && user.PanClient() != nil {
+				u.UpdateClient(user.PanClient().OpenapiPanClient(), user.PanClient().WebapiPanClient())
+			}
 			needToInsert = false
 			break
 		}
@@ -491,9 +502,9 @@ func (c *PanConfig) NumLogins() int {
 }
 
 // SwitchUser 切换登录用户
-func (c *PanConfig) SwitchUser(uid, username string) (*PanUser, error) {
+func (c *PanConfig) SwitchUser(uid string) (*PanUser, error) {
 	for _, u := range c.UserList {
-		if u.UserId == uid || u.AccountName == username {
+		if u.UserId == uid {
 			return c.SetActiveUser(u), nil
 		}
 	}
@@ -509,7 +520,7 @@ func (c *PanConfig) DeleteUser(uid string) (*PanUser, error) {
 			c.ActiveUID = ""
 			c.activeUser = nil
 			if len(c.UserList) > 0 {
-				c.SwitchUser(c.UserList[0].UserId, "")
+				c.SwitchUser(c.UserList[0].UserId)
 			}
 			return u, nil
 		}

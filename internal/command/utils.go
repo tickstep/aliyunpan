@@ -225,7 +225,7 @@ func RefreshOpenTokenInNeed(activeUser *config.PanUser) bool {
 		if activeUser.OpenapiToken != nil && len(activeUser.OpenapiToken.AccessToken) > 0 {
 			cz := time.FixedZone("CST", 8*3600) // 东8区
 			expiredTime := time.Unix(activeUser.OpenapiToken.Expired, 0).In(cz)
-			now := time.Now()
+			now := time.Now().In(cz)
 			if (expiredTime.Unix() - now.Unix()) <= (2 * 60) { // 有效期小于2min就刷新
 				pluginManger := plugins.NewPluginManager(config.GetPluginDir())
 				plugin, _ := pluginManger.GetPlugin()
