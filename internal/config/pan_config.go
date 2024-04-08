@@ -210,7 +210,7 @@ func (c *PanConfig) init() error {
 
 	// 设置本地网卡地址
 	if c.LocalAddrs != "" {
-		ips := ParseLocalAddress(c.LocalAddrs)
+		ips := ParseLocalAddress(c.LocalAddrs, strings.ToLower(c.PreferIPType))
 		if len(ips) > 0 {
 			logger.Verboseln("bind local address list: ", ips)
 			requester.SetLocalTCPAddrList(ips...)

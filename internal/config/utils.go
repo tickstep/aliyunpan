@@ -139,7 +139,7 @@ func RandomDeviceId() string {
 }
 
 // ParseLocalAddress 解析网络接口配置为对应的本地IP地址
-func ParseLocalAddress(localAddrs string) []string {
+func ParseLocalAddress(localAddrs string, filterIpType string) []string {
 	allLocalAddress, _ := nets.GetLocalNetInterfaceAddress()
 	localAddrNames := strings.Split(localAddrs, ",")
 	ips := []string{}
@@ -151,10 +151,22 @@ func ParseLocalAddress(localAddrs string) []string {
 			// maybe local interface name
 			if localAddr := allLocalAddress.GetByName(addr); localAddr != nil {
 				if localAddr.IPv4 != "" {
-					ips = append(ips, localAddr.IPv4)
+					if filterIpType == "any" || filterIpType == "" { // 不限制
+						ips = append(ips, localAddr.IPv4)
+					} else {
+						if filterIpType == "ipv4" {
+							ips = append(ips, localAddr.IPv4)
+						}
+					}
 				}
 				if localAddr.IPv6 != "" {
-					ips = append(ips, localAddr.IPv6)
+					if filterIpType == "any" || filterIpType == "" { // 不限制
+						ips = append(ips, localAddr.IPv6)
+					} else {
+						if filterIpType == "ipv6" {
+							ips = append(ips, localAddr.IPv6)
+						}
+					}
 				}
 			}
 		} else {

@@ -33,7 +33,7 @@ func (c *PanConfig) SetProxy(proxy string) {
 // SetLocalAddrs 设置localAddrs
 func (c *PanConfig) SetLocalAddrs(localAddrs string) {
 	c.LocalAddrs = localAddrs
-	ips := ParseLocalAddress(localAddrs)
+	ips := ParseLocalAddress(localAddrs, strings.ToLower(c.PreferIPType))
 	if len(ips) > 0 {
 		requester.SetLocalTCPAddrList(ips...)
 	}
