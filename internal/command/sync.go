@@ -374,6 +374,18 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 			for strings.ToLower(c) != "y" {
 				fmt.Scan(&c)
 			}
+			//如果只是运行一次
+		} else if syncMgr.IsOneTime() {
+			fmt.Println("单次任务模式，执行完所有任务后退出")
+			//先等待3秒，让其他协程启动
+			time.Sleep(time.Second * 3)
+			for {
+				if syncMgr.IsAllTaskDone() {
+					break
+				}
+				time.Sleep(time.Second * 3)
+			}
+			fmt.Println("所有上传/下载任务已完成")
 		} else {
 			fmt.Println("本命令不会退出，程序正在以非交互的方式运行。如需退出请借助运行环境提供的方式。")
 			logger.Verboseln("App not in CLI mode, not need to listen to input stream")

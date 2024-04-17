@@ -45,7 +45,7 @@ type (
 		// Policy 备份策略
 		Policy SyncPolicy `json:"policy"`
 		// CycleMode 循环模式，OneTime-运行一次，InfiniteLoop-无限循环模式
-		CycleModeType CycleMode `json:"-"`
+		CycleModeType CycleMode `json:"cycleModeType"`
 		// Priority 优先级选项
 		Priority SyncPriorityOption `json:"-"`
 		// LastSyncTime 上一次同步时间
@@ -787,4 +787,9 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 			t.fileActionTaskManager.doFileDiffRoutine(localFileScanList, panFileScanList)
 		}
 	}
+}
+
+// IsExecuteLoopIsDone 判断任务执行是否已经全部完成
+func (t *SyncTask) IsExecuteLoopIsDone() bool {
+	return t.fileActionTaskManager.IsExecuteLoopIsDone()
 }

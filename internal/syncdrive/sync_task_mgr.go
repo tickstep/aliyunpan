@@ -221,3 +221,27 @@ func (m *SyncTaskManager) Stop() (bool, error) {
 	}
 	return true, nil
 }
+
+// IsOneTime 判断是否是单次运行，此处判断只要是有一个任务是需要单次运行的，那么全部任务执行结束后退出程序
+func (m *SyncTaskManager) IsOneTime() bool {
+	for _, task := range m.syncDriveConfig.SyncTaskList {
+		if task.CycleModeType == CycleOneTime {
+			return true
+		}
+	}
+	return false
+}
+
+// IsAllTaskDone 任务是否全部完成
+func (m *SyncTaskManager) IsAllTaskDone() bool {
+	var b = 0
+	for _, v := range m.syncDriveConfig.SyncTaskList {
+		if v.IsExecuteLoopIsDone() {
+			b += 1
+		}
+	}
+	if b == len(m.syncDriveConfig.SyncTaskList) {
+		return true
+	}
+	return false
+}
