@@ -13,7 +13,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.2-0.20190618033246-cc27d85e17ce
 	github.com/peterh/liner v1.2.1
 	github.com/satori/go.uuid v1.2.0
-	github.com/tickstep/aliyunpan-api v0.2.0
+	github.com/tickstep/aliyunpan-api v0.2.1
 	github.com/tickstep/bolt v1.3.4
 	github.com/tickstep/library-go v0.1.1
 	github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f
@@ -38,4 +38,4 @@ require (
 //replace github.com/boltdb/bolt => github.com/tickstep/bolt v1.3.4
 //replace github.com/tickstep/bolt => /Users/tickstep/Documents/Workspace/go/projects/bolt
 //replace github.com/tickstep/library-go => /Users/tickstep/Documents/Workspace/go/projects/library-go
-replace github.com/tickstep/aliyunpan-api => /Users/tickstep/Documents/Workspace/go/projects/aliyunpan-api
+//replace github.com/tickstep/aliyunpan-api => /Users/tickstep/Documents/Workspace/go/projects/aliyunpan-api
