@@ -31,6 +31,8 @@ services:
       - ALIYUNPAN_SYNC_MODE=upload
       # 备份策略: exclusive(排他备份文件，目标目录多余的文件会被删除),increment(增量备份文件，目标目录多余的文件不会被删除)
       - ALIYUNPAN_SYNC_POLICY=increment
+      # 备份周期, 支持两种: infinity(永久循环备份),onetime(只运行一次备份)
+      - ALIYUNPAN_SYNC_CYCLE=infinity
       # 网盘：backup(备份盘), resource(资源盘)
       - ALIYUNPAN_SYNC_DRIVE=backup
       # 是否显示文件备份过程日志，true-显示，false-不显示
