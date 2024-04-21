@@ -60,9 +60,9 @@
 
 参考例子：
 ```shell
-wget https://github.com/tickstep/aliyunpan/releases/download/v0.3.0/aliyunpan-v0.3.0-linux-amd64.zip
-unzip aliyunpan-v0.3.0-linux-amd64.zip
-cd aliyunpan-v0.3.0-linux-amd64
+wget https://github.com/tickstep/aliyunpan/releases/download/v0.3.1/aliyunpan-v0.3.1-linux-amd64.zip
+unzip aliyunpan-v0.3.1-linux-amd64.zip
+cd aliyunpan-v0.3.1-linux-amd64
 ./aliyunpan
 ```
 
@@ -116,7 +116,7 @@ winget install tickstep.aliyunpan --silent
 ![](./assets/images/sync_command-basic_logic.jpg)
 
 ```
-docker run -d --name=aliyunpan-sync --restart=always -v "<your aliyunpan_config.json>:/home/app/config/aliyunpan_config.json" -v "<your local dir>:/home/app/data" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_SYNC_DRIVE="backup" -e ALIYUNPAN_SYNC_LOG="true" tickstep/aliyunpan-sync:v0.3.0 
+docker run -d --name=aliyunpan-sync --restart=always -v "<your aliyunpan_config.json>:/home/app/config/aliyunpan_config.json" -v "<your local dir>:/home/app/data" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_SYNC_DRIVE="backup" -e ALIYUNPAN_SYNC_LOG="true" tickstep/aliyunpan-sync:v0.3.1 
   
 <your aliyunpan_config.json>: 用户已经登录成功并保存好的aliyunpan_config.json凭据文件
 <your local dir>：本地目标目录，绝对路径，例如：/tickstep/Documents/设计文档
