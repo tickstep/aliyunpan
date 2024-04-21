@@ -226,7 +226,13 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 						}
 					}
 
-					RunSync(task, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"))
+					cycleMode := syncdrive.CycleInfiniteLoop
+					if c.String("cycle") == "onetime" {
+						cycleMode = syncdrive.CycleOneTime
+					} else {
+						cycleMode = syncdrive.CycleInfiniteLoop
+					}
+					RunSync(task, cycleMode, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"))
 
 					return nil
 				},
@@ -253,6 +259,11 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 						Name:  "policy",
 						Usage: "备份策略, 支持两种: exclusive(排他备份文件，目标目录多余的文件会被删除),increment(增量备份文件，目标目录多余的文件不会被删除)",
 						Value: "increment",
+					},
+					cli.StringFlag{
+						Name:  "cycle",
+						Usage: "备份周期, 支持两种: infinity(永久循环备份),onetime(只运行一次备份)",
+						Value: "infinity",
 					},
 					cli.IntFlag{
 						Name:  "dp",
@@ -290,7 +301,7 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 	}
 }
 
-func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64,
+func RunSync(defaultTask *syncdrive.SyncTask, cycleMode syncdrive.CycleMode, fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64,
 	flag syncdrive.SyncPriorityOption, localDelayTime int) {
 	maxDownloadRate := config.Config.MaxDownloadRate
 	maxUploadRate := config.Config.MaxUploadRate
@@ -353,7 +364,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 	fmt.Printf("备份配置文件：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",
 		syncConfigFile, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
 		converter.ConvertFileSize(uploadBlockSize, 2))
-	if _, e := syncMgr.Start(tasks); e != nil {
+	if _, e := syncMgr.Start(tasks, cycleMode); e != nil {
 		fmt.Println("启动任务失败：", e)
 		return
 	}
@@ -367,23 +378,33 @@ func RunSync(defaultTask *syncdrive.SyncTask, fileDownloadParallel, fileUploadPa
 			time.Sleep(60 * time.Second)
 		}
 	} else {
-		if global.IsAppInCliMode {
-			// in cmd mode
-			c := ""
-			fmt.Println("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止。")
-			for strings.ToLower(c) != "y" {
-				fmt.Scan(&c)
+		if cycleMode == syncdrive.CycleInfiniteLoop {
+			if global.IsAppInCliMode {
+				// in cmd mode
+				c := ""
+				fmt.Println("本命令不会退出，如需要结束同步备份进程请输入y，然后按Enter键进行停止。")
+				for strings.ToLower(c) != "y" {
+					fmt.Scan(&c)
+				}
+			} else {
+				fmt.Println("本命令不会退出，程序正在以非交互的方式运行。如需退出请借助运行环境提供的方式。")
+				logger.Verboseln("App not in CLI mode, not need to listen to input stream")
+				for {
+					time.Sleep(60 * time.Second)
+				}
 			}
 		} else {
-			fmt.Println("本命令不会退出，程序正在以非交互的方式运行。如需退出请借助运行环境提供的方式。")
-			logger.Verboseln("App not in CLI mode, not need to listen to input stream")
 			for {
-				time.Sleep(60 * time.Second)
+				if syncMgr.IsAllTaskCompletely() {
+					fmt.Println("所有备份任务已完成")
+					break
+				}
+				time.Sleep(5 * time.Second)
 			}
 		}
 	}
 
-	fmt.Println("正在停止同步备份任务，请稍等...")
+	fmt.Println("正在退出同步备份任务，请稍等...")
 
 	// stop task
 	syncMgr.Stop()

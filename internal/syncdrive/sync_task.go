@@ -236,6 +236,8 @@ func (t *SyncTask) Start() error {
 		go t.scanLocalFile(t.ctx)
 	} else if t.Mode == Download {
 		go t.scanPanFile(t.ctx)
+	} else if t.Mode == SyncTwoWay {
+		go t.scanLocalFile(t.ctx)
 	} else {
 		return fmt.Errorf("异常：暂不支持该模式。")
 	}
@@ -297,6 +299,12 @@ func (t *SyncTask) SetScanLoopFlag(done bool) {
 	t.resourceMutex.Lock()
 	defer t.resourceMutex.Unlock()
 	t.scanLoopIsDone = done
+}
+
+// IsTaskCompletely 任务是否已经完成
+func (t *SyncTask) IsTaskCompletely() bool {
+	// 扫描完成+执行完成+一次运行模式
+	return t.IsScanLoopDone() && t.fileActionTaskManager.IsExecuteLoopIsDone() && t.CycleModeType == CycleOneTime
 }
 
 // panSyncDbFullPath 云盘文件数据库

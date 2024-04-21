@@ -116,7 +116,7 @@ func (m *SyncTaskManager) ConfigFilePath() string {
 }
 
 // Start 启动同步进程
-func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
+func (m *SyncTaskManager) Start(tasks []*SyncTask, cycleMode CycleMode) (bool, error) {
 	if tasks != nil && len(tasks) > 0 {
 		m.syncDriveConfig = &SyncDriveConfig{
 			ConfigVer:    "1.0",
@@ -139,6 +139,9 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask) (bool, error) {
 		if len(task.Id) == 0 {
 			task.Id = utils.UuidStr()
 		}
+		// cycle mode
+		task.CycleModeType = cycleMode
+
 		// check driveId
 		if strings.ToLower(task.DriveName) == "backup" {
 			task.DriveId = m.PanUser.DriveList.GetFileDriveId()
@@ -220,4 +223,13 @@ func (m *SyncTaskManager) Stop() (bool, error) {
 		ioutil.WriteFile(m.ConfigFilePath(), []byte(utils.ObjectToJsonStr(m.syncDriveConfig, true)), 0755)
 	}
 	return true, nil
+}
+
+func (m *SyncTaskManager) IsAllTaskCompletely() bool {
+	for _, task := range m.syncDriveConfig.SyncTaskList {
+		if !task.IsTaskCompletely() {
+			return false
+		}
+	}
+	return true
 }
