@@ -260,6 +260,11 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 						Usage: "备份策略, 支持两种: exclusive(排他备份文件，目标目录多余的文件会被删除),increment(增量备份文件，目标目录多余的文件不会被删除)",
 						Value: "increment",
 					},
+					//cli.StringFlag{
+					//	Name:  "pri",
+					//	Usage: "同步优先级，只对sync模式有效。当网盘和本地存在同名文件，优先使用哪个，选项支持三种: time-时间优先，local-本地优先，pan-网盘优先",
+					//	Value: "time",
+					//},
 					cli.StringFlag{
 						Name:  "cycle",
 						Usage: "备份周期, 支持两种: infinity(永久循环备份),onetime(只运行一次备份)",
@@ -372,10 +377,20 @@ func RunSync(defaultTask *syncdrive.SyncTask, cycleMode syncdrive.CycleMode, fil
 	_, ok := os.LookupEnv("ALIYUNPAN_DOCKER")
 	if ok {
 		// in docker container
-		// 使用休眠以节省CPU资源
-		fmt.Println("本命令不会退出，程序正在以Docker的方式运行。如需退出请借助Docker提供的方式。")
-		for {
-			time.Sleep(60 * time.Second)
+		if cycleMode == syncdrive.CycleInfiniteLoop {
+			// 使用休眠以节省CPU资源
+			fmt.Println("本命令不会退出，程序正在以Docker的方式运行。如需退出请借助Docker提供的方式。")
+			for {
+				time.Sleep(60 * time.Second)
+			}
+		} else {
+			for {
+				if syncMgr.IsAllTaskCompletely() {
+					fmt.Println("所有备份任务已完成")
+					break
+				}
+				time.Sleep(5 * time.Second)
+			}
 		}
 	} else {
 		if cycleMode == syncdrive.CycleInfiniteLoop {

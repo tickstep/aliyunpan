@@ -108,17 +108,7 @@ func (t *SyncTask) String() string {
 		mode = "备份云盘文件（下载）"
 	}
 	builder.WriteString("同步模式: " + mode + "\n")
-	if t.Mode == SyncTwoWay {
-		priority := "时间优先"
-		if t.syncOption.SyncPriority == SyncPriorityLocalFirst {
-			priority = "本地文件优先"
-		} else if t.syncOption.SyncPriority == SyncPriorityPanFirst {
-			priority = "网盘文件优先"
-		} else {
-			priority = "时间优先"
-		}
-		builder.WriteString("优先选项: " + priority + "\n")
-	}
+
 	policy := ""
 	if t.Policy == SyncPolicyExclusive {
 		if t.Mode == Upload {
@@ -134,7 +124,25 @@ func (t *SyncTask) String() string {
 			policy = "增量备份（只下载）"
 		}
 	}
-	builder.WriteString("同步策略: " + policy + "\n")
+
+	if t.Mode == SyncTwoWay {
+		priority := "时间优先"
+		if t.syncOption.SyncPriority == SyncPriorityLocalFirst {
+			priority = "本地文件优先"
+		} else if t.syncOption.SyncPriority == SyncPriorityPanFirst {
+			priority = "网盘文件优先"
+		} else {
+			priority = "时间优先"
+		}
+		builder.WriteString("同步策略: " + priority + "\n")
+	} else {
+		builder.WriteString("同步策略: " + policy + "\n")
+	}
+	cycleModeStr := "永久循环"
+	if t.CycleModeType == CycleOneTime {
+		cycleModeStr = "运行一次"
+	}
+	builder.WriteString("运行周期: " + cycleModeStr + "\n")
 	builder.WriteString("本地目录: " + t.LocalFolderPath + "\n")
 	builder.WriteString("云盘目录: " + t.PanFolderPath + "\n")
 	driveName := "备份盘"
@@ -198,7 +206,6 @@ func (t *SyncTask) Start() error {
 
 	// setup sync db file
 	t.setupDb()
-
 	if t.fileActionTaskManager == nil {
 		t.fileActionTaskManager = NewFileActionTaskManager(t)
 	}
@@ -237,7 +244,7 @@ func (t *SyncTask) Start() error {
 	} else if t.Mode == Download {
 		go t.scanPanFile(t.ctx)
 	} else if t.Mode == SyncTwoWay {
-		go t.scanLocalFile(t.ctx)
+		return fmt.Errorf("异常：暂不支持该模式。")
 	} else {
 		return fmt.Errorf("异常：暂不支持该模式。")
 	}

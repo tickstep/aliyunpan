@@ -38,4 +38,4 @@ require (
 //replace github.com/boltdb/bolt => github.com/tickstep/bolt v1.3.4
 //replace github.com/tickstep/bolt => /Users/tickstep/Documents/Workspace/go/projects/bolt
 //replace github.com/tickstep/library-go => /Users/tickstep/Documents/Workspace/go/projects/library-go
-//replace github.com/tickstep/aliyunpan-api => /Users/tickstep/Documents/Workspace/go/projects/aliyunpan-api
+replace github.com/tickstep/aliyunpan-api => /Users/tickstep/Documents/Workspace/go/projects/aliyunpan-api
