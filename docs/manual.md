@@ -396,12 +396,16 @@ aliyunpan share cancel <shareid_1> <shareid_2> ...
 目前只支持通过分享id (shareid) 来取消分享.
 
 ## 同步备份功能
-同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份三种模式。支持JavaScript插件对备份文件进行过滤。
+同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地两种模式。支持JavaScript插件对备份文件进行过滤。
 指定本地目录和对应的一个网盘目录，以备份文件。网盘目录必须和本地目录独占使用，不要用作其他用途，不然备份可能会有问题。
    
 备份功能支持以下模式：   
 1. 备份本地文件，即上传本地文件到网盘，始终保持本地文件有一个完整的备份在网盘
 2. 备份云盘文件，即下载网盘文件到本地，始终保持网盘的文件有一个完整的备份在本地
+   
+备份功能支持指定备份策略：
+1. exclusive，排他备份文件，目标目录多余的文件会被删除。保证备份的源目录，和目标目录文件一比一备份。源目录文件如果文件被删除，则对应的目标目录的文件也会被删除。
+2. increment，增量备份文件，目标目录多余的文件不会被删除。只会把源目录修改的文件，新增的文件备份到目标目录。如果源目录有文件删除，或者目标目录有其他文件新增是不会被删除。
    
 备份功能一般用于NAS等系统，进行文件备份。比如备份照片，就可以使用这个功能定期备份照片到云盘。   
    
@@ -509,7 +513,7 @@ cd /path/to/aliyunpan/folder
 chmod +x ./aliyunpan
 
 # 指定配置参数并进行启动
-# 支持的模式：upload(备份本地文件到云盘),download(备份云盘文件到本地),sync(双向同步备份)
+# 支持的模式：upload(备份本地文件到云盘),download(备份云盘文件到本地)
 ./aliyunpan sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload" -drive "backup"
 ```
 
@@ -570,13 +574,14 @@ D:\Program Files\aliyunpan>alisync stop
 
 1. 直接运行
 ```
-docker run -d --name=aliyunpan-sync --restart=always -v "<your aliyunpan_config.json>:/home/app/config/aliyunpan_config.json" -v "<your local dir>:/home/app/data" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_SYNC_DRIVE="backup" -e ALIYUNPAN_SYNC_LOG="true" tickstep/aliyunpan-sync:<tag> 
+docker run -d --name=aliyunpan-sync --restart=always -v "<your aliyunpan_config.json>:/home/app/config/aliyunpan_config.json" -v "<your local dir>:/home/app/data" -e ALIYUNPAN_PAN_DIR="<your drive pan dir>" -e ALIYUNPAN_SYNC_MODE="upload" -e ALIYUNPAN_SYNC_POLICY="increment" -e ALIYUNPAN_SYNC_DRIVE="backup" -e ALIYUNPAN_SYNC_LOG="true" tickstep/aliyunpan-sync:<tag>
   
 <your aliyunpan_config.json>: 用户已经登录成功并保存好的aliyunpan_config.json凭据文件
 <your local dir>：本地目标目录，绝对路径，例如：/tickstep/Documents/设计文档
 ALIYUNPAN_PAN_DIR：云盘目标目录，绝对路径
-ALIYUNPAN_SYNC_MODE：备份模式，支持两种: upload(备份本地文件到云盘),download(备份云盘文件到本地)
-ALIYUNPAN_SYNC_DRIVE: 网盘，支持两种：backup(备份盘), resource(资源盘)
+ALIYUNPAN_SYNC_MODE：备份模式，支持: upload(备份本地文件到云盘),download(备份云盘文件到本地)
+ALIYUNPAN_SYNC_POLICY：备份策略，支持：exclusive(排他备份文件，目标目录多余的文件会被删除),increment(增量备份文件，目标目录多余的文件不会被删除)
+ALIYUNPAN_SYNC_DRIVE: 网盘，支持：backup(备份盘), resource(资源盘)
 ALIYUNPAN_SYNC_LOG: 同步日志，true-开启同步日志显示，false-关闭同步日志
 ```
 
@@ -614,12 +619,16 @@ services:
       - ALIYUNPAN_PAN_DIR=/my_sync_dir
       # 备份模式：upload(备份本地文件到云盘), download(备份云盘文件到本地)
       - ALIYUNPAN_SYNC_MODE=upload
+      # 备份策略: exclusive(排他备份文件，目标目录多余的文件会被删除),increment(增量备份文件，目标目录多余的文件不会被删除)
+      - ALIYUNPAN_SYNC_POLICY=increment
+      # 备份周期, 支持两种: infinity(永久循环备份),onetime(只运行一次备份)
+      - ALIYUNPAN_SYNC_CYCLE=infinity
       # 网盘：backup(备份盘), resource(资源盘)
       - ALIYUNPAN_SYNC_DRIVE=backup
       # 是否显示文件备份过程日志，true-显示，false-不显示
       - ALIYUNPAN_SYNC_LOG=true
       # 本地文件修改检测延迟间隔，单位秒。如果本地文件会被频繁修改，例如录制视频文件，配置好该时间可以避免上传未录制好的文件
-      - ALIYUNPAN_LOCAL_DELAY_TIME=3   
+      - ALIYUNPAN_LOCAL_DELAY_TIME=3
 ```
 
 3. sync_handler.js插件说明   
