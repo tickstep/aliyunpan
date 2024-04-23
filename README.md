@@ -130,6 +130,7 @@ ALIYUNPAN_SYNC_POLICY：备份策略，支持：exclusive(排他备份文件，�
 ALIYUNPAN_SYNC_DRIVE: 网盘，支持：backup(备份盘), resource(资源盘)
 ALIYUNPAN_SYNC_LOG: 同步日志，true-开启同步日志显示，false-关闭同步日志
 ```
+docker-compose启动方式请查看：[docker-compose.yml](https://github.com/tickstep/aliyunpan/blob/main/docs/manual.md#Docker%E8%BF%90%E8%A1%8C)   
 更详情文档请参考dockerhub网址：[tickstep/aliyunpan-sync](https://hub.docker.com/r/tickstep/aliyunpan-sync)
 
 # 如何使用
