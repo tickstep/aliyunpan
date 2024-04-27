@@ -424,9 +424,6 @@ func main() {
 		// 获取当前帐号空间配额 quota
 		command.CmdQuota(),
 
-		// Token操作
-		//command.CmdToken(),
-
 		// 切换工作目录 cd
 		command.CmdCd(),
 
@@ -445,12 +442,6 @@ func main() {
 		// 删除文件/目录 rm
 		command.CmdRm(),
 
-		//// 拷贝文件/目录 cp
-		//command.CmdCp(),
-
-		// 备份盘和资源库之间拷贝文件 xcp
-		command.CmdXcp(),
-
 		// 复制文件/目录 cp
 		command.CmdCp(),
 
@@ -460,47 +451,20 @@ func main() {
 		// 重命名文件 rename
 		command.CmdRename(),
 
-		// 分享文件/目录 share
-		command.CmdShare(),
-
-		// 保存分享文件/目录 save
-		command.CmdSave(),
-
 		// 同步备份 sync
 		command.CmdSync(),
 
 		// 上传文件/目录 upload
 		command.CmdUpload(),
 
-		// 手动秒传
-		//command.CmdRapidUpload(),
-
 		// 下载文件/目录 download
 		command.CmdDownload(),
-
-		// 获取文件下载链接
-		//command.CmdLocateUrl(),
-
-		// 导出文件/目录元数据 export
-		//command.CmdExport(),
-
-		// 导入文件 import
-		//command.CmdImport(),
-
-		// webdav服务(depressed)
-		//command.CmdWebdav(),
-
-		// 回收站
-		command.CmdRecycle(),
 
 		// 显示和修改程序配置项 config
 		command.CmdConfig(),
 
 		// 工具箱 tool
 		command.CmdTool(),
-
-		// 相簿
-		//command.CmdAlbum(), // 先移除，需要重构&适配
 
 		// 显示命令历史
 		{
@@ -676,6 +640,26 @@ func main() {
 		//},
 	}
 
+	// 隐藏不支持的命令
+	if global.IsSupportNoneOpenApiCommands {
+		hiddenCommands := []cli.Command{
+			// 备份盘和资源库之间拷贝文件 xcp
+			command.CmdXcp(),
+
+			// 分享文件/目录 share
+			command.CmdShare(),
+
+			// 保存分享文件/目录 save
+			command.CmdSave(),
+
+			// 回收站
+			command.CmdRecycle(),
+
+			// 相簿
+			//command.CmdAlbum(),
+		}
+		app.Commands = append(app.Commands, hiddenCommands...)
+	}
 	sort.Sort(cli.FlagsByName(app.Flags))
 	sort.Sort(cli.CommandsByName(app.Commands))
 	app.Run(os.Args)
