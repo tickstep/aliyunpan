@@ -62,6 +62,11 @@ var (
 )
 
 func init() {
+	b, ok := os.LookupEnv("ALIYUNPAN_NONE_OPENAPI")
+	if ok && b == "1" {
+		global.IsSupportNoneOpenApiCommands = true
+	}
+
 	global.AppVersion = Version
 	cmdutil.ChWorkDir()
 

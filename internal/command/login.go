@@ -18,6 +18,7 @@ import (
 	"github.com/tickstep/aliyunpan/cmder/cmdliner"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/functions/panlogin"
+	"github.com/tickstep/aliyunpan/internal/global"
 	_ "github.com/tickstep/library-go/requester"
 	"github.com/urfave/cli"
 	"strings"
@@ -129,8 +130,14 @@ func RunLogin() (ticketId string, openapiToken, webapiToken *config.PanClientTok
 	}
 	ticketId = qrCodeUrlResult.TokenId
 	loginUrl := &strings.Builder{}
-	fmt.Fprintf(loginUrl, "https://openapi.alipan.com/oauth/authorize?client_id=%s&redirect_uri=https%%3A%%2F%%2Fapi.tickstep.com%%2Fauth%%2Ftickstep%%2Faliyunpan%%2Ftoken%%2Fopenapi%%2F%s%%2Fauth&scope=user:base,file:all:read,file:all:write",
-		config.Config.ClientId, ticketId)
+	if global.IsSupportNoneOpenApiCommands {
+		// 兼容以前的版本
+		fmt.Fprintf(loginUrl, "https://openapi.alipan.com/oauth/authorize?client_id=%s&redirect_uri=https%%3A%%2F%%2Fapi.tickstep.com%%2Fauth%%2Ftickstep%%2Faliyunpan%%2Ftoken%%2Fopenapi%%2F%s%%2Fauth&scope=user:base,file:all:read,file:all:write",
+			config.Config.ClientId, ticketId)
+	} else {
+		fmt.Fprintf(loginUrl, "https://openapi.alipan.com/oauth/authorize?client_id=%s&redirect_uri=https%%3A%%2F%%2Fapi.tickstep.com%%2Fauth%%2Ftickstep%%2Faliyunpan%%2Ftoken%%2Fopenapi%%2F%s%%2Fauth2&scope=user:base,file:all:read,file:all:write",
+			config.Config.ClientId, ticketId)
+	}
 	fmt.Printf("请在浏览器打开以下链接进行登录，链接有效时间为5分钟。\n注意：你需要进行一次授权一次扫码的两次登录。\n%s\n\n", loginUrl)
 
 	// handler waiting
