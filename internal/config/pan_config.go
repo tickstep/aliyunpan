@@ -325,17 +325,20 @@ func GetConfigDir() string {
 		logger.Verboseln("use config dir from ALIYUNPAN_CONFIG_DIR env: ", configDir)
 		return configDir
 	} else {
-		// 2. /etc/aliyunpan/
+		// 2. 环境变量 XDG_CONFIG_HOME - ~/.config/aliyunpan
+
 		if runtime.GOOS == "linux" {
-			cd := "/etc/aliyunpan"
-			if IsFolderExist(cd) {
-				logger.Verboseln("use config dir: ", cd)
-				return cd
+
+			if xdgConfigHome, ok := os.LookupEnv("XDG_CONFIG_HOME"); ok {
+				cd = filepath.Join(xdgConfigHome, "aliyunpan")
+			} else {
+				cd, _ = homedir.Expand("~/.config/aliyunpan")
 			}
+			return cd
 		}
 
 		// 3. ~/.aliyunpan/
-		if runtime.GOOS == "linux" || runtime.GOOS == "windows" {
+		if runtime.GOOS == "windows" {
 			cd, er := homedir.Expand("~/.aliyunpan")
 			if er == nil {
 				if IsFolderExist(cd) {
