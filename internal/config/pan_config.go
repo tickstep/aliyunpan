@@ -15,6 +15,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/adrg/xdg"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil"
@@ -24,6 +25,7 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -31,6 +33,8 @@ import (
 )
 
 const (
+	// EnvDownloadDir 配置下载环境变量
+	EnvDownloadDir = "ALIYUNPAN_DOWNLOAD_DIR"
 	// EnvVerbose 启用调试环境变量
 	EnvVerbose = "ALIYUNPAN_VERBOSE"
 	// EnvConfigDir 配置路径环境变量
@@ -283,22 +287,7 @@ func (c *PanConfig) loadConfigFromFile() (err error) {
 }
 
 func (c *PanConfig) initDefaultConfig() {
-	// 设置默认的下载路径
-	switch runtime.GOOS {
-	case "windows":
-		c.SaveDir = cmdutil.ExecutablePathJoin("Downloads")
-	case "android":
-		// TODO: 获取完整的的下载路径
-		c.SaveDir = "/sdcard/Download"
-	default:
-		dataPath, ok := os.LookupEnv("HOME")
-		if !ok {
-			CmdConfigVerbose.Warn("Environment HOME not set")
-			c.SaveDir = cmdutil.ExecutablePathJoin("Downloads")
-		} else {
-			c.SaveDir = filepath.Join(dataPath, "Downloads")
-		}
-	}
+	//c.SaveDir = GetDefaultDownloadDir()
 	c.ConfigVer = ConfigVersion
 	c.VideoFileExtensions = DefaultVideoFileExtensions
 	c.DeviceId = RandomDeviceId() // 生成默认客户端ID
@@ -311,7 +300,7 @@ func (c *PanConfig) initDefaultConfig() {
 // GetConfigDir 获取配置路径
 func GetConfigDir() string {
 	// 按照以下顺序依次获取配置目录
-	// 1.环境变量ALIYUNPAN_CONFIG_DIR => 2. /etc/aliyunpan/ => 3. ~/.aliyunpan/ => 4.当前程序目录
+	// 1.环境变量ALIYUNPAN_CONFIG_DIR => 2. XDG_CONFIG_HOME/aliyunpan => 3. /etc/aliyunpan/ => 4. ~/.aliyunpan/ => 5.当前程序目录
 
 	// 1. 从环境变量读取
 	configDir, ok := os.LookupEnv(EnvConfigDir)
@@ -325,7 +314,14 @@ func GetConfigDir() string {
 		logger.Verboseln("use config dir from ALIYUNPAN_CONFIG_DIR env: ", configDir)
 		return configDir
 	} else {
-		// 2. /etc/aliyunpan/
+		// 2. $XDG_CONFIG_HOME/aliyunpan
+		xdgConfigHome := path.Join(xdg.ConfigHome, "aliyunpan")
+		if IsFolderExist(xdgConfigHome) {
+			logger.Verboseln("use XDG home config dir: ", xdgConfigHome)
+			return xdgConfigHome
+		}
+
+		// 3. /etc/aliyunpan/
 		if runtime.GOOS == "linux" {
 			cd := "/etc/aliyunpan"
 			if IsFolderExist(cd) {
@@ -334,7 +330,7 @@ func GetConfigDir() string {
 			}
 		}
 
-		// 3. ~/.aliyunpan/
+		// 4. ~/.aliyunpan/
 		if runtime.GOOS == "linux" || runtime.GOOS == "windows" {
 			cd, er := homedir.Expand("~/.aliyunpan")
 			if er == nil {
@@ -346,10 +342,53 @@ func GetConfigDir() string {
 		}
 	}
 
-	// 4.当前程序所在目录
+	// 5.当前程序所在目录
 	configDir = cmdutil.ExecutablePathJoin("")
 	logger.Verboseln("use config dir: ", configDir)
 	return configDir
+}
+
+// GetDefaultDownloadDir 获取默认的下载目录
+func GetDefaultDownloadDir() string {
+	// 按照以下顺序依次获取下载目录
+	// 1.环境变量ALIYUNPAN_DOWNLOAD_DIR => 2. XDG_DOWNLOAD_DIR目录 => 3. (当前程序目录)/Downloads
+
+	downloadDir := ""
+	// 设置默认的下载路径
+	switch runtime.GOOS {
+	case "android":
+		// TODO: 获取完整的的下载路径
+		downloadDir = "/sdcard/Download"
+		return downloadDir
+	default:
+		// 1. 环境变量ALIYUNPAN_DOWNLOAD_DIR
+		d, ok := os.LookupEnv(EnvDownloadDir)
+		if ok {
+			logger.Verboseln("use download dir from ALIYUNPAN_DOWNLOAD_DIR env: ", d)
+			downloadDir = d
+			return downloadDir
+		} else {
+			// 2. $XDG_DOWNLOAD_DIR
+			xdgDownloadDir := path.Join(xdg.UserDirs.Download)
+			if IsFolderExist(xdgDownloadDir) {
+				logger.Verboseln("use XDG download dir: ", xdgDownloadDir)
+				return xdgDownloadDir
+			}
+		}
+	}
+
+	// 3. (当前程序目录)/Downloads
+	downloadDir = cmdutil.ExecutablePathJoin("Downloads")
+	logger.Verboseln("use default download dir: ", downloadDir)
+	return downloadDir
+}
+
+// GetDownloadDir 获取当前下载目录
+func GetDownloadDir() string {
+	if Config.SaveDir == "" {
+		return GetDefaultDownloadDir()
+	}
+	return Config.SaveDir
 }
 
 // GetPluginDir 获取插件文件夹路径

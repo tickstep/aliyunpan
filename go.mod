@@ -20,6 +20,7 @@ require (
 )
 
 require (
+	github.com/adrg/xdg v0.4.0 // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/btcsuite/btcd v0.22.1 // indirect
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
@@ -31,7 +32,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/russross/blackfriday v1.5.2 // indirect
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a // indirect
-	golang.org/x/sys v0.0.0-20210423082822-04245dca01da // indirect
+	golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359 // indirect
 	golang.org/x/text v0.3.7 // indirect
 )
 

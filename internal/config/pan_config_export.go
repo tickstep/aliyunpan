@@ -113,7 +113,7 @@ func (c *PanConfig) PrintTable() {
 		[]string{"max_upload_parallel", strconv.Itoa(c.MaxUploadParallel), "1 ~ 20", "最大上传并发量，即同时上传文件最大数量"},
 		[]string{"max_download_rate", showMaxRate(c.MaxDownloadRate), "", "限制单个文件最大下载速度, 0代表不限制"},
 		[]string{"max_upload_rate", showMaxRate(c.MaxUploadRate), "", "限制单个文件最大上传速度, 0代表不限制"},
-		[]string{"savedir", c.SaveDir, "", "下载文件的储存目录"},
+		[]string{"savedir", GetDownloadDir(), "", "下载文件的储存目录"},
 		[]string{"proxy", c.Proxy, "", "设置代理, 支持 http/socks5 代理，例如: http://127.0.0.1:8888 或者 socks5://127.0.0.1:8889"},
 		[]string{"local_addrs", c.LocalAddrs, "", "绑定本地网卡地址, 多个地址用逗号隔开，支持网口名称，例如: 127.0.0.1,192.168.100.126,en0,eth0"},
 		[]string{"ip_type", c.PreferIPType, "ipv4-优先IPv4，ipv6-优先IPv6", "设置域名解析IP优先类型。修改后需要重启应用生效"},

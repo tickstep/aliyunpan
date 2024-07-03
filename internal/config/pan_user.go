@@ -332,7 +332,7 @@ func (pu *PanUser) FreshWorkdirInfo() {
 // GetSavePath 根据提供的网盘文件路径 panpath, 返回本地储存路径,
 // 返回绝对路径, 获取绝对路径出错时才返回相对路径...
 func (pu *PanUser) GetSavePath(filePanPath string) string {
-	dirStr := filepath.Join(Config.SaveDir, fmt.Sprintf("%s", pu.UserId), filePanPath)
+	dirStr := filepath.Join(GetDownloadDir(), fmt.Sprintf("%s", pu.UserId), filePanPath)
 	dir, err := filepath.Abs(dirStr)
 	if err != nil {
 		dir = filepath.Clean(dirStr)
