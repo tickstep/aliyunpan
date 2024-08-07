@@ -129,7 +129,12 @@ func CmdWho() cli.Command {
 			}
 			activeUser := config.Config.ActiveUser()
 			cloudName := activeUser.GetDriveById(activeUser.ActiveDriveId).DriveName
-			fmt.Printf("当前帐号UID: %s, 昵称: %s, 用户名: %s, 当前使用网盘：%s\n", activeUser.UserId, activeUser.Nickname, activeUser.AccountName, cloudName)
+			user, _ := GetActivePanClient().OpenapiPanClient().GetUserInfo()
+			thirdParty := "未开通"
+			if user.ThirdPartyVip {
+				thirdParty = "已开通(" + user.ThirdPartyVipExpire + ")"
+			}
+			fmt.Printf("当前帐号UID: %s, 昵称: %s, 三方权益包: %s, 当前使用网盘：%s\n", activeUser.UserId, activeUser.Nickname, thirdParty, cloudName)
 			return nil
 		},
 	}
