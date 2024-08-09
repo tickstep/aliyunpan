@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 type (
@@ -351,6 +352,24 @@ func (wer *Worker) Execute() {
 				logger.Verboseln("download url return 403 error and expired url response")
 				wer.status.statusCode = StatusCodeDownloadUrlExpired
 				wer.err = errors.New(resp.Status)
+			} else if strings.Contains(respBodyStr, "ExceedMaxConcurrency") { // 遇到限流报错
+				// 普通应用：文件分片下载的并发数为 3，即某用户使用 App 时，可以同时下载 1 个文件的 3 个分片，或者同时下载 3 个文件的各 1 个分片。
+				// 超过并发，再次调用接口，报错 http status：403。示例报错信息如下：
+				// <?xml version="1.0" encoding="UTF-8"?>
+				//<Error>
+				//  <Code>RequestDeniedByCallback</Code>
+				//  <Message>Callback deny this request reason: ExceedMaxConcurrency</Message>
+				//  <RequestId>66B5720887CECD32333EB8C1</RequestId>
+				//  <HostId>cn-beijing-data.aliyundrive.net</HostId>
+				//  <EC>0007-00000209</EC>
+				//  <RecommendDoc>https://api.aliyun.com/troubleshoot?q=0007-00000209</RecommendDoc>
+				//</Error>
+				logger.Verboseln("download url return 403 error and exceed max concurrency response")
+				wer.status.statusCode = StatusCodeDownloadUrlExceedMaxConcurrency
+				wer.err = errors.New(resp.Status)
+
+				// 遇到限流，本线程延迟后，再重试
+				time.Sleep(10 * time.Second)
 			}
 		}
 		return

@@ -131,7 +131,7 @@ func CmdDownload() cli.Command {
 				IsOverwrite:          c.Bool("ow"),
 				SaveTo:               saveTo,
 				Parallel:             c.Int("p"),
-				SliceParallel:        c.Int("sp"),
+				SliceParallel:        3,
 				Load:                 0,
 				MaxRetry:             c.Int("retry"),
 				NoCheck:              c.Bool("nocheck"),
@@ -182,11 +182,11 @@ func CmdDownload() cli.Command {
 				Usage: "parallel,指定同时进行下载文件的数量（取值范围:1 ~ 3）",
 				Value: 1,
 			},
-			cli.IntFlag{
-				Name:  "sp",
-				Usage: "slice parallel,指定单个文件下载的最大线程(分片)数（取值范围:1 ~ 3）",
-				Value: 1,
-			},
+			//cli.IntFlag{
+			//	Name:  "sp",
+			//	Usage: "slice parallel,指定单个文件下载的最大线程(分片)数（取值范围:1 ~ 3）",
+			//	Value: 1,
+			//},
 			cli.IntFlag{
 				Name:  "retry",
 				Usage: "下载失败最大重试次数",
@@ -314,7 +314,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	// 阿里OpenAPI规定：文件分片下载的并发数为3，即某用户使用 App 时，可以同时下载 1 个文件的 3 个分片，或者同时下载 3 个文件的各 1 个分片。
 	// 超过并发，调用接口，报错 http status：403，并且下载速度为0
 	if options.Parallel*options.SliceParallel > 3 {
-		fmt.Println("\n####### 当前文件下载的并发数已经超过阿里云盘的限制，可能会导致下载速度为0并出现下载错误！ #######\n")
+		fmt.Println("\n####### 当前文件下载的并发数已经超过阿里云盘的限制，可能会导致下载速度为0！ #######\n")
 		time.Sleep(3 * time.Second)
 	}
 

@@ -348,6 +348,8 @@ func (mt *Monitor) ResetWorker(worker *Worker) {
 	case StatusCodeDownloadUrlExpired: // 下载链接已经过期
 		worker.RefreshDownloadUrl()
 		break
+	case StatusCodeDownloadUrlExceedMaxConcurrency: // 下载遇到限流报错
+		break
 	}
 
 	mt.resetController.AddResetNum()
@@ -406,7 +408,7 @@ func (mt *Monitor) Execute(cancelCtx context.Context) {
 
 			// 是否有失败的worker
 			for _, w := range mt.workers {
-				if w.status.statusCode == StatusCodeDownloadUrlExpired {
+				if w.status.statusCode == StatusCodeDownloadUrlExpired || w.status.statusCode == StatusCodeDownloadUrlExceedMaxConcurrency {
 					mt.ResetWorker(w)
 				}
 			}
