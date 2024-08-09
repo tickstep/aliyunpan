@@ -214,7 +214,7 @@ func CmdDownload() cli.Command {
 			},
 			cli.BoolFlag{
 				Name:  "md",
-				Usage: "(BETA) Multi-user Download，使用多用户混合下载，可以叠加所有用户的下载速度",
+				Usage: "(BETA) Multi-user Download，使用多用户混合下载，可以叠加所有登录用户的下载速度",
 			},
 		},
 	}
