@@ -48,6 +48,7 @@ type (
 
 		Cfg                *downloader.Config
 		PanClient          *config.PanClient
+		SubPanClientList   []*config.PanClient // 辅助下载子账号列表
 		ParentTaskExecutor *taskframework.TaskExecutor
 
 		DownloadStatistic *DownloadStatistic // 下载统计
@@ -170,7 +171,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	}
 	defer file.Close()
 
-	der := downloader.NewDownloader(writer, dtu.Cfg, dtu.PanClient, dtu.GlobalSpeedsStat)
+	der := downloader.NewDownloader(writer, dtu.Cfg, dtu.PanClient, dtu.SubPanClientList, dtu.GlobalSpeedsStat)
 	der.SetFileInfo(dtu.fileInfo)
 	der.SetDriveId(dtu.DriveId)
 	der.SetStatusCodeBodyCheckFunc(func(respBody io.Reader) error {

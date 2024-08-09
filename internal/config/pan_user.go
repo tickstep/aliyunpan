@@ -62,6 +62,15 @@ func (d DriveInfoList) GetResourceDriveId() string {
 	return ""
 }
 
+func (d DriveInfoList) GetDriveIdByName(name string) string {
+	for _, drive := range d {
+		if drive.DriveTag == name {
+			return drive.DriveId
+		}
+	}
+	return ""
+}
+
 // PanClientToken 授权Token
 type PanClientToken struct {
 	// AccessToken AccessToken

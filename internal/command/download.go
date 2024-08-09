@@ -25,13 +25,13 @@ import (
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
+	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"github.com/urfave/cli"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
-	"time"
 )
 
 type (
@@ -49,6 +49,7 @@ type (
 		ShowProgress         bool
 		DriveId              string
 		ExcludeNames         []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行下载，支持正则表达式
+		IsMultiUserDownload  bool     // 是否启用多用户混合下载
 	}
 
 	// LocateDownloadOption 获取下载链接可选参数
@@ -138,6 +139,7 @@ func CmdDownload() cli.Command {
 				ShowProgress:         !c.Bool("np"),
 				DriveId:              parseDriveId(c),
 				ExcludeNames:         c.StringSlice("exn"),
+				IsMultiUserDownload:  c.Bool("md"),
 			}
 
 			// 获取下载文件锁，保证下载操作单实例
@@ -209,6 +211,10 @@ func CmdDownload() cli.Command {
 				Name:  "exn",
 				Usage: "exclude name，指定排除的文件夹或者文件的名称，被排除的文件不会进行下载，只支持正则表达式。支持同时排除多个名称，每一个名称就是一个exn参数",
 				Value: nil,
+			},
+			cli.BoolFlag{
+				Name:  "md",
+				Usage: "(BETA) Multi-user Download，使用多用户混合下载，可以叠加所有用户的下载速度",
 			},
 		},
 	}
@@ -309,14 +315,46 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 单文件下载分片线程数为: %d, 下载缓存为: %s\n", options.Parallel, options.SliceParallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
 
-	// 阿里OpenAPI规定：文件分片下载的并发数为3，即某用户使用 App 时，可以同时下载 1 个文件的 3 个分片，或者同时下载 3 个文件的各 1 个分片。
-	// 超过并发，调用接口，报错 http status：403，并且下载速度为0
-	if options.Parallel*options.SliceParallel > 3 {
-		fmt.Println("\n####### 当前文件下载的并发数已经超过阿里云盘的限制，可能会导致下载速度为0！ #######\n")
-		time.Sleep(3 * time.Second)
+	// 多用户下载的辅助账号列表
+	var subPanClientList []*config.PanClient
+	if options.IsMultiUserDownload { // 多用户下载
+		c := config.Config
+		for _, u := range config.Config.UserList {
+			if u.UserId == activeUser.UserId {
+				// 当前登录用户，作为主用户，跳过
+				continue
+			}
+			// 初始化客户端
+			user, err := config.SetupUserByCookie(u.OpenapiToken, u.WebapiToken,
+				u.TicketId, u.UserId,
+				c.DeviceId, c.DeviceName,
+				c.ClientId, c.ClientSecret)
+			if err != nil {
+				logger.Verboseln("setup user error")
+				continue
+			}
+			if subPanClientList == nil {
+				subPanClientList = []*config.PanClient{}
+			}
+			subPanClientList = append(subPanClientList, user.PanClient())
+		}
+
+		if subPanClientList == nil || len(subPanClientList) == 0 {
+			fmt.Printf("\n当前登录用户只有一个，无法启用多用户混合下载\n")
+			subPanClientList = nil
+		}
 	}
+	if subPanClientList != nil || len(subPanClientList) > 0 {
+		// 已启用多用户下载
+		userCount := len(subPanClientList) + 1
+		fmt.Printf("\n*** 已启用多用户混合下载，用户数: %d ***\n", userCount)
+		// 多用户下载，并发数必须为1，以获得最大下载速度
+		options.Parallel = 1
+		// 阿里OpenAPI规定：文件分片下载的并发数为3，即某用户使用 App 时，可以同时下载 1 个文件的 3 个分片，或者同时下载 3 个文件的各 1 个分片。
+		options.SliceParallel = userCount * 3
+	}
+	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 单文件下载分片线程数为: %d, 下载缓存为: %s\n", options.Parallel, options.SliceParallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
 
 	var (
 		panClient = activeUser.PanClient()
@@ -365,6 +403,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 			unit := pandownload.DownloadTaskUnit{
 				Cfg:                  &newCfg, // 复制一份新的cfg
 				PanClient:            panClient,
+				SubPanClientList:     subPanClientList,
 				VerbosePrinter:       panCommandVerbose,
 				PrintFormat:          downloadPrintFormat(options.Load),
 				ParentTaskExecutor:   &executor,

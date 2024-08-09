@@ -64,6 +64,7 @@ type (
 		writer                  io.WriterAt
 		client                  *requester.HTTPClient
 		panClient               *config.PanClient
+		subPanClientList        []*config.PanClient // 辅助下载子账号列表
 		config                  *Config
 		monitor                 *Monitor
 		instanceState           *InstanceState
@@ -73,14 +74,24 @@ type (
 	DURLCheckFunc func(client *requester.HTTPClient, durl string) (contentLength int64, resp *http.Response, err error)
 	// StatusCodeBodyCheckFunc 响应状态码出错的检查函数
 	StatusCodeBodyCheckFunc func(respBody io.Reader) error
+
+	// panClientDownloadUrlEntity 下载url实体，和网盘(用户)客户端绑定
+	panClientDownloadUrlEntity struct {
+		PanClient *config.PanClient
+		FileInfo  *aliyunpan.FileEntity
+		DriveId   string
+		FileId    string
+		FileUrl   string
+	}
 )
 
 // NewDownloader 初始化Downloader
-func NewDownloader(writer io.WriterAt, config *Config, p *config.PanClient, globalSpeedsStat *speeds.Speeds) (der *Downloader) {
+func NewDownloader(writer io.WriterAt, config *Config, p *config.PanClient, sp []*config.PanClient, globalSpeedsStat *speeds.Speeds) (der *Downloader) {
 	der = &Downloader{
 		config:           config,
 		writer:           writer,
 		panClient:        p,
+		subPanClientList: sp,
 		globalSpeedsStat: globalSpeedsStat,
 	}
 	return
@@ -379,41 +390,51 @@ func (der *Downloader) Execute() error {
 	)
 
 	// 获取下载链接
-	var apierr *apierror.ApiError
-	durl, apierr := der.panClient.OpenapiPanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
-		DriveId: der.driveId,
-		FileId:  der.fileInfo.FileId,
-	})
-	time.Sleep(time.Duration(200) * time.Millisecond)
-	if apierr != nil {
+	//var apierr *apierror.ApiError
+	//durl, apierr := der.panClient.OpenapiPanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+	//	DriveId: der.driveId,
+	//	FileId:  der.fileInfo.FileId,
+	//})
+	//time.Sleep(time.Duration(200) * time.Millisecond)
+	//if apierr != nil {
+	//	logger.Verbosef("ERROR: get download url error: %s\n", der.fileInfo.FileId)
+	//	cmdutil.Trigger(der.onCancelEvent)
+	//	return apierr
+	//}
+	//if durl == nil || durl.Url == "" || strings.HasPrefix(durl.Url, aliyunpan.IllegalDownloadUrlPrefix) {
+	//	logger.Verbosef("无法获取有效的下载链接: %+v\n", durl)
+	//	cmdutil.Trigger(der.onCancelEvent)
+	//	der.removeInstanceState() // 移除断点续传文件
+	//	cmdutil.Trigger(der.onFailedEvent)
+	//	return ErrFileDownloadForbidden
+	//}
+
+	// 获取各个网盘客户端的下载链接
+	panClientFileUrl, err := der.getFileAllClientDownloadUrl()
+	if err != nil || panClientFileUrl == nil {
 		logger.Verbosef("ERROR: get download url error: %s\n", der.fileInfo.FileId)
 		cmdutil.Trigger(der.onCancelEvent)
-		return apierr
-	}
-	if durl == nil || durl.Url == "" || strings.HasPrefix(durl.Url, aliyunpan.IllegalDownloadUrlPrefix) {
-		logger.Verbosef("无法获取有效的下载链接: %+v\n", durl)
-		cmdutil.Trigger(der.onCancelEvent)
-		der.removeInstanceState() // 移除断点续传文件
-		cmdutil.Trigger(der.onFailedEvent)
-		return ErrFileDownloadForbidden
+		return err
 	}
 
 	// 初始化下载worker
+	factorNum := len(bii.Ranges) / len(panClientFileUrl)
 	for k, r := range bii.Ranges {
+		panClientUrl := panClientFileUrl[int(k/factorNum)]
 		loadBalancer := loadBalancerResponseList.SequentialGet()
 		if loadBalancer == nil {
 			continue
 		}
 
-		logger.Verbosef("work id: %d, download url: %v\n", k, durl)
+		logger.Verbosef("work id: %d, download url: %v\n", k, panClientUrl.FileUrl)
 		client := requester.NewHTTPClient()
 		client.SetKeepAlive(true)
 		client.SetTimeout(10 * time.Minute)
 
-		realUrl := durl.Url
-		worker := NewWorker(k, der.driveId, der.fileInfo.FileId, realUrl, writer, der.globalSpeedsStat)
+		realUrl := panClientUrl.FileUrl
+		worker := NewWorker(k, panClientUrl.DriveId, panClientUrl.FileInfo.FileId, realUrl, writer, der.globalSpeedsStat)
 		worker.SetClient(client)
-		worker.SetPanClient(der.panClient)
+		worker.SetPanClient(panClientUrl.PanClient)
 		worker.SetWriteMutex(writeMu)
 		worker.SetTotalSize(der.fileInfo.FileSize)
 
@@ -453,6 +474,100 @@ func (der *Downloader) Execute() error {
 	// 执行结束
 	cmdutil.Trigger(der.onFinishEvent)
 	return err
+}
+
+// 获取对应网盘的下载链接
+func (der *Downloader) getFileAllClientDownloadUrl() ([]*panClientDownloadUrlEntity, error) {
+	result := []*panClientDownloadUrlEntity{}
+
+	// 主账号（必须存在）
+	// 获取下载链接
+	var apierr *apierror.ApiError
+	durl, apierr := der.panClient.OpenapiPanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+		DriveId: der.driveId,
+		FileId:  der.fileInfo.FileId,
+	})
+	time.Sleep(time.Duration(200) * time.Millisecond)
+	if apierr != nil {
+		logger.Verbosef("ERROR: get download url error: %s\n", der.fileInfo.FileId)
+		cmdutil.Trigger(der.onCancelEvent)
+		return nil, apierr
+	}
+	if durl == nil || durl.Url == "" || strings.HasPrefix(durl.Url, aliyunpan.IllegalDownloadUrlPrefix) {
+		logger.Verbosef("无法获取有效的下载链接: %+v\n", durl)
+		cmdutil.Trigger(der.onCancelEvent)
+		der.removeInstanceState() // 移除断点续传文件
+		cmdutil.Trigger(der.onFailedEvent)
+		return nil, ErrFileDownloadForbidden
+	}
+	result = append(result, &panClientDownloadUrlEntity{
+		PanClient: der.panClient,
+		FileInfo:  der.fileInfo,
+		DriveId:   der.driveId,
+		FileId:    der.fileInfo.FileId,
+		FileUrl:   durl.Url,
+	})
+
+	// 网盘名称
+	mainDriveName := ""
+	openUserInfo, err := der.panClient.OpenapiPanClient().GetUserInfo()
+	if err != nil || openUserInfo == nil {
+		return nil, err
+	}
+	if openUserInfo.FileDriveId == der.driveId {
+		mainDriveName = "File"
+	} else if openUserInfo.ResourceDriveId == der.driveId {
+		mainDriveName = "Resource"
+	}
+
+	// 网盘文件路径
+	mainFileFullPath := der.fileInfo.Path
+
+	// 铺助账号的下载链接
+	if der.subPanClientList != nil {
+		for _, spc := range der.subPanClientList {
+			driveId := ""
+			userInfo, err1 := spc.OpenapiPanClient().GetUserInfo()
+			if err1 != nil {
+				continue
+			}
+			if mainDriveName == "File" {
+				driveId = userInfo.FileDriveId
+			} else if mainDriveName == "Resource" {
+				driveId = userInfo.ResourceDriveId
+			}
+
+			// 文件信息
+			panfileInfo, err2 := spc.OpenapiPanClient().FileInfoByPath(driveId, mainFileFullPath)
+			if err2 != nil || panfileInfo == nil {
+				continue
+			}
+
+			// 下载链接
+			durl2, apierr := spc.OpenapiPanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
+				DriveId: driveId,
+				FileId:  panfileInfo.FileId,
+			})
+			time.Sleep(time.Duration(200) * time.Millisecond)
+			if apierr != nil {
+				logger.Verbosef("ERROR: get download url error: %s\n", der.fileInfo.FileId)
+				continue
+			}
+			if durl2 == nil || durl2.Url == "" || strings.HasPrefix(durl2.Url, aliyunpan.IllegalDownloadUrlPrefix) {
+				logger.Verbosef("无法获取有效的下载链接: %+v\n", durl2)
+				continue
+			}
+			result = append(result, &panClientDownloadUrlEntity{
+				PanClient: spc,
+				FileInfo:  panfileInfo,
+				DriveId:   driveId,
+				FileId:    panfileInfo.FileId,
+				FileUrl:   durl2.Url,
+			})
+		}
+	}
+
+	return result, nil
 }
 
 // downloadStatusEvent 执行状态处理事件
