@@ -27,7 +27,7 @@ var (
 	MinParallelSize int64 = 10 * 1024 * 1024 // 10MB
 
 	// MaxParallelWorkerCount 单个文件下载最大并发线程数量
-	// 阿里云盘规定：并发下载线程数不要超过10，否则会有风控检测处罚的风险
+	// 阿里云盘规定：并发下载线程数不要超过3，否则会有风控检测处罚的风险
 	MaxParallelWorkerCount int = 3
 )
 
@@ -35,6 +35,7 @@ var (
 type Config struct {
 	Mode                       transfer.RangeGenMode      // 下载Range分配模式
 	MaxParallel                int                        // 最大下载并发量
+	SliceParallel              int                        // 单文件下载线程数，为0代表程序自动调度
 	CacheSize                  int                        // 下载缓冲
 	BlockSize                  int64                      // 每个Range区块的大小, RangeGenMode 为 RangeGenMode2 时才有效
 	MaxRate                    int64                      // 限制最大下载速度
@@ -48,7 +49,7 @@ type Config struct {
 // NewConfig 返回默认配置
 func NewConfig() *Config {
 	return &Config{
-		MaxParallel: 5,
+		MaxParallel: 3,
 		CacheSize:   CacheSize,
 	}
 }

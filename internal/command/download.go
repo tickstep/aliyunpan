@@ -31,6 +31,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 type (
@@ -40,7 +41,8 @@ type (
 		IsExecutedPermission bool
 		IsOverwrite          bool
 		SaveTo               string
-		Parallel             int
+		Parallel             int // 文件下载最大线程数
+		SliceParallel        int // 单个文件分片下载最大线程数
 		Load                 int
 		MaxRetry             int
 		NoCheck              bool
@@ -129,6 +131,7 @@ func CmdDownload() cli.Command {
 				IsOverwrite:          c.Bool("ow"),
 				SaveTo:               saveTo,
 				Parallel:             c.Int("p"),
+				SliceParallel:        c.Int("sp"),
 				Load:                 0,
 				MaxRetry:             c.Int("retry"),
 				NoCheck:              c.Bool("nocheck"),
@@ -176,7 +179,13 @@ func CmdDownload() cli.Command {
 			},
 			cli.IntFlag{
 				Name:  "p",
-				Usage: "指定同时进行下载文件的数量（取值范围:1 ~ 20）",
+				Usage: "parallel,指定同时进行下载文件的数量（取值范围:1 ~ 3）",
+				Value: 1,
+			},
+			cli.IntFlag{
+				Name:  "sp",
+				Usage: "slice parallel,指定单个文件下载的最大线程(分片)数（取值范围:1 ~ 3）",
+				Value: 1,
 			},
 			cli.IntFlag{
 				Name:  "retry",
@@ -272,6 +281,11 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		options.Parallel = config.MaxFileDownloadParallelNum
 	}
 
+	// 设置单个文件下载分片线程数
+	if options.SliceParallel < 1 {
+		options.SliceParallel = 1
+	}
+
 	// 保存文件的本地根文件夹
 	originSaveRootPath := ""
 	if options.SaveTo != "" {
@@ -295,12 +309,20 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s\n\n", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
+	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 单文件下载分片线程数为: %d, 下载缓存为: %s\n", options.Parallel, options.SliceParallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
+
+	// 阿里OpenAPI规定：文件分片下载的并发数为3，即某用户使用 App 时，可以同时下载 1 个文件的 3 个分片，或者同时下载 3 个文件的各 1 个分片。
+	// 超过并发，调用接口，报错 http status：403，并且下载速度为0
+	if options.Parallel*options.SliceParallel > 3 {
+		fmt.Println("\n####### 当前文件下载的并发数已经超过阿里云盘的限制，可能会导致下载速度为0并出现下载错误！ #######\n")
+		time.Sleep(3 * time.Second)
+	}
 
 	var (
 		panClient = activeUser.PanClient()
 	)
 	cfg.MaxParallel = options.Parallel
+	cfg.SliceParallel = options.SliceParallel
 
 	var (
 		executor = taskframework.TaskExecutor{

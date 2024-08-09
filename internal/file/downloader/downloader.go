@@ -130,10 +130,10 @@ func (der *Downloader) lazyInit() {
 }
 
 // SelectParallel 获取合适的 parallel
-func (der *Downloader) SelectParallel(single bool, maxParallel int, totalSize int64, instanceRangeList transfer.RangeList) (parallel int) {
-	isRange := instanceRangeList != nil && len(instanceRangeList) > 0
-	if single { // 单线程下载
-		parallel = 1
+func (der *Downloader) SelectParallel(prefParallel int, maxParallel int, totalSize int64, instanceRangeList transfer.RangeList) (parallel int) {
+	isRange := instanceRangeList != nil && len(instanceRangeList) > 0 // 历史下载分片记录存在
+	if prefParallel > 0 {                                             // 单线程下载
+		parallel = prefParallel
 	} else if isRange {
 		parallel = len(instanceRangeList)
 	} else {
@@ -151,9 +151,9 @@ func (der *Downloader) SelectParallel(single bool, maxParallel int, totalSize in
 }
 
 // SelectBlockSizeAndInitRangeGen 获取合适的 BlockSize, 和初始化 RangeGen
-func (der *Downloader) SelectBlockSizeAndInitRangeGen(single bool, status *transfer.DownloadStatus, parallel int) (blockSize int64, initErr error) {
+func (der *Downloader) SelectBlockSizeAndInitRangeGen(status *transfer.DownloadStatus, parallel int) (blockSize int64, initErr error) {
 	// Range 生成器
-	if single { // 单线程
+	if parallel == 1 { // 单线程
 		blockSize = -1
 		return
 	}
@@ -309,7 +309,6 @@ func (der *Downloader) Execute() error {
 	var (
 		isInstance = bii != nil // 是否存在断点信息
 		status     *transfer.DownloadStatus
-		single     = false // 默认开启多线程下载，所以当前single值都为false代表不是单线程下载
 	)
 	if !isInstance {
 		bii = &transfer.DownloadInstanceInfo{}
@@ -331,9 +330,9 @@ func (der *Downloader) Execute() error {
 		defer rl.Stop()
 	}
 
-	// 计算文件下载的并发线程数，计单个文件下载的并发数
-	parallel := der.SelectParallel(single, MaxParallelWorkerCount, status.TotalSize(), bii.Ranges) // 实际的下载并行量
-	blockSize, err := der.SelectBlockSizeAndInitRangeGen(single, status, parallel)                 // 实际的BlockSize
+	// 计算本文件下载的并发线程数（分片数）
+	parallel := der.SelectParallel(der.config.SliceParallel, MaxParallelWorkerCount, status.TotalSize(), bii.Ranges) // 实际的下载并行量
+	blockSize, err := der.SelectBlockSizeAndInitRangeGen(status, parallel)                                           // 实际的BlockSize
 	if err != nil {
 		return err
 	}
@@ -361,7 +360,7 @@ func (der *Downloader) Execute() error {
 		// 没有使用断点续传
 		// 分配线程
 		bii.Ranges = make(transfer.RangeList, 0, parallel)
-		if single { // 单线程
+		if parallel == 1 { // 单线程
 			bii.Ranges = append(bii.Ranges, &transfer.Range{Begin: 0, End: der.fileInfo.FileSize})
 		} else {
 			gen := status.RangeListGen()
