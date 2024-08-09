@@ -347,6 +347,9 @@ func (f *FileActionTask) downloadFile(ctx context.Context) error {
 				}
 				logger.Verboseln("query new download url: ", newUrl.Url)
 				worker.SetUrl(newUrl.Url)
+			} else if worker.GetStatus().StatusCode() == downloader.StatusCodeDownloadUrlExceedMaxConcurrency {
+				logger.Verboseln("download url exceed max concurrency: ", f.syncItem.PanFile.Path)
+				// 下载遇到限流了，下一次重试
 			}
 		}
 	}
