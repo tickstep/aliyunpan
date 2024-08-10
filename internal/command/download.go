@@ -49,7 +49,7 @@ type (
 		ShowProgress         bool
 		DriveId              string
 		ExcludeNames         []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行下载，支持正则表达式
-		IsMultiUserDownload  bool     // 是否启用多用户混合下载
+		IsMultiUserDownload  bool     // 是否启用多用户联合下载
 	}
 
 	// LocateDownloadOption 获取下载链接可选参数
@@ -214,7 +214,7 @@ func CmdDownload() cli.Command {
 			},
 			cli.BoolFlag{
 				Name:  "md",
-				Usage: "(BETA) Multi-user Download，使用多用户混合下载，可以叠加所有登录用户的下载速度",
+				Usage: "(BETA) Multi-User Download，使用多用户联合下载，可以对单一文件叠加所有登录用户的下载速度",
 			},
 		},
 	}
@@ -341,14 +341,14 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		}
 
 		if subPanClientList == nil || len(subPanClientList) == 0 {
-			fmt.Printf("\n当前登录用户只有一个，无法启用多用户混合下载\n")
+			fmt.Printf("\n当前登录用户只有一个，无法启用多用户联合下载\n")
 			subPanClientList = nil
 		}
 	}
 	if subPanClientList != nil || len(subPanClientList) > 0 {
 		// 已启用多用户下载
 		userCount := len(subPanClientList) + 1
-		fmt.Printf("\n*** 已启用多用户混合下载，用户数: %d ***\n", userCount)
+		fmt.Printf("\n*** 已启用多用户联合下载，用户数: %d ***\n", userCount)
 		// 多用户下载，并发数必须为1，以获得最大下载速度
 		options.Parallel = 1
 		// 阿里OpenAPI规定：文件分片下载的并发数为3，即某用户使用 App 时，可以同时下载 1 个文件的 3 个分片，或者同时下载 3 个文件的各 1 个分片。
