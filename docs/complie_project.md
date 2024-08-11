@@ -4,6 +4,7 @@
 工具安装，运行下面的命令即可生成工具。也可以直接用 bin/ 文件夹下面的编译好的
 ```
 go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo
+go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo
 ```
 
 versioninfo.json - 里面有exe程序信息以及ico的配置

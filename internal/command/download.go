@@ -97,7 +97,10 @@ func CmdDownload() cli.Command {
 
 	下载 /我的资源/1.mp4 并保存下载的文件到本地的 d:/panfile
 	aliyunpan download --saveto d:/panfile /我的资源/1.mp4
-
+	
+	使用多用户联合下载 /我的资源/1.mp4 文件。必须保证所有登录的用户在相同的网盘（备份盘/资源盘）下，相同的路径下，有相同的文件
+	aliyunpan download /我的资源/1.mp4 -md
+	
   参考：
     以下是典型的排除特定文件或者文件夹的例子，注意：参数值必须是正则表达式。在正则表达式中，^表示匹配开头，$表示匹配结尾。
     1)排除@eadir文件或者文件夹：-exn "^@eadir$"

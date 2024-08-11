@@ -11,6 +11,7 @@
 7. 命令和文件路径输入支持Tab键自动补全，路径支持通配符匹配模式
 8. 支持[JavaScript插件](docs/manual.md#JavaScript插件)，你可以按照自己的需要定制上传/下载中关键步骤的行为，最大程度满足自己的个性化需求
 9. 支持个人相册的相关操作，支持批量下载相册所有照片、视频文件到本地
+10. 支持多用户联合下载功能，对下载速度有极致追求的用户可以尝试使用该选项。详情请查看文档[多用户联合下载](docs/manual.md#多用户联合下载)
 
 # 阿里云盘VIP会员推荐码
 如果大家有打算开通阿里云盘VIP会员，可以使用阿里云盘APP扫描我们的推荐码进行开通。   
@@ -239,6 +240,7 @@ aliyunpan:/ tickstep$ ls
 ```
 
 ### 下载文件
+通过 `aliyunpan config set -savedir <savedir>` 可以自定义下载文件保存的目录。
 ```shell
 aliyunpan:/ tickstep$ download IMG_0106.JPG
 

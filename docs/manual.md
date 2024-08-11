@@ -15,6 +15,7 @@
     * [输出工作目录](#输出工作目录)
     * [列出目录](#列出目录)
     * [下载文件/目录](#下载文件目录)
+    * [多用户联合下载](#多用户联合下载)
     * [上传文件/目录](#上传文件目录)
     * [创建目录](#创建目录)
     * [删除文件/目录](#删除文件目录)
@@ -93,7 +94,6 @@ aliyunpan login
 ```
 aliyunpan > login
 请在浏览器打开以下链接进行登录，链接有效时间为5分钟。
-注意：你需要进行一次授权一次扫码的两次登录。
 https://openapi.alipan.com/oauth/authorize?client_id=cf9f70e8fc61430f8ec5ab5cadf31375&redirect_uri=https%3A%2F%2Fapi.tickstep.com%2Fauth%2Ftickstep%2Faliyunpan%2Ftoken%2Fopenapi%2F8206f0.....fb5db6b40336%2Fauth&scope=user:base,file:all:read,file:all:write
 阿里云盘登录成功:  tickstep
 aliyunpan:/ tickstep$ 
@@ -232,6 +232,7 @@ aliyunpan d <网盘文件或目录的路径1> <文件或目录2> <文件或目�
   --retry value   下载失败最大重试次数 (default: 3)
   --nocheck       下载文件完成后不校验文件
   --exn value     指定排除的文件夹或者文件的名称，只支持正则表达式。支持排除多个名称，每一个名称就是一个exn参数
+  --md             (BETA) Multi-User Download，使用多用户联合下载，可以对单一文件叠加所有登录用户的下载速度
 ```
 
 
@@ -250,11 +251,21 @@ aliyunpan d /我的文档
 
 下载的文件默认保存到 **程序所在目录** 的 download/ 目录, 支持设置指定目录, 重名的文件会自动跳过!
 
-通过 `aliyunpan config set -savedir <savedir>` 可以自定义保存的目录.
+通过 `aliyunpan config set -savedir <savedir>` 可以自定义保存的目录。   
+支持多个文件或目录下载，支持自动跳过下载重名的文件!   
 
-支持多个文件或目录下载.
-
-自动跳过下载重名的文件!
+## 多用户联合下载
+前提：程序必须登录多个帐号，并且登录授权都有效。   
+```
+# 使用多用户联合下载 /我的资源/1.mp4 文件。必须保证所有登录的用户在相同的网盘（备份盘/资源盘）下，相同的路径下，有相同的文件
+aliyunpan download /我的资源/1.mp4 -md
+```
+什么是多用户联合下载？   
+由于阿里云盘的限制，一个用户下载的时候只能有3个线程并发数，未开通三方权益包的账号一个下载线程速度大概是500KB/s，3个并发即为1.5MB/s。   
+多用户联合下载，即是多个用户同时下载同一个文件，每个用户并发3个线程，N个用户即能开启 Nx3 个线程，对应的下载速度叠加为 Nx1.5MB/s。   
+对下载速度有极致追求的用户可以尝试使用该选项。   
+如果你的账号都开通了三方权益包，则一个用户下载速度为50MB/s，两个用户联合下载可以轻松突破100MB/s。   
+![](../assets/images/multi_user_download.png)
 
 ## 上传文件/目录
 ```
