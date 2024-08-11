@@ -126,12 +126,16 @@ func main() {
 	app.Copyright = "(c) 2021-2024 tickstep."
 	app.Usage = "阿里云盘客户端 for " + runtime.GOOS + "/" + runtime.GOARCH
 	app.Description = `aliyunpan 是一款阿里云盘命令行客户端工具, 为操作阿里云盘, 提供实用功能。
-	支持同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地，双向同步备份。
+	支持同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地。
 	具体功能, 参见 COMMANDS 列表。
 
 	支持设置环境变量 ALIYUNPAN_CONFIG_DIR 更改配置文件存储路径：
 	export ALIYUNPAN_CONFIG_DIR=/etc/aliyunpan/config
-
+	
+	支持XDG目录规范：
+	默认XDG配置目录：$XDG_CONFIG_HOME/aliyunpan
+	默认XDG下载目录：$XDG_DOWNLOAD_DIR
+	
 	------------------------------------------------------------------------------
 	前往 https://github.com/tickstep/aliyunpan 以获取更多帮助信息!
 	前往 https://github.com/tickstep/aliyunpan/releases 以获取程序更新信息!
