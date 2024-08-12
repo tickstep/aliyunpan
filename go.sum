@@ -101,12 +101,12 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/tickstep/aliyunpan-api v0.2.2 h1:u1DS6wAg5dZ1595Q55iNZ87/M5cQ21b9/9B5twl9GJo=
-github.com/tickstep/aliyunpan-api v0.2.2/go.mod h1:uMYRMWJO8mEAW6nRkw/QnathYFzQ8AL8kKO/cdMt058=
+github.com/tickstep/aliyunpan-api v0.2.3 h1:y/C0xE27O/YWUTmX5k24xjFkdjA99UlfNXuowRFHbIg=
+github.com/tickstep/aliyunpan-api v0.2.3/go.mod h1:UvQgQYMIgA5k1QsfKIVnEJ2h/HqDXIkAb16oookNc8o=
 github.com/tickstep/bolt v1.3.4 h1:UN1txRsauOfR8a5mUWm5So0ng233PsIMVR5/+3WowCE=
 github.com/tickstep/bolt v1.3.4/go.mod h1:Y24RwCywbOsKAyHiVcJ4K2QQfED+q67x7PEOH9OG7Q4=
-github.com/tickstep/library-go v0.1.2 h1:iewbEZBl5+aWeL9zcjVHVC4BXET4+9gwc52fuDC8MXQ=
-github.com/tickstep/library-go v0.1.2/go.mod h1:uAHeNOIpoywCzlaeLrWmmRSupn03m9kJVZKOEmuarmA=
+github.com/tickstep/library-go v0.1.3 h1:OUj6nkimTsqhHXh5s+PbmHq5hR0m739Y1tu9QpfA2ng=
+github.com/tickstep/library-go v0.1.3/go.mod h1:uAHeNOIpoywCzlaeLrWmmRSupn03m9kJVZKOEmuarmA=
 github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f h1:xKDKjIsL76VUyHcA0G4Qe1cIAUB/nrq6Pt8D411bd1g=
 github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f/go.mod h1:qXyCeJubPqsgeiLd3kvHOGHHSrQcNdjZ2ScXIcVZK/I=
 golang.org/x/crypto v0.0.0-20170930174604-9419663f5a44/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
