@@ -183,14 +183,23 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 		}
 
 		if utu.ShowProgress {
+			// 如果下载速度为0, 剩余下载时间未知, 则用 - 代替
+			var leftStr string
+			left := status.TimeLeft()
+			if left < 0 {
+				leftStr = "-"
+			} else {
+				leftStr = left.String()
+			}
 			uploadedPercentage := fmt.Sprintf("%.2f%%", float64(status.Uploaded())/float64(status.TotalSize())*100)
-			fmt.Printf("\r[%s] ↑ %s/%s(%s) %s/s(%s/s) in %s ............", utu.taskInfo.Id(),
+			fmt.Printf("\r[%s] ↑ %s/%s(%s) %s/s(%s/s) in %s, left %s ............", utu.taskInfo.Id(),
 				converter.ConvertFileSize(status.Uploaded(), 2),
 				converter.ConvertFileSize(status.TotalSize(), 2),
 				uploadedPercentage,
 				converter.ConvertFileSize(status.SpeedsPerSecond(), 2),
 				converter.ConvertFileSize(utu.GlobalSpeedsStat.GetSpeeds(), 2),
 				status.TimeElapsed(),
+				leftStr,
 			)
 		}
 	})

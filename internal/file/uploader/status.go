@@ -14,6 +14,7 @@
 package uploader
 
 import (
+	"sync/atomic"
 	"time"
 )
 
@@ -24,6 +25,7 @@ type (
 		Uploaded() int64            // 已上传数据
 		SpeedsPerSecond() int64     // 每秒的上传速度
 		TimeElapsed() time.Duration // 上传时间
+		TimeLeft() time.Duration    // 预计剩余时间, 负数代表未知
 	}
 
 	// UploadStatus 上传状态
@@ -65,6 +67,18 @@ func (us *UploadStatus) SpeedsPerSecond() int64 {
 // TimeElapsed 返回上传时间
 func (us *UploadStatus) TimeElapsed() time.Duration {
 	return us.timeElapsed
+}
+
+// TimeLeft 返回预计剩余时间, 负数代表未知
+func (us *UploadStatus) TimeLeft() time.Duration {
+	var left time.Duration
+	speeds := atomic.LoadInt64(&us.speedsPerSecond)
+	if speeds <= 0 {
+		left = -1
+	} else {
+		left = time.Duration((us.totalSize-us.uploaded)/(speeds)) * time.Second
+	}
+	return left
 }
 
 // GetStatusChan 获取上传状态
