@@ -620,6 +620,60 @@ func main() {
 			},
 		},
 
+		// 显示程序环境变量
+		{
+			Name:  "env",
+			Usage: "显示程序环境变量",
+			Description: `	ALIYUNPAN_CONFIG_DIR: 配置文件路径
+	ALIYUNPAN_DOWNLOAD_DIR: 配置下载路径
+	ALIYUNPAN_VERBOSE: 是否启用调试
+	XDG_CONFIG_HOME: XDG配置主目录
+	XDG_DOWNLOAD_DIR: XDG配置下载目录
+`,
+			Category: "其他",
+			Action: func(c *cli.Context) error {
+				envStr := "%s=%s\n"
+				envVar, ok := os.LookupEnv(config.EnvVerbose)
+				if ok {
+					if envVar == "1" {
+						fmt.Printf(envStr, config.EnvVerbose, "1")
+					} else {
+						fmt.Printf(envStr, config.EnvVerbose, "0")
+					}
+				} else {
+					fmt.Printf(envStr, config.EnvVerbose, "0")
+				}
+
+				envVar, ok = os.LookupEnv(config.EnvConfigDir)
+				if ok {
+					fmt.Printf(envStr, config.EnvConfigDir, envVar)
+				} else {
+					fmt.Printf(envStr, config.EnvConfigDir, config.GetConfigDir())
+				}
+
+				envVar, ok = os.LookupEnv(config.EnvDownloadDir)
+				if ok {
+					fmt.Printf(envStr, config.EnvDownloadDir, envVar)
+				} else {
+					fmt.Printf(envStr, config.EnvDownloadDir, config.GetDefaultDownloadDir())
+				}
+
+				envVar, ok = os.LookupEnv("XDG_CONFIG_HOME")
+				if ok {
+					fmt.Printf(envStr, "XDG_CONFIG_HOME", envVar)
+				} else {
+					fmt.Printf(envStr, "XDG_CONFIG_HOME", "")
+				}
+				envVar, ok = os.LookupEnv("XDG_DOWNLOAD_DIR")
+				if ok {
+					fmt.Printf(envStr, "XDG_DOWNLOAD_DIR", envVar)
+				} else {
+					fmt.Printf(envStr, "XDG_DOWNLOAD_DIR", "")
+				}
+				return nil
+			},
+		},
+
 		// 调试用 debug
 		//{
 		//	Name:        "debug",
