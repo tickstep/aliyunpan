@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,11 +15,12 @@ package uploader
 
 import (
 	"context"
+	"errors"
 	"github.com/oleiade/lane"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
-	"os"
+	"io"
 	"strconv"
 )
 
@@ -89,7 +90,7 @@ func (muer *MultiUploader) upload() (uperr error) {
 			)
 			go func() {
 				if !wer.uploadDone {
-					logger.Verboseln("begin to upload part: " + strconv.Itoa(wer.id))
+					logger.Verboseln("begin to upload part num: " + strconv.Itoa(wer.id+1))
 					uploadDone, terr = muer.multiUpload.UploadFile(ctx, int(wer.id), wer.partOffset, wer.splitUnit.Range().End, wer.splitUnit, uploadClient)
 				} else {
 					uploadDone = true
@@ -102,11 +103,11 @@ func (muer *MultiUploader) upload() (uperr error) {
 				return
 			case <-doneChan:
 				// continue
-				logger.Verboseln("multiUpload worker upload file done")
+				logger.Verboseln("multiUpload worker upload file http action done")
 			}
 			cancel()
 			if terr != nil {
-				logger.Verboseln("upload file part err: %+v", terr)
+				logger.Verbosef("upload file part err: %+v\n", terr)
 				if me, ok := terr.(*MultiError); ok {
 					if me.Terminated { // 终止
 						muer.closeCanceledOnce.Do(func() { // 只关闭一次
@@ -115,18 +116,21 @@ func (muer *MultiUploader) upload() (uperr error) {
 						uperr = me.Err
 						return
 					} else if me.NeedStartOver {
-						logger.Verboseln("upload start over: %d\n", wer.id)
+						logger.Verbosef("upload start over: %d\n", wer.id)
 						// 从头开始上传
 						muer.closeCanceledOnce.Do(func() { // 只关闭一次
 							close(muer.canceled)
 						})
 						uperr = me.Err
 						return
+					} else {
+						uperr = me.Err
+						return
 					}
 				}
 
-				logger.Verboseln("upload err: %s, id: %d\n", terr, wer.id)
-				wer.splitUnit.Seek(0, os.SEEK_SET)
+				logger.Verbosef("upload worker err: %s, id: %d\n", terr, wer.id)
+				wer.splitUnit.Seek(0, io.SeekStart)
 				uploadDeque.Prepend(wer) // 放回上传队列首位
 				return
 			}
@@ -139,9 +143,10 @@ func (muer *MultiUploader) upload() (uperr error) {
 		}()
 		wg.Wait()
 		if uperr != nil {
-			if uperr == UploadPartNotSeq {
-				// 分片出现乱序，需要重新上传，取消本次所有剩余的分片的上传
-				break
+			if errors.Is(uperr, UploadPartNotSeq) {
+				// 分片出现乱序，停止上传
+				// 清空数据，准备重新上传
+				uploadDeque = lane.NewDeque() // 清空待上传列表
 			}
 		}
 		// 没有任务了
@@ -152,6 +157,11 @@ func (muer *MultiUploader) upload() (uperr error) {
 
 	// 释放链路
 	uploadClient.CloseIdleConnections()
+
+	// 返回错误，通知上层客户端
+	if errors.Is(uperr, UploadPartNotSeq) {
+		return uperr
+	}
 
 	select {
 	case <-muer.canceled:

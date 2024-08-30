@@ -14,6 +14,7 @@
 package panupload
 
 import (
+	"errors"
 	"fmt"
 	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/plugins"
@@ -167,7 +168,7 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 			Parallel:  utu.Parallel,
 			BlockSize: utu.BlockSize,
 			MaxRate:   config.Config.MaxUploadRate,
-		}, utu.LocalFileChecksum.UploadOpEntity, utu.GlobalSpeedsStat)
+		}, utu.LocalFileChecksum.UploadOpEntity, utu.PanClient, utu.GlobalSpeedsStat)
 
 	// 设置断点续传
 	if utu.state != nil {
@@ -240,6 +241,10 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 	if er != nil {
 		result.ResultMessage = StrUploadFailed
 		result.NeedRetry = true
+		if errors.Is(er, uploader.UploadNoSuchUpload) {
+			// do not need retry
+			result.NeedRetry = false
+		}
 		result.Err = er
 	}
 	return
@@ -555,14 +560,67 @@ stepUploadUpload:
 	// 正常上传流程
 	uploadResult := utu.upload()
 	if uploadResult != nil && uploadResult.Err != nil {
-		if uploadResult.Err == uploader.UploadPartNotSeq {
-			fmt.Printf("[%s] %s 文件分片上传顺序错误，开始重新上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+		// 处理上传错误
+		if errors.Is(uploadResult.Err, uploader.UploadPartNotSeq) {
+			// 分片乱序错误
+			utu.amendFileUploadPartNum()
+			goto stepUploadUpload
+		}
+		if errors.Is(uploadResult.Err, uploader.UploadNoSuchUpload) {
+			// 上传任务过期
+			fmt.Printf("[%s] %s 网盘上传任务不存在，创建新任务重新上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 			// 需要重新从0开始上传
 			uploadResult = nil
 			utu.LocalFileChecksum.UploadOpEntity = nil
 			utu.state = nil
 			goto StepUploadPrepareUpload
 		}
+		var apier *apierror.ApiError
+		if errors.As(uploadResult.Err, &apier) {
+			// 上传任务过期
+			if apier.Code == apierror.ApiCodeUploadIdNotFound {
+				fmt.Printf("[%s] %s 网盘上传任务已失效，创建新任务重新上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+				uploadResult = nil
+				utu.LocalFileChecksum.UploadOpEntity = nil
+				utu.state = nil
+				goto StepUploadPrepareUpload
+			}
+		}
 	}
 	return uploadResult
+}
+
+// amendFileUploadPartNum 修正文件分片上传顺序错误
+func (utu *UploadTaskUnit) amendFileUploadPartNum() {
+	if utu.LocalFileChecksum.LocalFileMeta.UploadOpEntity == nil || utu.state == nil {
+		return
+	}
+	logger.Verbosef("adjust the uploaded parts num error\n")
+	// 分片出现乱序
+	// 获取的已上传分片信息，修正正确的分片顺序
+	uploadedParts, uper := utu.PanClient.OpenapiPanClient().GetUploadedPartInfoAllItem(&aliyunpan.GetUploadedPartsParam{
+		DriveId:  utu.LocalFileChecksum.LocalFileMeta.UploadOpEntity.DriveId,
+		FileId:   utu.LocalFileChecksum.LocalFileMeta.UploadOpEntity.FileId,
+		UploadId: utu.LocalFileChecksum.LocalFileMeta.UploadOpEntity.UploadId,
+	})
+	if uper != nil {
+		logger.Verbosef("get uploaded parts info error: %+v\n", uper)
+		return
+	}
+	// 获取最后上传的分片编号
+	lastUploadedPartNum := -1
+	if len(uploadedParts.UploadedParts) > 0 {
+		lastUploadedPartNum = uploadedParts.UploadedParts[len(uploadedParts.UploadedParts)-1].PartNumber
+	}
+	// 修正分片上传的标识
+	if lastUploadedPartNum > 0 {
+		logger.Verbosef("get the right uploaded parts num: %d\n", lastUploadedPartNum)
+		for _, w := range utu.state.BlockList {
+			if (w.ID + 1) <= lastUploadedPartNum { // 分片的编号从1开始，BlockList的id是从0开始
+				w.UploadDone = true
+			} else {
+				w.UploadDone = false
+			}
+		}
+	}
 }

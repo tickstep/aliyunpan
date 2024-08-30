@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +16,7 @@ package uploader
 import (
 	"context"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
@@ -61,6 +62,7 @@ type (
 
 		// 网盘上传参数
 		UploadOpEntity *aliyunpan.CreateFileUploadResult `json:"uploadOpEntity"`
+		panClient      *config.PanClient
 	}
 
 	// MultiUploaderConfig 多线程上传配置
@@ -72,12 +74,13 @@ type (
 )
 
 // NewMultiUploader 初始化上传
-func NewMultiUploader(multiUpload MultiUpload, file rio.ReaderAtLen64, config *MultiUploaderConfig, uploadOpEntity *aliyunpan.CreateFileUploadResult, globalSpeedsStat *speeds.Speeds) *MultiUploader {
+func NewMultiUploader(multiUpload MultiUpload, file rio.ReaderAtLen64, config *MultiUploaderConfig, uploadOpEntity *aliyunpan.CreateFileUploadResult, panClient *config.PanClient, globalSpeedsStat *speeds.Speeds) *MultiUploader {
 	return &MultiUploader{
 		multiUpload:      multiUpload,
 		file:             file,
 		config:           config,
 		UploadOpEntity:   uploadOpEntity,
+		panClient:        panClient,
 		globalSpeedsStat: globalSpeedsStat,
 	}
 }
@@ -137,13 +140,13 @@ func (muer *MultiUploader) Execute() error {
 	// 分配任务
 	if muer.instanceState != nil {
 		muer.workers = muer.getWorkerListByInstanceState(muer.instanceState)
-		logger.Verboseln("upload task CREATED from instance state\n")
+		logger.Verbosef("upload task CREATED from instance state\n")
 	} else {
 		muer.workers = muer.getWorkerListByInstanceState(&InstanceState{
 			BlockList: SplitBlock(muer.file.Len(), muer.config.BlockSize),
 		})
 
-		logger.Verboseln("upload task CREATED: block size: %d, num: %d\n", muer.config.BlockSize, len(muer.workers))
+		logger.Verbosef("upload task CREATED: block size: %d, num: %d\n", muer.config.BlockSize, len(muer.workers))
 	}
 
 	// 开始上传
@@ -195,32 +198,32 @@ func (muer *MultiUploader) Cancel() {
 	close(muer.canceled)
 }
 
-//OnExecute 设置开始上传事件
+// OnExecute 设置开始上传事件
 func (muer *MultiUploader) OnExecute(onExecuteEvent requester.Event) {
 	muer.onExecuteEvent = onExecuteEvent
 }
 
-//OnSuccess 设置成功上传事件
+// OnSuccess 设置成功上传事件
 func (muer *MultiUploader) OnSuccess(onSuccessEvent requester.Event) {
 	muer.onSuccessEvent = onSuccessEvent
 }
 
-//OnFinish 设置结束上传事件
+// OnFinish 设置结束上传事件
 func (muer *MultiUploader) OnFinish(onFinishEvent requester.Event) {
 	muer.onFinishEvent = onFinishEvent
 }
 
-//OnCancel 设置取消上传事件
+// OnCancel 设置取消上传事件
 func (muer *MultiUploader) OnCancel(onCancelEvent requester.Event) {
 	muer.onCancelEvent = onCancelEvent
 }
 
-//OnError 设置上传发生错误事件
+// OnError 设置上传发生错误事件
 func (muer *MultiUploader) OnError(onErrorEvent requester.EventOnError) {
 	muer.onErrorEvent = onErrorEvent
 }
 
-//OnUploadStatusEvent 设置上传状态事件
+// OnUploadStatusEvent 设置上传状态事件
 func (muer *MultiUploader) OnUploadStatusEvent(f UploadStatusFunc) {
 	muer.onUploadStatusEvent = f
 }

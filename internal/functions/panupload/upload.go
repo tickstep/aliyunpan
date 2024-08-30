@@ -129,12 +129,20 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 					errResp := &apierror.ErrorXmlResp{}
 					if err := xml.Unmarshal(buf, errResp); err == nil {
 						if errResp.Code != "" {
-							if "PartNotSequential" == errResp.Code || "NoSuchUpload" == errResp.Code {
+							if "PartNotSequential" == errResp.Code {
 								respError = uploader.UploadPartNotSeq
 								respErr = &uploader.MultiError{
 									Err:           uploader.UploadPartNotSeq,
 									Terminated:    false,
-									NeedStartOver: true,
+									NeedStartOver: false,
+								}
+								return resp, respError
+							} else if "NoSuchUpload" == errResp.Code {
+								respError = uploader.UploadNoSuchUpload
+								respErr = &uploader.MultiError{
+									Err:           uploader.UploadNoSuchUpload,
+									Terminated:    true,
+									NeedStartOver: false,
 								}
 								return resp, respError
 							} else if "AccessDenied" == errResp.Code && "Request has expired." == errResp.Message {
@@ -153,6 +161,14 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 								return resp, respError
 							}
 						}
+					} else {
+						respError = uploader.UploadHttpError
+						respErr = &uploader.MultiError{
+							Err:           uploader.UploadHttpError,
+							Terminated:    false,
+							NeedStartOver: false,
+						}
+						return resp, respError
 					}
 				}
 			} else {
@@ -204,7 +220,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 			// success
 			return true, nil
 		} else if respErr.Err == uploader.UploadPartNotSeq {
-			// 上传分片乱序了，需要重新从0分片开始上传
+			// 上传分片乱序了
 			// 先直接返回，后续再优化
 			return false, respErr
 		} else {

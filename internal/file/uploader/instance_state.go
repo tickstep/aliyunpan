@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,9 +20,9 @@ import (
 type (
 	// BlockState 文件区块信息
 	BlockState struct {
-		ID       int            `json:"id"`
-		Range    transfer.Range `json:"range"`
-		UploadDone bool `json:"upload_done"`
+		ID         int            `json:"id"`
+		Range      transfer.Range `json:"range"`
+		UploadDone bool           `json:"upload_done"`
 	}
 
 	// InstanceState 上传断点续传信息
@@ -39,18 +39,14 @@ func (muer *MultiUploader) getWorkerListByInstanceState(is *InstanceState) worke
 				id:         blockState.ID,
 				partOffset: blockState.Range.Begin,
 				splitUnit:  NewBufioSplitUnit(muer.file, blockState.Range, muer.speedsStat, muer.rateLimit, muer.globalSpeedsStat),
-				uploadDone:   false,
+				uploadDone: false,
 			})
 		} else {
-			// 已经完成的, 也要加入 (可继续优化)
+			// 已经完成的, 也要加入
 			workers = append(workers, &worker{
 				id:         blockState.ID,
 				partOffset: blockState.Range.Begin,
-				splitUnit: &fileBlock{
-					readRange: blockState.Range,
-					readed:    blockState.Range.End - blockState.Range.Begin,
-					readerAt:  muer.file,
-				},
+				splitUnit:  NewBufioSplitUnit(muer.file, blockState.Range, muer.speedsStat, muer.rateLimit, muer.globalSpeedsStat),
 				uploadDone: true,
 			})
 		}

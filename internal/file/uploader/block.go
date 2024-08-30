@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,6 +30,7 @@ type (
 		io.Seeker
 		Range() transfer.Range
 		Left() int64
+		ResetReader(readerAt io.ReaderAt)
 	}
 
 	fileBlock struct {
@@ -146,4 +147,9 @@ func (fb *fileBlock) Range() transfer.Range {
 
 func (fb *fileBlock) Readed() int64 {
 	return fb.readed
+}
+
+func (fb *fileBlock) ResetReader(readerAt io.ReaderAt) {
+	fb.readerAt = readerAt
+	fb.readed = 0
 }
