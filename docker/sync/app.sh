@@ -39,6 +39,9 @@ sleep 2s
 #  ./aliyunpan config set -device_id ${ALIYUNPAN_DEVICE_ID}
 #fi
 
+# show docker IPs
+./aliyunpan tool getip
+
 # check login already or not
 ./aliyunpan who
 if [ $? -eq 0 ]
