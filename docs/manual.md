@@ -254,6 +254,39 @@ aliyunpan d /我的文档
 通过 `aliyunpan config set -savedir <savedir>` 可以自定义保存的目录。   
 支持多个文件或目录下载，支持自动跳过下载重名的文件!   
 
+### Linux后台下载
+需要结合nohup进行启动。
+   
+新建 download.sh 脚本，内容如下
+```
+#!/bin/bash
+
+# 是否开启调试日志
+export ALIYUNPAN_VERBOSE=0
+# （可选）配置目录的绝对路径（请更改成你自己的目录）
+export ALIYUNPAN_CONFIG_DIR=/Users/tickstep/Applications/adrive/config
+# aliyunpan程序所在的绝对路径（请更改成你自己的目录）
+export ALIYUNPAN_BIN=/Users/tickstep/Applications/adrive/aliyunpan
+
+# 本地目录（请更改成你自己的目录）
+LOCAL_DIR="/tickstep/Documents/我的文档"
+# 网盘目录（请更改成你自己的目录）
+PAN_DIR="/我的文档"
+
+# 执行下载
+"$ALIYUNPAN_BIN" download --saveto "$LOCAL_DIR" "$PAN_DIR"
+```
+
+增加脚本执行权限
+```
+$ chmod +x download.sh
+```
+
+然后启动该脚本进行后台运行
+```
+$ nohup ./download.sh > aliyunpan.log 2>&1 &
+```
+
 ## 多用户联合下载
 前提：程序必须登录多个帐号，并且登录授权都有效。   
 ```
@@ -299,6 +332,38 @@ aliyunpan upload -exn "\.jpg$" -exn "\.mp3$" C:/Users/Administrator/Video /视�
 3)排除.号开头的文件：-exn "^\."
 4)排除~号开头的文件：-exn "^~"
 5)排除 myfile.txt 文件：-exn "^myfile.txt$"
+```
+### Linux后台上传
+需要结合nohup进行启动。   
+   
+新建 upload.sh 脚本，内容如下
+```
+#!/bin/bash
+
+# 是否开启调试日志
+export ALIYUNPAN_VERBOSE=0
+# （可选）配置目录的绝对路径（请更改成你自己的目录）
+export ALIYUNPAN_CONFIG_DIR=/Users/tickstep/Applications/adrive/config
+# aliyunpan程序所在的绝对路径（请更改成你自己的目录）
+export ALIYUNPAN_BIN=/Users/tickstep/Applications/adrive/aliyunpan
+
+# 本地目录（请更改成你自己的目录）
+LOCAL_DIR="/tickstep/Documents/我的文档"
+# 网盘目录（请更改成你自己的目录）
+PAN_DIR="/我的文档"
+
+# 执行上传
+$ALIYUNPAN_BIN upload -exn "^\." -exn "^@eadir$" "$LOCAL_DIR" $PAN_DIR" 
+```
+
+增加脚本执行权限
+```
+$ chmod +x upload.sh
+```
+
+然后启动该脚本进行后台运行
+```
+$ nohup ./upload.sh > aliyunpan.log 2>&1 &
 ```
 
 ## 创建目录
@@ -518,14 +583,23 @@ drive - 网盘，支持：backup(备份盘), resource(资源盘)
 
 sync.sh脚本，内容如下
 ```
-# 请更改成你自己的目录
-cd /path/to/aliyunpan/folder
+#!/bin/bash
 
-chmod +x ./aliyunpan
+# 是否开启调试日志
+export ALIYUNPAN_VERBOSE=0
+# （可选）配置目录的绝对路径（请更改成你自己的目录）
+export ALIYUNPAN_CONFIG_DIR=/Users/tickstep/Applications/adrive/config
+# aliyunpan程序所在的绝对路径（请更改成你自己的目录）
+export ALIYUNPAN_BIN=/Users/tickstep/Applications/adrive/aliyunpan
+
+# 本地目录（请更改成你自己的目录）
+LOCAL_DIR="/tickstep/Documents/设计文档"
+# 网盘目录（请更改成你自己的目录）
+PAN_DIR="/备份盘/我的文档"
 
 # 指定配置参数并进行启动
 # 支持的模式：upload(备份本地文件到云盘),download(备份云盘文件到本地)
-./aliyunpan sync start -ldir "/tickstep/Documents/设计文档" -pdir "/备份盘/我的文档" -mode "upload" -drive "backup"
+"$ALIYUNPAN_BIN" sync start -ldir "$LOCAL_DIR" -pdir "$PAN_DIR" -mode "upload" -drive "backup"
 ```
 
 增加脚本执行权限
