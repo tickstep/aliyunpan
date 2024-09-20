@@ -232,8 +232,12 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 					} else {
 						cycleMode = syncdrive.CycleInfiniteLoop
 					}
-					RunSync(task, cycleMode, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"))
-
+					scanIntervalTime := int64(c.Int("sit") * 60)
+					if scanIntervalTime == 0 {
+						// 默认1分钟
+						scanIntervalTime = 60
+					}
+					RunSync(task, cycleMode, dp, up, downloadBlockSize, uploadBlockSize, syncOpt, c.Int("ldt"), scanIntervalTime)
 					return nil
 				},
 				Flags: []cli.Flag{
@@ -297,8 +301,13 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 					},
 					cli.IntFlag{
 						Name:  "ldt",
-						Usage: "local delay time，本地文件修改检测延迟间隔，单位秒。如果本地文件会被频繁修改，例如录制视频文件，配置好该时间可以避免上传未录制好的文件",
+						Usage: "local delay time，本地文件修改检测延迟间隔，单位秒。如果本地文件会被频繁修改，例如录制视频文件，配置好该时间可以避免上传未录制好的文件。",
 						Value: 3,
+					},
+					cli.IntFlag{
+						Name:  "sit",
+						Usage: "scan interval time，扫描文件间隔时间，单位：分钟。",
+						Value: 1,
 					},
 				},
 			},
@@ -307,7 +316,7 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 }
 
 func RunSync(defaultTask *syncdrive.SyncTask, cycleMode syncdrive.CycleMode, fileDownloadParallel, fileUploadParallel int, downloadBlockSize, uploadBlockSize int64,
-	flag syncdrive.SyncPriorityOption, localDelayTime int) {
+	flag syncdrive.SyncPriorityOption, localDelayTime int, scanTimeInterval int64) {
 	maxDownloadRate := config.Config.MaxDownloadRate
 	maxUploadRate := config.Config.MaxUploadRate
 	activeUser := GetActiveUser()
@@ -369,7 +378,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, cycleMode syncdrive.CycleMode, fil
 	fmt.Printf("备份配置文件：%s\n下载并发：%d\n上传并发：%d\n下载分片大小：%s\n上传分片大小：%s\n",
 		syncConfigFile, fileDownloadParallel, fileUploadParallel, converter.ConvertFileSize(downloadBlockSize, 2),
 		converter.ConvertFileSize(uploadBlockSize, 2))
-	if _, e := syncMgr.Start(tasks, cycleMode); e != nil {
+	if _, e := syncMgr.Start(tasks, cycleMode, scanTimeInterval); e != nil {
 		fmt.Println("启动任务失败：", e)
 		return
 	}

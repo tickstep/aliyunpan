@@ -116,7 +116,7 @@ func (m *SyncTaskManager) ConfigFilePath() string {
 }
 
 // Start 启动同步进程
-func (m *SyncTaskManager) Start(tasks []*SyncTask, cycleMode CycleMode) (bool, error) {
+func (m *SyncTaskManager) Start(tasks []*SyncTask, cycleMode CycleMode, scanTimeInterval int64) (bool, error) {
 	if tasks != nil && len(tasks) > 0 {
 		m.syncDriveConfig = &SyncDriveConfig{
 			ConfigVer:    "1.0",
@@ -141,6 +141,8 @@ func (m *SyncTaskManager) Start(tasks []*SyncTask, cycleMode CycleMode) (bool, e
 		}
 		// cycle mode
 		task.CycleModeType = cycleMode
+		// scan time
+		task.ScanTimeInterval = scanTimeInterval
 
 		// check driveId
 		if strings.ToLower(task.DriveName) == "backup" {

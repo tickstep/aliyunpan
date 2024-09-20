@@ -50,6 +50,8 @@ type (
 		Priority SyncPriorityOption `json:"-"`
 		// LastSyncTime 上一次同步时间
 		LastSyncTime string `json:"lastSyncTime"`
+		// ScanTimeInterval 扫描文件时间间隔，单位秒
+		ScanTimeInterval int64 `json:"-"`
 
 		syncDbFolderPath string
 		localFileDb      LocalSyncDb
@@ -497,7 +499,7 @@ func (t *SyncTask) scanLocalFile(ctx context.Context) {
 					fileInfo: rootFolder,
 					path:     t.LocalFolderPath,
 				})
-				delayTimeCount = TimeSecondsOfOneMinute
+				delayTimeCount = t.ScanTimeInterval
 				continue
 			}
 			item := obj.(*folderItem)
@@ -718,7 +720,7 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 
 				// 无限循环模式，继续下一次扫描
 				folderQueue.Push(rootPanFile)
-				delayTimeCount = TimeSecondsOfOneMinute
+				delayTimeCount = t.ScanTimeInterval
 				continue
 			}
 			item := obj.(*aliyunpan.FileEntity)
