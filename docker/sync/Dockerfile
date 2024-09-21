@@ -13,6 +13,9 @@ LABEL description="sync & backup service for aliyun cloud drive"
 ENV TZ=Asia/Shanghai
 # 手动下载tzdata安装包，注意要下载对应架构的： https://dl-cdn.alpinelinux.org/alpine/v3.15/community/
 RUN apk add -U tzdata
+# 更新Alpine的软件源为国内镜像站点，提高下载速度。安装tzdata包
+# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+# RUN apk add --no-cache tzdata
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 创建运行目录
