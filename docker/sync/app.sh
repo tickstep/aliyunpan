@@ -59,4 +59,8 @@ else
   ./aliyunpan config set -file_record_config 2
 fi
 
+# IP type
+./aliyunpan config set -ip_type ${ALIYUNPAN_IP_TYPE}
+
+# run
 ./aliyunpan sync start -dp ${ALIYUNPAN_DOWNLOAD_PARALLEL} -up ${ALIYUNPAN_UPLOAD_PARALLEL} -dbs ${ALIYUNPAN_DOWNLOAD_BLOCK_SIZE} -ubs ${ALIYUNPAN_UPLOAD_BLOCK_SIZE} -log ${ALIYUNPAN_SYNC_LOG} -ldt ${ALIYUNPAN_LOCAL_DELAY_TIME} -cycle ${ALIYUNPAN_SYNC_CYCLE} -sit ${ALIYUNPAN_SCAN_INTERVAL_TIME}
