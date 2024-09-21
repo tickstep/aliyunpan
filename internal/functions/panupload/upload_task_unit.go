@@ -184,7 +184,7 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 		}
 
 		if utu.ShowProgress {
-			// 如果下载速度为0, 剩余下载时间未知, 则用 - 代替
+			// 如果上传速度为0, 剩余时间未知, 则用 - 代替
 			var leftStr string
 			left := status.TimeLeft()
 			if left < 0 {
