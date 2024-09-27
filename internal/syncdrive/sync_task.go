@@ -245,8 +245,6 @@ func (t *SyncTask) Start() error {
 		go t.scanLocalFile(t.ctx)
 	} else if t.Mode == Download {
 		go t.scanPanFile(t.ctx)
-	} else if t.Mode == SyncTwoWay {
-		return fmt.Errorf("异常：暂不支持该模式。")
 	} else {
 		return fmt.Errorf("异常：暂不支持该模式。")
 	}
