@@ -710,7 +710,7 @@ func main() {
 			command.CmdXcp(),
 
 			// 分享文件/目录 share
-			command.CmdShare(),
+			command.CmdShareWeb(),
 
 			// 保存分享文件/目录 save
 			command.CmdSave(),

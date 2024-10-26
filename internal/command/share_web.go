@@ -30,11 +30,12 @@ import (
 	"time"
 )
 
-func CmdShare() cli.Command {
+// web端分享接口
+func CmdShareWeb() cli.Command {
 	return cli.Command{
-		Name:      "share",
+		Name:      "sharew",
 		Usage:     "分享文件/目录",
-		UsageText: cmder.App().Name + " share",
+		UsageText: cmder.App().Name + " sharew",
 		Category:  "阿里云盘",
 		Before:    ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
@@ -286,7 +287,7 @@ func RunShareSet(modeFlag, driveId string, paths []string, expiredTime string, s
 		fmt.Printf("链接：%s\n", r.ShareUrl)
 	} else {
 		// 分享
-		r, err1 := panClient.WebapiPanClient().ShareLinkCreate(aliyunpan_web.ShareCreateParam{
+		r, err1 := panClient.WebapiPanClient().ShareLinkCreate(aliyunpan.ShareCreateParam{
 			DriveId:    driveId,
 			SharePwd:   sharePwd,
 			Expiration: expiredTime,
