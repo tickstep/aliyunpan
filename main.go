@@ -475,6 +475,9 @@ func main() {
 		// 工具箱 tool
 		command.CmdTool(),
 
+		// 分享文件/目录 share
+		command.CmdShare(),
+
 		// 显示命令历史
 		{
 			Name:      "history",
@@ -709,7 +712,7 @@ func main() {
 			// 备份盘和资源库之间拷贝文件 xcp
 			command.CmdXcp(),
 
-			// 分享文件/目录 share
+			// 分享文件/目录 sharew，web端接口的分享功能
 			command.CmdShareWeb(),
 
 			// 保存分享文件/目录 save
