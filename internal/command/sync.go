@@ -203,8 +203,6 @@ driveName - 网盘名称，backup(备份盘)，resource(资源盘)
 						}
 						if policy == string(syncdrive.SyncPolicyExclusive) {
 							task.Policy = syncdrive.SyncPolicyExclusive
-						} else if policy == string(syncdrive.SyncPolicyIncrement) {
-							task.Policy = syncdrive.SyncPolicyIncrement
 						} else {
 							task.Policy = syncdrive.SyncPolicyIncrement
 						}
