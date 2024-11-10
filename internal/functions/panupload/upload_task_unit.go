@@ -539,6 +539,8 @@ StepUploadPrepareUpload:
 			logger.Verboseln("create upload file error: " + result.ResultMessage)
 			// 重试
 			result.NeedRetry = true
+		} else if apierr.Code == apierror.ApiCodeUploadPayloadTooLarge {
+			fmt.Printf("[%s] %s 上传文件的大小超出限制，你可能需要开通阿里云盘三方权益包以便上传大文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 		}
 		return
 	}
