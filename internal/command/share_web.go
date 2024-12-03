@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
-	"github.com/tickstep/aliyunpan-api/aliyunpan_web"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
@@ -270,7 +269,7 @@ func RunShareSet(modeFlag, driveId string, paths []string, expiredTime string, s
 
 	if modeFlag == "3" {
 		// 快传
-		r, err1 := panClient.WebapiPanClient().FastShareLinkCreate(aliyunpan_web.FastShareCreateParam{
+		r, err1 := panClient.WebapiPanClient().FastShareLinkCreate(aliyunpan.FastShareCreateParam{
 			DriveId:    driveId,
 			FileIdList: fidList,
 		})

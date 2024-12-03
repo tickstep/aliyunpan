@@ -93,12 +93,27 @@ func CmdShare() cli.Command {
 						sharePwd = RandomStr(4)
 					}
 
-					if config.Config.ActiveUser().ActiveDriveId != config.Config.ActiveUser().DriveList.GetResourceDriveId() {
-						// 只有资源库才支持私有、公开分享
-						fmt.Println("只有资源库才支持创建分享链接")
-						return nil
+					// 模式
+					modeFlag := "3"
+					if c.IsSet("mode") {
+						modeFlag = c.String("mode")
 					}
-					RunOpenShareSet(parseDriveId(c), c.Args(), et, sharePwd)
+					if modeFlag == "1" || modeFlag == "2" {
+						if config.Config.ActiveUser().ActiveDriveId != config.Config.ActiveUser().DriveList.GetResourceDriveId() {
+							// 只有资源库才支持私有、公开分享
+							fmt.Println("只有资源库才支持分享链接，其他请使用快传链接")
+							return nil
+						}
+					}
+					if modeFlag == "1" {
+						if sharePwd == "" {
+							sharePwd = RandomStr(4)
+						}
+					} else {
+						sharePwd = ""
+					}
+
+					RunOpenShareSet(modeFlag, parseDriveId(c), c.Args(), et, sharePwd)
 					return nil
 				},
 				Flags: []cli.Flag{
@@ -113,6 +128,11 @@ func CmdShare() cli.Command {
 						Value: "0",
 					},
 					cli.StringFlag{
+						Name:  "mode",
+						Usage: "模式，1-私密分享，2-公开分享，3-快传",
+						Value: "3",
+					},
+					cli.StringFlag{
 						Name:  "sharePwd",
 						Usage: "自定义私密分享密码，4个字符，没有指定则随机生成",
 						Value: "",
@@ -124,7 +144,7 @@ func CmdShare() cli.Command {
 }
 
 // RunOpenShareSet 执行分享
-func RunOpenShareSet(driveId string, paths []string, expiredTime string, sharePwd string) {
+func RunOpenShareSet(modeFlag, driveId string, paths []string, expiredTime string, sharePwd string) {
 	if len(paths) <= 0 {
 		fmt.Println("请指定文件路径")
 		return
@@ -159,26 +179,46 @@ func RunOpenShareSet(driveId string, paths []string, expiredTime string, sharePw
 		return
 	}
 
-	// 创建分享
-	r, err1 := panClient.OpenapiPanClient().ShareLinkCreate(aliyunpan.ShareCreateParam{
-		DriveId:    driveId,
-		SharePwd:   sharePwd,
-		Expiration: expiredTime,
-		FileIdList: fidList,
-	})
-	if err1 != nil || r == nil {
-		if err1.Code == apierror.ApiCodeFileShareNotAllowed {
-			fmt.Printf("创建分享链接失败: 该文件类型不允许分享\n")
-		} else {
-			fmt.Printf("创建分享链接失败: %s\n", err1)
+	// 创建分享类型
+	if modeFlag == "3" {
+		// 快传
+		r, err1 := panClient.OpenapiPanClient().FastShareLinkCreate(aliyunpan.FastShareCreateParam{
+			DriveId:    driveId,
+			FileIdList: fidList,
+		})
+		if err1 != nil || r == nil {
+			if err1.Code == apierror.ApiCodeFileShareNotAllowed {
+				fmt.Printf("创建快传链接失败: 该文件类型不允许分享\n")
+			} else {
+				fmt.Printf("创建快传链接失败: %s\n", err1)
+			}
+			return
 		}
-		return
-	}
 
-	fmt.Printf("创建分享链接成功\n")
-	if len(sharePwd) > 0 {
-		fmt.Printf("链接：%s 提取码：%s\n", r.ShareUrl, r.SharePwd)
-	} else {
+		fmt.Printf("创建快传链接成功\n")
 		fmt.Printf("链接：%s\n", r.ShareUrl)
+	} else {
+		// 分享
+		r, err1 := panClient.OpenapiPanClient().ShareLinkCreate(aliyunpan.ShareCreateParam{
+			DriveId:    driveId,
+			SharePwd:   sharePwd,
+			Expiration: expiredTime,
+			FileIdList: fidList,
+		})
+		if err1 != nil || r == nil {
+			if err1.Code == apierror.ApiCodeFileShareNotAllowed {
+				fmt.Printf("创建分享链接失败: 该文件类型不允许分享\n")
+			} else {
+				fmt.Printf("创建分享链接失败: %s\n", err1)
+			}
+			return
+		}
+
+		fmt.Printf("创建分享链接成功\n")
+		if len(sharePwd) > 0 {
+			fmt.Printf("链接：%s 提取码：%s\n", r.ShareUrl, r.SharePwd)
+		} else {
+			fmt.Printf("链接：%s\n", r.ShareUrl)
+		}
 	}
 }
