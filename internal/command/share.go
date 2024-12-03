@@ -214,7 +214,11 @@ func RunOpenShareSet(modeFlag, driveId string, paths []string, expiredTime strin
 			return
 		}
 
-		fmt.Printf("创建分享链接成功\n")
+		if modeFlag == "1" {
+			fmt.Printf("创建私密分享链接成功\n")
+		} else if modeFlag == "2" {
+			fmt.Printf("创建公开分享链接成功\n")
+		}
 		if len(sharePwd) > 0 {
 			fmt.Printf("链接：%s 提取码：%s\n", r.ShareUrl, r.SharePwd)
 		} else {
