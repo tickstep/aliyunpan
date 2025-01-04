@@ -506,6 +506,8 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			BlockSize:       f.syncItem.UploadBlockSize,
 			ProofCode:       proofCode,
 			ProofVersion:    "v1",
+			LocalCreatedAt:  utils.UnixTime2LocalFormatStr(localFile.ModTime),
+			LocalModifiedAt: utils.UnixTime2LocalFormatStr(localFile.ModTime),
 		}
 		if uploadOpEntity, err := f.panClient.OpenapiPanClient().CreateUploadFile(appCreateUploadFileParam); err != nil {
 			logger.Verbosef("创建云盘上传任务失败: %s\n", targetPanFilePath)

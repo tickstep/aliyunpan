@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -280,4 +280,11 @@ func ResizeUploadBlockSize(fileSize, defaultBlockSize int64) int64 {
 	}
 	sizeOfMB := int64(math.Ceil(float64(fileSize) / float64(aliyunpan.MaxPartNum) / 1024.0))
 	return sizeOfMB * 1024
+}
+
+// UnixTime2LocalFormatStr 时间戳转换为东8区时间字符串
+func UnixTime2LocalFormatStr(unixTime int64) string {
+	t := time.Unix(unixTime, 0)
+	cz := time.FixedZone("CST", 8*3600) // 东8区
+	return t.In(cz).Format("2006-01-02T15:04:05.000Z")
 }

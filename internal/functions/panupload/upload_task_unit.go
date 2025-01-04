@@ -518,16 +518,20 @@ StepUploadPrepareUpload:
 			ContentHashName: contentHashName,
 			ProofCode:       proofCode,
 			ProofVersion:    "v1",
+			LocalCreatedAt:  utils.UnixTime2LocalFormatStr(utu.LocalFileChecksum.ModTime),
+			LocalModifiedAt: utils.UnixTime2LocalFormatStr(utu.LocalFileChecksum.ModTime),
 		}
 	} else {
 		// 不支持秒传，不计算SHA1，直接上传文件
 		appCreateUploadFileParam = &aliyunpan.CreateFileUploadParam{
-			DriveId:       utu.DriveId,
-			Name:          filepath.Base(utu.SavePath),
-			Size:          utu.LocalFileChecksum.Length,
-			CheckNameMode: checkNameMode,
-			ParentFileId:  rs.FileId,
-			BlockSize:     utu.BlockSize,
+			DriveId:         utu.DriveId,
+			Name:            filepath.Base(utu.SavePath),
+			Size:            utu.LocalFileChecksum.Length,
+			CheckNameMode:   checkNameMode,
+			ParentFileId:    rs.FileId,
+			BlockSize:       utu.BlockSize,
+			LocalCreatedAt:  utils.UnixTime2LocalFormatStr(utu.LocalFileChecksum.ModTime),
+			LocalModifiedAt: utils.UnixTime2LocalFormatStr(utu.LocalFileChecksum.ModTime),
 		}
 	}
 
