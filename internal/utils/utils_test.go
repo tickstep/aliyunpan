@@ -51,3 +51,18 @@ func TestResizeUploadBlockSize_ReturnNewBlockSize(t *testing.T) {
 	fileSize := int64(107374182400)                     // 100GB
 	fmt.Println(ResizeUploadBlockSize(fileSize, 10*MB)) // 10737664 = 10486KB
 }
+func TestParseVersionNum(t *testing.T) {
+	fmt.Println(ParseVersionNum("v1.3.55"))
+}
+
+func TestParseVersionNum2(t *testing.T) {
+	fmt.Println(ParseVersionNum("v0.3.10-dev"))
+}
+
+func TestParseVersionNum3(t *testing.T) {
+	fmt.Println(ParseVersionNum("v0.3.5-1"))
+}
+
+func TestParseVersionNum4(t *testing.T) {
+	fmt.Println(ParseVersionNum("v"))
+}

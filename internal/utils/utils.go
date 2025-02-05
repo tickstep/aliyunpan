@@ -111,9 +111,22 @@ func TriggerOnSync(f func()) {
 }
 
 func ParseVersionNum(versionStr string) int {
+	// 解析版本号字符串
+	// 正式版本号：v0.3.5
+	// 开发版本号：v0.3.5-dev
 	versionStr = strings.ReplaceAll(versionStr, "-dev", "")
 	versionStr = strings.ReplaceAll(versionStr, "v", "")
+
+	// 适配版本号：v0.3.5-1
+	if strings.Contains(versionStr, "-") {
+		versionStr = strings.Split(versionStr, "-")[0]
+	}
+
+	// 解析版本号数值
 	versionParts := strings.Split(versionStr, ".")
+	if len(versionParts) < 3 {
+		return 0
+	}
 	verNum := parseInt(versionParts[0])*1e4 + parseInt(versionParts[1])*1e2 + parseInt(versionParts[2])
 	return verNum
 }
