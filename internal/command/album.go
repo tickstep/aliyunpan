@@ -402,7 +402,7 @@ func RunAlbumDelete(nameList []string) {
 	}
 }
 
-func getAlbumFromName(activeUser *config.PanUser, name string) *aliyunpan_web.AlbumEntity {
+func getAlbumFromName(activeUser *config.PanUser, name string) *aliyunpan.AlbumEntity {
 	records, err := activeUser.PanClient().WebapiPanClient().AlbumListGetAll(&aliyunpan_web.AlbumListParam{})
 	if err != nil {
 		fmt.Printf("获取相簿列表失败: %s\n", err)
