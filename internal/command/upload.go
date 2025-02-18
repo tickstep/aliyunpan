@@ -222,21 +222,6 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	activeUser.PanClient().OpenapiPanClient().ClearCache()
 	defer activeUser.PanClient().OpenapiPanClient().DisableCache()
 
-	//// pan token expired checker
-	//continueFlag := int32(0)
-	//atomic.StoreInt32(&continueFlag, 0)
-	//defer func() {
-	//	atomic.StoreInt32(&continueFlag, 1)
-	//}()
-	//go func(flag *int32) {
-	//	for atomic.LoadInt32(flag) == 0 {
-	//		time.Sleep(time.Duration(1) * time.Minute)
-	//		if RefreshWebTokenInNeed(activeUser, config.Config.DeviceName) {
-	//			logger.Verboseln("update access token for upload task")
-	//		}
-	//	}
-	//}(&continueFlag)
-
 	if opt == nil {
 		opt = &UploadOptions{}
 	}
@@ -264,7 +249,8 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		activeUser.PanClient().OpenapiPanClient().SetTimeout(time.Duration(opt.MaxTimeoutSec) * time.Second)
 	}
 
-	fmt.Printf("\n[0] 当前文件上传最大并发量为: %d, 上传分片大小为: %s\n", opt.AllParallel, converter.ConvertFileSize(opt.BlockSize, 2))
+	targetDriveName := config.Config.ActiveUser().DriveList.GetDriveNameById(opt.DriveId)
+	fmt.Printf("\n[0] 当前文件上传最大并发量为: %d, 上传分片大小为: %s, 目标网盘: %s\n", opt.AllParallel, converter.ConvertFileSize(opt.BlockSize, 2), targetDriveName)
 
 	savePath = activeUser.PathJoin(opt.DriveId, savePath)
 	_, err1 := activeUser.PanClient().OpenapiPanClient().FileInfoByPath(opt.DriveId, savePath)
