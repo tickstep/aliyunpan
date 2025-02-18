@@ -20,6 +20,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/functions/pandownload"
+	"github.com/tickstep/aliyunpan/internal/global"
 	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
 	"github.com/tickstep/aliyunpan/internal/utils"
@@ -415,6 +416,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 				IsExecutedPermission: options.IsExecutedPermission,
 				IsOverwrite:          options.IsOverwrite,
 				NoCheck:              options.NoCheck,
+				FilePanSource:        global.FileSource,
 				FilePanPath:          f.Path,
 				DriveId:              options.DriveId,
 				GlobalSpeedsStat:     globalSpeedsStat,

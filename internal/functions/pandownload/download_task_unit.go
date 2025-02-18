@@ -21,6 +21,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/functions"
+	"github.com/tickstep/aliyunpan/internal/global"
 	"github.com/tickstep/aliyunpan/internal/localfile"
 	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/plugins"
@@ -40,8 +41,6 @@ import (
 )
 
 type (
-	FileSourceType string
-
 	// DownloadTaskUnit 下载的任务单元
 	DownloadTaskUnit struct {
 		taskInfo *taskframework.TaskInfo // 任务信息
@@ -62,10 +61,11 @@ type (
 		IsOverwrite          bool // 是否覆盖已存在的文件
 		NoCheck              bool // 不校验文件
 
-		FilePanPath        string // 要下载的网盘文件路径
-		SavePath           string // 文件保存在本地的路径
-		OriginSaveRootPath string // 文件保存在本地的根目录路径
-		DriveId            string
+		FilePanSource      global.FileSourceType // 要下载的网盘文件来源
+		FilePanPath        string                // 要下载的网盘文件路径
+		SavePath           string                // 文件保存在本地的路径
+		OriginSaveRootPath string                // 文件保存在本地的根目录路径
+		DriveId            string                // 网盘ID
 
 		fileInfo *aliyunpan.FileEntity // 文件或目录详情
 
@@ -89,14 +89,13 @@ const (
 	StrDownloadChecksumFailed = "检测文件有效性失败"
 	// DefaultDownloadMaxRetry 默认下载失败最大重试次数
 	DefaultDownloadMaxRetry = 3
-
-	// BackupFileSource 备份盘文件
-	BackupFileSource FileSourceType = "backup"
-	// ResourceFileSource 资源库文件
-	ResourceFileSource FileSourceType = "resource"
-	// AlbumFileSource 相册文件
-	AlbumFileSource FileSourceType = "album"
 )
+
+// SetFileInfo 设置文件信息
+func (dtu *DownloadTaskUnit) SetFileInfo(source global.FileSourceType, f *aliyunpan.FileEntity) {
+	dtu.FilePanSource = source
+	dtu.fileInfo = f
+}
 
 func (dtu *DownloadTaskUnit) SetTaskInfo(info *taskframework.TaskInfo) {
 	dtu.taskInfo = info
@@ -172,7 +171,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	defer file.Close()
 
 	der := downloader.NewDownloader(writer, dtu.Cfg, dtu.PanClient, dtu.SubPanClientList, dtu.GlobalSpeedsStat)
-	der.SetFileInfo(dtu.fileInfo)
+	der.SetFileInfo(dtu.FilePanSource, dtu.fileInfo)
 	der.SetDriveId(dtu.DriveId)
 	der.SetStatusCodeBodyCheckFunc(func(respBody io.Reader) error {
 		// 解析错误
@@ -568,6 +567,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			newCfg := *dtu.Cfg
 			subUnit.Cfg = &newCfg
 			subUnit.fileInfo = fileList[k] // 保存文件信息
+			subUnit.FilePanSource = dtu.FilePanSource
 			subUnit.FilePanPath = fileList[k].Path
 			subUnit.SavePath = filepath.Join(dtu.OriginSaveRootPath, fileList[k].Path) // 保存位置
 

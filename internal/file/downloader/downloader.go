@@ -20,6 +20,7 @@ import (
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/global"
 	"github.com/tickstep/aliyunpan/internal/waitgroup"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/cachepool"
@@ -54,6 +55,7 @@ type (
 		monitorCancelFunc context.CancelFunc
 		globalSpeedsStat  *speeds.Speeds // 全局速度统计
 
+		filePanSource           global.FileSourceType // 要下载的网盘文件来源
 		fileInfo                *aliyunpan.FileEntity // 下载的文件信息
 		driveId                 string
 		loadBalancerCompareFunc LoadBalancerCompareFunc // 负载均衡检测函数
@@ -97,11 +99,11 @@ func NewDownloader(writer io.WriterAt, config *Config, p *config.PanClient, sp [
 	return
 }
 
-// SetClient 设置http客户端
-func (der *Downloader) SetFileInfo(f *aliyunpan.FileEntity) {
+// SetFileInfo 设置文件信息
+func (der *Downloader) SetFileInfo(source global.FileSourceType, f *aliyunpan.FileEntity) {
+	der.filePanSource = source
 	der.fileInfo = f
 }
-
 func (der *Downloader) SetDriveId(driveId string) {
 	der.driveId = driveId
 }
@@ -389,27 +391,7 @@ func (der *Downloader) Execute() error {
 		writeMu = &sync.Mutex{}
 	)
 
-	// 获取下载链接
-	//var apierr *apierror.ApiError
-	//durl, apierr := der.panClient.OpenapiPanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{
-	//	DriveId: der.driveId,
-	//	FileId:  der.fileInfo.FileId,
-	//})
-	//time.Sleep(time.Duration(200) * time.Millisecond)
-	//if apierr != nil {
-	//	logger.Verbosef("ERROR: get download url error: %s\n", der.fileInfo.FileId)
-	//	cmdutil.Trigger(der.onCancelEvent)
-	//	return apierr
-	//}
-	//if durl == nil || durl.Url == "" || strings.HasPrefix(durl.Url, aliyunpan.IllegalDownloadUrlPrefix) {
-	//	logger.Verbosef("无法获取有效的下载链接: %+v\n", durl)
-	//	cmdutil.Trigger(der.onCancelEvent)
-	//	der.removeInstanceState() // 移除断点续传文件
-	//	cmdutil.Trigger(der.onFailedEvent)
-	//	return ErrFileDownloadForbidden
-	//}
-
-	// 获取各个网盘客户端的下载链接
+	// 获取各个账号网盘客户端的下载链接
 	panClientFileUrl, err := der.getFileAllClientDownloadUrl()
 	if err != nil || panClientFileUrl == nil {
 		logger.Verbosef("ERROR: get download url error: %s\n", der.fileInfo.FileId)
@@ -476,8 +458,19 @@ func (der *Downloader) Execute() error {
 	return err
 }
 
-// 获取对应网盘的下载链接
+// 获取对应网盘文件的下载链接
 func (der *Downloader) getFileAllClientDownloadUrl() ([]*panClientDownloadUrlEntity, error) {
+	if der.filePanSource == global.AlbumSource {
+		// 相册源只支持主账号下载
+		return der.getAlbumSourceDownloadUrl()
+	} else {
+		// 文件源支持多账号分流下载
+		return der.getFileSourceDownloadUrl()
+	}
+}
+
+// getFileSourceDownloadUrl 获取文件源的文件下载链接
+func (der *Downloader) getFileSourceDownloadUrl() ([]*panClientDownloadUrlEntity, error) {
 	result := []*panClientDownloadUrlEntity{}
 
 	// 主账号（必须存在）
@@ -523,7 +516,7 @@ func (der *Downloader) getFileAllClientDownloadUrl() ([]*panClientDownloadUrlEnt
 	// 网盘文件路径
 	mainFileFullPath := der.fileInfo.Path
 
-	// 铺助账号的下载链接
+	// 铺助账号的下载链接，只支持文件源
 	if der.subPanClientList != nil {
 		for _, spc := range der.subPanClientList {
 			driveId := ""
@@ -567,6 +560,60 @@ func (der *Downloader) getFileAllClientDownloadUrl() ([]*panClientDownloadUrlEnt
 		}
 	}
 
+	return result, nil
+}
+
+// getAlbumSourceDownloadUrl 获取相册源的文件下载链接
+func (der *Downloader) getAlbumSourceDownloadUrl() ([]*panClientDownloadUrlEntity, error) {
+	result := []*panClientDownloadUrlEntity{}
+
+	// 相册源只能使用主账号
+	// 获取下载链接
+	var apierr *apierror.ApiError
+	durl, apierr := der.panClient.OpenapiPanClient().ShareAlbumGetFileDownloadUrl(&aliyunpan.ShareAlbumGetFileUrlParam{
+		AlbumId: der.fileInfo.AlbumId,
+		DriveId: der.fileInfo.DriveId,
+		FileId:  der.fileInfo.FileId,
+	})
+	time.Sleep(time.Duration(200) * time.Millisecond)
+	if apierr != nil {
+		logger.Verbosef("ERROR: get album file download url error: %s\n", der.fileInfo.FileId)
+		cmdutil.Trigger(der.onCancelEvent)
+		return nil, apierr
+	}
+	realUrl := ""
+	if durl.StreamsUrl != nil { // 实况图片
+		if strings.ToLower(der.fileInfo.FileExtension) == "mov" {
+			// 视频文件
+			if durl.StreamsUrl.Mov != "" {
+				realUrl = durl.StreamsUrl.Mov
+			}
+		} else {
+			// 照片文件
+			if durl.StreamsUrl.Heic != "" {
+				realUrl = durl.StreamsUrl.Heic
+			} else if durl.StreamsUrl.Jpeg != "" {
+				realUrl = durl.StreamsUrl.Jpeg
+			}
+		}
+	} else if durl.Url != "" { // 普通图片
+		realUrl = durl.Url
+	}
+	if realUrl == "" {
+		logger.Verbosef("无法获取有效的相册文件下载链接: %+v\n", durl)
+		cmdutil.Trigger(der.onCancelEvent)
+		der.removeInstanceState() // 移除断点续传文件
+		cmdutil.Trigger(der.onFailedEvent)
+		return nil, ErrFileDownloadForbidden
+	}
+	// 返回下载链接
+	result = append(result, &panClientDownloadUrlEntity{
+		PanClient: der.panClient,
+		FileInfo:  der.fileInfo,
+		DriveId:   der.driveId,
+		FileId:    der.fileInfo.FileId,
+		FileUrl:   realUrl,
+	})
 	return result, nil
 }
 

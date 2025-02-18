@@ -14,46 +14,36 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
-	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
-	"github.com/tickstep/aliyunpan-api/aliyunpan_web"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/functions/pandownload"
+	"github.com/tickstep/aliyunpan/internal/global"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
+	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"github.com/urfave/cli"
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync/atomic"
+	"strings"
 	"time"
-)
-
-type (
-	AlbumFileCategoryOption string
-)
-
-var (
-	ImageOnlyOption      AlbumFileCategoryOption = "image"
-	VideoOnlyOption      AlbumFileCategoryOption = "video"
-	ImageVideoOnlyOption AlbumFileCategoryOption = "image_video"
-	AllFileOption        AlbumFileCategoryOption = "none"
 )
 
 func CmdAlbum() cli.Command {
 	return cli.Command{
 		Name:      "album",
 		Aliases:   []string{"abm"},
-		Usage:     "个人相册(Beta)",
+		Usage:     "共享相册",
 		UsageText: cmder.App().Name + " album",
 		Category:  "阿里云盘",
 		Before:    ReloadConfigFunc,
@@ -66,12 +56,11 @@ func CmdAlbum() cli.Command {
 			{
 				Name:      "list",
 				Aliases:   []string{"ls"},
-				Usage:     "展示相簿列表",
+				Usage:     "展示共享相簿列表",
 				UsageText: cmder.App().Name + " album list",
 				Description: `
 示例:
-
-    展示相簿列表 
+    展示共享相簿列表 
     aliyunpan album ls
 `,
 				Action: func(c *cli.Context) error {
@@ -79,94 +68,7 @@ func CmdAlbum() cli.Command {
 						fmt.Println("未登录账号")
 						return nil
 					}
-					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
-						return nil
-					}
-					RunAlbumList()
-					return nil
-				},
-				Flags: []cli.Flag{},
-			},
-			{
-				Name:      "new",
-				Aliases:   []string{""},
-				Usage:     "创建相簿",
-				UsageText: cmder.App().Name + " album new",
-				Description: `
-示例:
-
-    新建相簿，名称为：我的相簿2022
-    aliyunpan album new "我的相簿2022"
-
-    新建相簿，名称为：我的相簿2022，描述为：存放2022所有文件
-    aliyunpan album new "我的相簿2022" "存放2022所有文件"
-`,
-				Action: func(c *cli.Context) error {
-					if config.Config.ActiveUser() == nil {
-						fmt.Println("未登录账号")
-						return nil
-					}
-					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
-						return nil
-					}
-					RunAlbumCreate(c.Args().Get(0), c.Args().Get(1))
-					return nil
-				},
-				Flags: []cli.Flag{},
-			},
-			{
-				Name:      "rm",
-				Aliases:   []string{""},
-				Usage:     "删除相簿",
-				UsageText: cmder.App().Name + " album rm",
-				Description: `
-删除相簿，同名的相簿只会删除第一个符合条件的
-示例:
-
-    删除名称为"我的相簿2022"的相簿
-    aliyunpan album rm "我的相簿2022"
-
-    删除名称为"我的相簿2022-1" 和 "我的相簿2022-2"的相簿
-    aliyunpan album rm "我的相簿2022-1" "我的相簿2022-2"
-`,
-				Action: func(c *cli.Context) error {
-					if config.Config.ActiveUser() == nil {
-						fmt.Println("未登录账号")
-						return nil
-					}
-					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
-						return nil
-					}
-					RunAlbumDelete(c.Args())
-					return nil
-				},
-				Flags: []cli.Flag{},
-			},
-			{
-				Name:      "rename",
-				Aliases:   []string{""},
-				Usage:     "重命名相簿",
-				UsageText: cmder.App().Name + " album rename",
-				Description: `
-重命名相簿，同名的相簿只会修改第一个符合条件的
-示例:
-
-    重命名相簿"我的相簿2022"为新的名称"我的相簿2022-new"
-    aliyunpan album rename "我的相簿2022" "我的相簿2022-new"
-`,
-				Action: func(c *cli.Context) error {
-					if config.Config.ActiveUser() == nil {
-						fmt.Println("未登录账号")
-						return nil
-					}
-					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
-						return nil
-					}
-					RunAlbumRename(c.Args().Get(0), c.Args().Get(1))
+					RunShareAlbumList()
 					return nil
 				},
 				Flags: []cli.Flag{},
@@ -188,76 +90,7 @@ func CmdAlbum() cli.Command {
 						fmt.Println("未登录账号")
 						return nil
 					}
-					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
-						return nil
-					}
-					RunAlbumListFile(c.Args().Get(0))
-					return nil
-				},
-				Flags: []cli.Flag{},
-			},
-			{
-				Name:      "rm-file",
-				Aliases:   []string{"rf"},
-				Usage:     "移除相簿中的文件",
-				UsageText: cmder.App().Name + " album rm-file",
-				Description: `
-移除相簿中的文件，同名的相簿只会移除第一个符合条件的
-示例:
-
-    移除相簿 "我的相簿2022" 中的文件 1.png 2.png
-    aliyunpan album rm-file 我的相簿2022 1.png 2.png
-`,
-				Action: func(c *cli.Context) error {
-					if config.Config.ActiveUser() == nil {
-						fmt.Println("未登录账号")
-						return nil
-					}
-					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
-						return nil
-					}
-					subArgs := c.Args()
-					if len(subArgs) < 2 {
-						fmt.Println("请指定移除的文件")
-						return nil
-					}
-					RunAlbumRmFile(subArgs[0], subArgs[1:])
-					return nil
-				},
-				Flags: []cli.Flag{},
-			},
-			{
-				Name:      "add-file",
-				Aliases:   []string{"af"},
-				Usage:     "增加（文件/相册）网盘文件到相簿中",
-				UsageText: cmder.App().Name + " album add-file",
-				Description: `
-增加文件到相簿中
-示例:
-
-    增加当前目录下的 1.png 2.png 文件到相簿 "我的相簿2022" 中
-    aliyunpan album add-file 我的相簿2022 1.png 2.png
-
-    增加当前目录下的 myFolder 文件夹下所有文件到相簿 "我的相簿2022" 中
-    aliyunpan album add-file 我的相簿2022 myFolder
-`,
-				Action: func(c *cli.Context) error {
-					if config.Config.ActiveUser() == nil {
-						fmt.Println("未登录账号")
-						return nil
-					}
-					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
-						return nil
-					}
-					subArgs := c.Args()
-					if len(subArgs) < 2 {
-						fmt.Println("请指定增加的文件")
-						return nil
-					}
-					RunAlbumAddFile(subArgs[0], subArgs[1:], ImageVideoOnlyOption)
+					RunShareAlbumListFile(c.Args().Get(0))
 					return nil
 				},
 				Flags: []cli.Flag{},
@@ -273,15 +106,10 @@ func CmdAlbum() cli.Command {
 
     下载相簿 "我的相簿2022" 里面的所有文件
     aliyunpan album download-file 我的相簿2022
-
 `,
 				Action: func(c *cli.Context) error {
 					if config.Config.ActiveUser() == nil {
 						fmt.Println("未登录账号")
-						return nil
-					}
-					if config.Config.ActiveUser().PanClient().WebapiPanClient() == nil {
-						fmt.Println("WEB客户端未登录，请登录后再使用该命令")
 						return nil
 					}
 					subArgs := c.Args()
@@ -312,7 +140,7 @@ func CmdAlbum() cli.Command {
 						ExcludeNames:         []string{},
 					}
 
-					RunAlbumDownloadFile(c.Args(), do)
+					RunShareAlbumDownloadFile(c.Args(), do)
 					return nil
 				},
 				Flags: []cli.Flag{
@@ -334,76 +162,25 @@ func CmdAlbum() cli.Command {
 	}
 }
 
-func RunAlbumList() {
+func RunShareAlbumList() {
 	activeUser := GetActiveUser()
-	records, err := activeUser.PanClient().WebapiPanClient().AlbumListGetAll(&aliyunpan_web.AlbumListParam{})
+	records, err := activeUser.PanClient().OpenapiPanClient().ShareAlbumListGetAll()
 	if err != nil {
 		fmt.Printf("获取相簿列表失败: %s\n", err)
 		return
 	}
 
 	tb := cmdtable.NewTable(os.Stdout)
-	tb.SetHeader([]string{"#", "ALBUM_ID", "名称", "文件数量", "创建日期", "修改日期"})
-	tb.SetColumnAlignment([]int{tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_DEFAULT})
+	tb.SetHeader([]string{"#", "ALBUM_ID", "名称", "更新日期", "创建日期"})
+	tb.SetColumnAlignment([]int{tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_DEFAULT})
 	for k, record := range records {
-		tb.Append([]string{strconv.Itoa(k + 1), record.AlbumId, record.Name, strconv.Itoa(record.FileCount),
-			record.CreatedAtStr(), record.UpdatedAtStr()})
+		tb.Append([]string{strconv.Itoa(k + 1), record.AlbumId, record.Name, record.UpdatedAtStr(), record.CreatedAtStr()})
 	}
 	tb.Render()
 }
 
-func RunAlbumCreate(name, description string) {
-	if name == "" {
-		fmt.Printf("相簿名称不能为空\n")
-		return
-	}
-
-	activeUser := GetActiveUser()
-	_, err := activeUser.PanClient().WebapiPanClient().AlbumCreate(&aliyunpan_web.AlbumCreateParam{
-		Name:        name,
-		Description: description,
-	})
-	if err != nil {
-		fmt.Printf("创建相簿失败: %s\n", err)
-		return
-	}
-	fmt.Printf("创建相簿成功: %s\n", name)
-}
-
-func RunAlbumDelete(nameList []string) {
-	if len(nameList) == 0 {
-		fmt.Printf("相簿名称不能为空\n")
-		return
-	}
-
-	activeUser := GetActiveUser()
-	records, err := activeUser.PanClient().WebapiPanClient().AlbumListGetAll(&aliyunpan_web.AlbumListParam{})
-	if err != nil {
-		fmt.Printf("获取相簿列表失败: %s\n", err)
-		return
-	}
-
-	for _, record := range records {
-		for i, name := range nameList {
-			if name == record.Name {
-				nameList = append(nameList[:i], nameList[i+1:]...)
-				_, err := activeUser.PanClient().WebapiPanClient().AlbumDelete(&aliyunpan_web.AlbumDeleteParam{
-					AlbumId: record.AlbumId,
-				})
-				if err != nil {
-					fmt.Printf("删除相簿失败: %s\n", name)
-					return
-				} else {
-					fmt.Printf("删除相簿成功: %s\n", name)
-				}
-				break
-			}
-		}
-	}
-}
-
-func getAlbumFromName(activeUser *config.PanUser, name string) *aliyunpan.AlbumEntity {
-	records, err := activeUser.PanClient().WebapiPanClient().AlbumListGetAll(&aliyunpan_web.AlbumListParam{})
+func getShareAlbumFromName(activeUser *config.PanUser, name string) *aliyunpan.AlbumEntity {
+	records, err := activeUser.PanClient().OpenapiPanClient().ShareAlbumListGetAll()
 	if err != nil {
 		fmt.Printf("获取相簿列表失败: %s\n", err)
 		return nil
@@ -417,48 +194,21 @@ func getAlbumFromName(activeUser *config.PanUser, name string) *aliyunpan.AlbumE
 	return nil
 }
 
-func RunAlbumRename(name, newName string) {
-	if len(name) == 0 {
-		fmt.Printf("相簿名称不能为空\n")
-		return
-	}
-	if len(newName) == 0 {
-		fmt.Printf("相簿名称不能为空\n")
-		return
-	}
-
-	activeUser := GetActiveUser()
-	record := getAlbumFromName(activeUser, name)
-	if record == nil {
-		return
-	}
-	_, err := activeUser.PanClient().WebapiPanClient().AlbumEdit(&aliyunpan_web.AlbumEditParam{
-		AlbumId:     record.AlbumId,
-		Description: record.Description,
-		Name:        newName,
-	})
-	if err != nil {
-		fmt.Printf("重命名相簿失败: %s\n", name)
-		return
-	} else {
-		fmt.Printf("重命名相簿成功: %s -> %s\n", name, newName)
-	}
-}
-
-func RunAlbumListFile(name string) {
+func RunShareAlbumListFile(name string) {
 	if len(name) == 0 {
 		fmt.Printf("相簿名称不能为空\n")
 		return
 	}
 
 	activeUser := GetActiveUser()
-	record := getAlbumFromName(activeUser, name)
+	record := getShareAlbumFromName(activeUser, name)
 	if record == nil {
 		return
 	}
 
-	fileList, er := activeUser.PanClient().WebapiPanClient().AlbumListFileGetAll(&aliyunpan_web.AlbumListFileParam{
+	fileList, er := activeUser.PanClient().OpenapiPanClient().ShareAlbumListFileGetAll(&aliyunpan.ShareAlbumListFileParam{
 		AlbumId: record.AlbumId,
+		Limit:   100,
 	})
 	if er != nil {
 		fmt.Printf("获取相簿文件列表失败：%s\n", er)
@@ -467,174 +217,13 @@ func RunAlbumListFile(name string) {
 	renderTable(opLs, false, "", fileList)
 }
 
-func RunAlbumRmFile(name string, nameList []string) {
-	if len(name) == 0 {
-		fmt.Printf("相簿名称不能为空\n")
-		return
-	}
-	if len(nameList) == 0 {
-		fmt.Printf("指定文件不能为空\n")
-		return
-	}
-
-	activeUser := GetActiveUser()
-	album := getAlbumFromName(activeUser, name)
-	if album == nil {
-		return
-	}
-
-	fileList, er := activeUser.PanClient().WebapiPanClient().AlbumListFileGetAll(&aliyunpan_web.AlbumListFileParam{
-		AlbumId: album.AlbumId,
-	})
-	if er != nil {
-		fmt.Printf("获取相簿文件列表失败：%s\n", er)
-		return
-	}
-	param := &aliyunpan_web.AlbumDeleteFileParam{
-		AlbumId:       album.AlbumId,
-		DriveFileList: []aliyunpan.FileBatchActionParam{},
-	}
-	for _, file := range fileList {
-		if len(nameList) == 0 {
-			break
-		}
-		for i, name := range nameList {
-			if name == file.FileName {
-				nameList = append(nameList[:i], nameList[i+1:]...)
-				param.AddFileItem(file.DriveId, file.FileId)
-				break
-			}
-		}
-	}
-
-	// 1-500 范围
-	if len(param.DriveFileList) == 0 {
-		fmt.Printf("没有符合的文件\n")
-		return
-	}
-	// delete file
-	_, e := activeUser.PanClient().WebapiPanClient().AlbumDeleteFile(param)
-	if e != nil {
-		fmt.Printf("删除相簿文件失败：%s\n", e)
-		return
-	}
-	fmt.Printf("删除相簿文件成功：%s\n", name)
-}
-
-// RunAlbumAddFile 增加网盘文件到相簿
-func RunAlbumAddFile(albumName string, filePathList []string, filterOption AlbumFileCategoryOption) {
-	activeUser := GetActiveUser()
-
-	if albumName == "" {
-		fmt.Printf("必须指定相簿名称\n")
-		return
-	}
-	album := getAlbumFromName(activeUser, albumName)
-	if album == nil {
-		fmt.Printf("相簿不存在\n")
-		return
-	}
-
-	paths, err := makePathAbsolute(activeUser.ActiveDriveId, filePathList...)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	if len(paths) == 0 {
-		fmt.Printf("没有有效的文件\n")
-		return
-	}
-
-	fmt.Printf("正在获取增加的文件信息，该操作可能会非常耗费时间，请耐心等待...\n")
-	param := &aliyunpan_web.AlbumAddFileParam{
-		AlbumId:       album.AlbumId,
-		DriveFileList: []aliyunpan.FileBatchActionParam{},
-	}
-	for k := range paths {
-		filePath := paths[k]
-		fileInfo, apierr := activeUser.PanClient().WebapiPanClient().FileInfoByPath(activeUser.ActiveDriveId, filePath)
-		if apierr != nil {
-			fmt.Printf("获取文件信息失败: %s\n", filePath)
-			continue
-		}
-		if fileInfo.IsFile() {
-			// file
-			if isFileMatchCondition(fileInfo, filterOption) {
-				param.AddFileItem(fileInfo.DriveId, fileInfo.FileId)
-			}
-		} else {
-			// folder
-			activeUser.PanClient().WebapiPanClient().FilesDirectoriesRecurseList(activeUser.ActiveDriveId, fileInfo.Path, func(depth int, _ string, fd *aliyunpan.FileEntity, apiError *apierror.ApiError) bool {
-				if apiError != nil {
-					logger.Verbosef("%s\n", apiError)
-					return true
-				}
-				if !fd.IsFolder() {
-					if isFileMatchCondition(fd, filterOption) {
-						param.AddFileItem(fd.DriveId, fd.FileId)
-					}
-				}
-				time.Sleep(2 * time.Second)
-				return true
-			})
-		}
-		time.Sleep(2 * time.Second)
-	}
-
-	if len(param.DriveFileList) == 0 {
-		fmt.Printf("没有符合的文件\n")
-		return
-	}
-	// add file
-	_, e := activeUser.PanClient().WebapiPanClient().AlbumAddFile(param)
-	if e != nil {
-		fmt.Printf("增加相簿文件失败：%s\n", e)
-		return
-	}
-	fmt.Printf("增加相簿文件成功：%s\n", albumName)
-}
-
-func isFileMatchCondition(fileInfo *aliyunpan.FileEntity, filterOption AlbumFileCategoryOption) bool {
-	if fileInfo == nil {
-		return false
-	}
-	if filterOption == ImageOnlyOption {
-		return fileInfo.Category == "image"
-	} else if filterOption == VideoOnlyOption {
-		return fileInfo.Category == "video"
-	} else if filterOption == ImageVideoOnlyOption {
-		return fileInfo.Category == "image" || fileInfo.Category == "video"
-	} else if filterOption == AllFileOption {
-		return true
-	}
-	return false
-}
-
-func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
+func RunShareAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 	if len(albumNames) == 0 {
-		fmt.Printf("相簿名称不能为空\n")
+		fmt.Printf("请指定相簿名称\n")
 		return
 	}
 
 	activeUser := GetActiveUser()
-	activeUser.PanClient().WebapiPanClient().EnableCache()
-	activeUser.PanClient().WebapiPanClient().ClearCache()
-	defer activeUser.PanClient().WebapiPanClient().DisableCache()
-	// pan token expired checker
-	continueFlag := int32(0)
-	atomic.StoreInt32(&continueFlag, 0)
-	defer func() {
-		atomic.StoreInt32(&continueFlag, 1)
-	}()
-	go func(flag *int32) {
-		for atomic.LoadInt32(flag) == 0 {
-			time.Sleep(time.Duration(1) * time.Minute)
-			if RefreshWebTokenInNeed(activeUser, config.Config.DeviceName) {
-				logger.Verboseln("update access token for download task")
-			}
-		}
-	}(&continueFlag)
-
 	if options == nil {
 		options = &DownloadOptions{}
 	}
@@ -668,6 +257,10 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 	if options.Parallel > config.MaxFileDownloadParallelNum {
 		options.Parallel = config.MaxFileDownloadParallelNum
 	}
+	// 设置单个文件下载分片线程数
+	if options.SliceParallel < 1 {
+		options.SliceParallel = 1
+	}
 
 	// 保存文件的本地根文件夹
 	originSaveRootPath := ""
@@ -693,6 +286,7 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 		panClient = activeUser.PanClient()
 	)
 	cfg.MaxParallel = options.Parallel
+	cfg.SliceParallel = options.SliceParallel
 
 	var (
 		executor = taskframework.TaskExecutor{
@@ -707,14 +301,26 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 	globalSpeedsStat := &speeds.Speeds{}
 
 	// 处理队列
+	allShareAlbumList, err := activeUser.PanClient().OpenapiPanClient().ShareAlbumListGetAll()
+	if err != nil {
+		fmt.Printf("获取相簿列表失败: %s\n", err)
+		return
+	}
 	for k := range albumNames {
-		record := getAlbumFromName(activeUser, albumNames[k])
+		var record *aliyunpan.AlbumEntity
+		for _, album := range allShareAlbumList {
+			if album.Name == albumNames[k] {
+				record = album
+				break
+			}
+		}
 		if record == nil {
 			continue
 		}
 		// 获取相簿下的所有文件
-		fileList, er := activeUser.PanClient().WebapiPanClient().AlbumListFileGetAll(&aliyunpan_web.AlbumListFileParam{
+		fileList, er := activeUser.PanClient().OpenapiPanClient().ShareAlbumListFileGetAll(&aliyunpan.ShareAlbumListFileParam{
 			AlbumId: record.AlbumId,
+			Limit:   100,
 		})
 		if er != nil {
 			fmt.Printf("获取相簿文件出错，请稍后重试: %s\n", albumNames[k])
@@ -724,9 +330,61 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 			fmt.Printf("相簿里面没有文件: %s\n", albumNames[k])
 			continue
 		}
-		for _, f := range fileList {
-			// 补全虚拟网盘路径，规则：/<相簿名称>/文件名称
-			f.Path = "/" + albumNames[k] + "/" + f.FileName
+
+		// 相薄文件是没有子文件夹的，这个fileList就是该相册里面的全部文件了，所以不需要再遍历子文件夹了
+		idx := 0
+		for {
+			if idx >= len(fileList) {
+				break
+			}
+			f := fileList.Item(idx)
+			idx += 1
+			// 处理实况照片
+			if f.IsAlbumLivePhotoFile() {
+				// 如果是实况照片，则需要下载图片+视频两个文件
+				// 获取下载链接
+				durl, apierr := activeUser.PanClient().OpenapiPanClient().ShareAlbumGetFileDownloadUrl(&aliyunpan.ShareAlbumGetFileUrlParam{
+					AlbumId: f.AlbumId,
+					DriveId: f.DriveId,
+					FileId:  f.FileId,
+				})
+				if apierr != nil {
+					logger.Verbosef("ERROR: get album file download url error: %s\n", f.FileId)
+					fmt.Printf("\n下载照片失败: %s\n", f.FileName)
+					continue
+				}
+				if durl.StreamsUrl != nil { // 实况图片(照片+视频)下载链接
+					// 照片文件
+					photoFile := cloneFileEntity(f)
+					photoFileSize := int64(0)
+					if durl.StreamsUrl.Heic != "" {
+						beforeStr, _ := strings.CutSuffix(f.FileName, ".livp")
+						photoFile.FileName = beforeStr + ".HEIC"
+						photoFile.FileExtension = "heic"
+						photoFileSize = getHttpDownloadFileSize(durl.StreamsUrl.Heic)
+					} else if durl.StreamsUrl.Jpeg != "" {
+						beforeStr, _ := strings.CutSuffix(f.FileName, ".livp")
+						photoFile.FileName = beforeStr + ".JPG"
+						photoFile.FileExtension = "jpg"
+						photoFileSize = getHttpDownloadFileSize(durl.StreamsUrl.Jpeg)
+					}
+					photoFile.FileSize = photoFileSize
+					fileList = append(fileList, photoFile)
+
+					// 视频文件
+					videoFile := cloneFileEntity(f)
+					videoFile.FileSize = f.FileSize - photoFileSize
+					if durl.StreamsUrl.Mov != "" {
+						beforeStr, _ := strings.CutSuffix(f.FileName, ".livp")
+						videoFile.FileName = beforeStr + ".MOV"
+						videoFile.FileExtension = "mov"
+					}
+					fileList = append(fileList, videoFile)
+				}
+				continue
+			}
+			// 补全虚拟网盘路径，规则：/共享相册/<相簿名称>/文件名称
+			f.Path = "/共享相册/" + albumNames[k] + "/" + f.FileName
 
 			// 生成下载项
 			newCfg := *cfg
@@ -741,15 +399,15 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 				IsExecutedPermission: options.IsExecutedPermission,
 				IsOverwrite:          options.IsOverwrite,
 				NoCheck:              options.NoCheck,
+				FilePanSource:        global.AlbumSource,
 				FilePanPath:          f.Path,
-				DriveId:              f.DriveId, // 必须使用文件的DriveId,因为一个相簿的文件会来自多个网盘（资源库/备份盘）
+				DriveId:              f.DriveId, // 一个相簿的文件会来自多个网盘（资源库/备份盘）
 				GlobalSpeedsStat:     globalSpeedsStat,
 				FileRecorder:         nil,
 			}
 
-			// TODO: 相册下载需要重构
 			// 设置相簿文件信息
-			//unit.SetFileInfo(pandownload.AlbumFileSource, f)
+			unit.SetFileInfo(global.AlbumSource, f)
 
 			// 设置储存的路径
 			if options.SaveTo != "" {
@@ -784,4 +442,34 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 		}
 		tb.Render()
 	}
+}
+
+func cloneFileEntity(entity *aliyunpan.FileEntity) *aliyunpan.FileEntity {
+	data, err := json.Marshal(entity) // 序列化原始对象
+	if err != nil {
+		panic(err)
+	}
+	newEntity := &aliyunpan.FileEntity{}
+	err = json.Unmarshal(data, newEntity) // 反序列化到新的对象中
+	if err != nil {
+		panic(err)
+	}
+	return newEntity
+}
+
+func getHttpDownloadFileSize(fileUrl string) int64 {
+	client := requester.NewHTTPClient()
+	client.SetKeepAlive(true)
+	client.SetTimeout(10 * time.Minute)
+	// header
+	headers := map[string]string{
+		"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+		"referer":    "https://www.aliyundrive.com/",
+	}
+	resp, err := client.Req("GET", fileUrl, nil, headers)
+	if err != nil {
+		return -1
+	}
+	fileSize := resp.ContentLength
+	return fileSize
 }

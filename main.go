@@ -478,6 +478,9 @@ func main() {
 		// 分享文件/目录 share
 		command.CmdShare(),
 
+		// 相簿
+		command.CmdAlbum(),
+
 		// 显示命令历史
 		{
 			Name:      "history",
@@ -686,9 +689,6 @@ func main() {
 		//	Category:    "debug",
 		//	Before:      command.ReloadConfigFunc,
 		//	Action: func(c *cli.Context) error {
-		//		os.Setenv(config.EnvVerbose, "1")
-		//		logger.IsVerbose = true
-		//		fmt.Println("显示调试日志", logger.IsVerbose)
 		//		return nil
 		//	},
 		//	Flags: []cli.Flag{
