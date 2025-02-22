@@ -569,7 +569,20 @@ stepUploadUpload:
 		// 处理上传错误
 		if errors.Is(uploadResult.Err, uploader.UploadPartNotSeq) {
 			// 分片乱序错误
-			utu.amendFileUploadPartNum()
+			if ee := utu.amendFileUploadPartNum(); ee != nil {
+				// 修正分片乱序失败，先令上传任务直接失败
+				logger.Verboseln("WARNING! amend uploaded parts num failed")
+				uploadResult = &taskframework.TaskUnitRunResult{
+					Succeed:       false,
+					NeedRetry:     false,
+					Cancel:        false,
+					Err:           ee,
+					ResultCode:    0,
+					ResultMessage: "",
+					Extra:         nil,
+				}
+				return uploadResult
+			}
 			goto stepUploadUpload
 		}
 		if errors.Is(uploadResult.Err, uploader.UploadNoSuchUpload) {
@@ -597,9 +610,9 @@ stepUploadUpload:
 }
 
 // amendFileUploadPartNum 修正文件分片上传顺序错误
-func (utu *UploadTaskUnit) amendFileUploadPartNum() {
+func (utu *UploadTaskUnit) amendFileUploadPartNum() error {
 	if utu.LocalFileChecksum.LocalFileMeta.UploadOpEntity == nil || utu.state == nil {
-		return
+		return nil
 	}
 	logger.Verbosef("adjust the uploaded parts num error\n")
 	// 分片出现乱序
@@ -611,12 +624,14 @@ func (utu *UploadTaskUnit) amendFileUploadPartNum() {
 	})
 	if uper != nil {
 		logger.Verbosef("get uploaded parts info error: %+v\n", uper)
-		return
+		return uper
 	}
 	// 获取最后上传的分片编号
 	lastUploadedPartNum := -1
 	if len(uploadedParts.UploadedParts) > 0 {
 		lastUploadedPartNum = uploadedParts.UploadedParts[len(uploadedParts.UploadedParts)-1].PartNumber
+	} else {
+		return errors.New("WARNING! uploaded parts list is empty")
 	}
 	// 修正分片上传的标识
 	if lastUploadedPartNum > 0 {
@@ -629,4 +644,5 @@ func (utu *UploadTaskUnit) amendFileUploadPartNum() {
 			}
 		}
 	}
+	return nil
 }
