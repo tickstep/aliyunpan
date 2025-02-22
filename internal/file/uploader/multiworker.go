@@ -26,7 +26,7 @@ import (
 
 type (
 	worker struct {
-		id         int
+		id         int // ID从0开始计数
 		partOffset int64
 		splitUnit  SplitUnit
 		uploadDone bool

@@ -116,7 +116,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 		}
 		resp, err = uploadClient.Req(httpMethod, fullUrl, r, headers)
 		if err != nil {
-			logger.Verbosef("分片上传出错: 分片%d => %s\n", partseq, err)
+			logger.Verbosef("分片上传出错: 分片%d => %s\n", partseq+1, err)
 		}
 
 		if resp != nil {
@@ -124,7 +124,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 				if blen > 0 {
 					buf := make([]byte, blen)
 					resp.Body.Read(buf)
-					logger.Verbosef("分片上传出错: 分片%d => %s\n", partseq, string(buf))
+					logger.Verbosef("分片上传出错: 分片%d => %s\n", partseq+1, string(buf))
 
 					errResp := &apierror.ErrorXmlResp{}
 					if err := xml.Unmarshal(buf, errResp); err == nil {
@@ -172,7 +172,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 					}
 				}
 			} else {
-				logger.Verbosef("分片上传出错: %d分片 => 原因未知\n", partseq)
+				logger.Verbosef("分片上传出错: %d分片 => 原因未知\n", partseq+1)
 			}
 
 			// 不可恢复的错误
@@ -203,7 +203,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 				DriveId:      pu.driveId,
 				FileId:       pu.uploadOpEntity.FileId,
 				UploadId:     pu.uploadOpEntity.UploadId,
-				PartInfoList: []aliyunpan.FileUploadPartInfoParam{{PartNumber: (partseq + 1)}}, // 阿里云盘partNum从1开始计数，partSeq从0开始
+				PartInfoList: []aliyunpan.FileUploadPartInfoParam{{PartNumber: partseq + 1}}, // 阿里云盘partNum从1开始计数，partSeq从0开始
 			})
 			if er != nil {
 				return false, &uploader.MultiError{

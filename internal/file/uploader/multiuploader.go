@@ -146,7 +146,7 @@ func (muer *MultiUploader) Execute() error {
 			BlockList: SplitBlock(muer.file.Len(), muer.config.BlockSize),
 		})
 
-		logger.Verbosef("upload task CREATED: block size: %d, num: %d\n", muer.config.BlockSize, len(muer.workers))
+		logger.Verbosef("upload task CREATED: block size: %d, worker num: %d\n", muer.config.BlockSize, len(muer.workers))
 	}
 
 	// 开始上传
