@@ -572,6 +572,7 @@ stepUploadUpload:
 			if ee := utu.amendFileUploadPartNum(); ee != nil {
 				// 修正分片乱序失败，先令上传任务直接失败
 				logger.Verboseln("WARNING! amend uploaded parts num failed")
+				fmt.Printf("[%s] %s 无法修正上传分片乱序的错误，建议重新上传\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 				uploadResult = &taskframework.TaskUnitRunResult{
 					Succeed:       false,
 					NeedRetry:     false,
@@ -631,7 +632,8 @@ func (utu *UploadTaskUnit) amendFileUploadPartNum() error {
 	if len(uploadedParts.UploadedParts) > 0 {
 		lastUploadedPartNum = uploadedParts.UploadedParts[len(uploadedParts.UploadedParts)-1].PartNumber
 	} else {
-		return errors.New("WARNING! uploaded parts list is empty")
+		logger.Verbosef("get uploaded parts list is empty\n")
+		return errors.New("uploaded parts list is empty")
 	}
 	// 修正分片上传的标识
 	if lastUploadedPartNum > 0 {

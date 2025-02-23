@@ -221,7 +221,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 			return true, nil
 		} else if respErr.Err == uploader.UploadPartNotSeq {
 			// 上传分片乱序了
-			// 先直接返回，后续再优化
+			// 返回错误，然后重传
 			return false, respErr
 		} else {
 			return false, respErr
