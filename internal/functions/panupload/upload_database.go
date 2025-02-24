@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,7 @@ package panupload
 
 import (
 	"errors"
+	"github.com/tickstep/library-go/logger"
 	"os"
 	"path/filepath"
 	"strings"
@@ -158,18 +159,20 @@ func (ud *UploadingDatabase) Search(meta *localfile.LocalFileMeta) *uploader.Ins
 		if uploading.LocalFileMeta == nil {
 			continue
 		}
-		if uploading.LocalFileMeta.EqualLengthSHA1(meta) {
-			return uploading.State
-		}
-		if uploading.LocalFileMeta.Path.LogicPath == meta.Path.LogicPath {
-			// 移除旧的信息
-			// 目前只是比较了文件大小
-			if meta.Length != uploading.LocalFileMeta.Length {
+		// 优选通过SHA1进行匹配，如果匹配失败则通过文件路径进行匹配
+		// 因为部分上传文件是直接上传的，没有计算SHA1
+		if uploading.LocalFileMeta.EqualLengthSHA1(meta) ||
+			uploading.LocalFileMeta.Path.LogicPath == meta.Path.LogicPath {
+			// 文件大小或者修改日期不一致，代表本地文件已经更改了，保存的旧的上传文件信息已经无用
+			// 移除旧的信息，客户端需要重新上传该文件
+			if meta.Length != uploading.LocalFileMeta.Length ||
+				meta.ModTime != uploading.LocalFileMeta.ModTime {
+				logger.Verboseln("本地文件已经被修改，上传数据记录需要移除，文件需要重新从0开始上传： {}", meta.Path.LogicPath)
 				ud.Delete(meta)
 				return nil
 			}
 
-			// 覆盖数据
+			// 从上传数据库补全信息并返回
 			meta.SHA1 = uploading.LocalFileMeta.SHA1
 			meta.ParentFolderId = uploading.LocalFileMeta.ParentFolderId
 			meta.UploadOpEntity = uploading.LocalFileMeta.UploadOpEntity

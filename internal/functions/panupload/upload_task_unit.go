@@ -445,7 +445,7 @@ StepUploadPrepareUpload:
 			}
 		}
 
-		if preHashMatch {
+		if preHashMatch { // preHashMatch为true，代表该文件可能已经被上传过，能够支持秒传，所以需要进一步计算完整SHA1进行检测是否能秒传
 			// 计算完整文件SHA1
 			fmt.Printf("[%s] %s 正在计算文件SHA1: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path.LogicPath)
 			utu.LocalFileChecksum.Sum(localfile.CHECKSUM_SHA1)
