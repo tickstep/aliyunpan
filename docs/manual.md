@@ -46,7 +46,8 @@
             + [2.上传文件后删除本地文件](#2.上传文件后删除本地文件)
             + [3.下载文件并截断过长的文件名](#3.下载文件并截断过长的文件名)
             + [4.上传文件去掉文件名包含的部分字符](#4.上传文件去掉文件名包含的部分字符)
-            + [5.Token刷新失败发送外部通知](#5.Token刷新失败发送外部通知)
+            + [5.上传文件时去掉指定目录或者文件](#5.上传文件时去掉指定目录或者文件)
+            + [6.Token刷新失败发送外部通知](#6.Token刷新失败发送外部通知)
     * [显示和修改程序配置项](#显示和修改程序配置项)
 - [常见问题Q&A](#常见问题Q&A)
     * [1. 如何开启Debug调试日志](#1-如何开启Debug调试日志)
@@ -1187,8 +1188,70 @@ function uploadFilePrepareCallback(context, params) {
     return result;
 }
 ```
+#### 5.上传文件时去掉指定目录或者文件
+upload命令本身支持exn参数排除上传文件或目录，但是只能指定文件名称，不能指定文件的路径。如果需要排除指定路径则可以通过插件脚本实现，样例如下：
+```js
+function uploadFilePrepareCallback(context, params) {
+    //（自行配置）禁止上传的本地【目录列表】，使用绝对路径，可以配置多个路径用逗号分隔
+    var forbiddenUploadFolders = ["/Users/tickstep/Downloads/up/target","/Users/tickstep/Downloads/up/.idea"]
+    //（自行配置）禁止上传的本地【文件列表】，使用绝对路径，可以配置多个路径用逗号分隔
+    var forbiddenUploadFiles = ["/Users/tickstep/Downloads/up/pom.xml"]
 
-#### 5.Token刷新失败发送外部通知
+    // -------------------- 以下代码不要修改 --------------------
+    var result = {
+        "uploadApproved": "yes",
+        "driveFilePath": ""
+    };
+
+    // 下面的代码都是分隔路径，方便后面使用
+    var filePath =  params["localFilePath"];
+    filePath = filePath.replace(/\\/g, "/");
+    // 目录完整路径
+    var dirPath = "";
+    // 文件名，不包括后缀名
+    var fileName = "";
+    // 文件后缀名
+    var fileExt = "";
+    var idx = filePath.lastIndexOf('/');
+    if (idx > 0) {
+        dirPath = filePath.substring(0,idx);
+        fileName = filePath.substring(idx+1,filePath.length);
+    } else {
+        fileName = filePath;
+    }
+    idx = fileName.lastIndexOf(".")
+    if (idx > 0) {
+        fileExt = fileName.substring(idx,fileName.length);
+        fileName = fileName.substring(0, fileName.length-fileExt.length)
+    }
+
+    if (params["localFileType"] == "file") {
+        for (var i = 0; i < forbiddenUploadFiles.length; i++) {
+            if (forbiddenUploadFiles[i].replace(/\\/g, "/") == params["localFilePath"]) {
+                result["uploadApproved"] = "no"; // 禁止文件上传
+                break
+            }
+        }
+        for (var i = 0; i < forbiddenUploadFolders.length; i++) {
+            if (forbiddenUploadFolders[i].replace(/\\/g, "/") == dirPath) {
+                result["uploadApproved"] = "no"; // 禁止文件上传
+                break
+            }
+        }
+    } else if (params["localFileType"] == "folder") {
+        for (var i = 0; i < forbiddenUploadFolders.length; i++) {
+            if (forbiddenUploadFolders[i].replace(/\\/g, "/") == params["localFilePath"]) {
+                result["uploadApproved"] = "no"; // 禁止文件上传
+                break
+            }
+        }
+    }
+
+    return result;
+}
+```
+
+#### 6.Token刷新失败发送外部通知
 Token刷新失败发送外部通知，例如Server酱
 ```js
 function userTokenRefreshFinishCallback(context, params) {
