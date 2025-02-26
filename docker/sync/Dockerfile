@@ -1,10 +1,12 @@
-# alpine:3.15.0
+# alpine:3.21
 
 # 参数
-#ARG DOCKER_IMAGE_HASH
+ARG DOCKER_IMAGE_HASH
 
 #FROM alpine@sha256:$DOCKER_IMAGE_HASH
-FROM alpine
+#FROM alpine
+FROM alpine:$DOCKER_IMAGE_HASH
+
 LABEL author="tickstep"
 LABEL email="tickstep@outlook.com"
 LABEL version="1.0"
