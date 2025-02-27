@@ -150,7 +150,7 @@ func (muer *MultiUploader) upload() (uperr error) {
 		}()
 		wg.Wait()
 		if uperr != nil {
-			if errors.Is(uperr, UploadPartNotSeq) {
+			if errors.Is(uperr, UploadPartNotSeq) || errors.Is(uperr, UploadNoSuchUpload) {
 				// 分片出现乱序，停止上传
 				// 清空数据，准备重新上传
 				uploadDeque = lane.NewDeque() // 清空待上传列表
@@ -166,7 +166,7 @@ func (muer *MultiUploader) upload() (uperr error) {
 	uploadClient.CloseIdleConnections()
 
 	// 返回错误，通知上层客户端
-	if errors.Is(uperr, UploadPartNotSeq) {
+	if errors.Is(uperr, UploadPartNotSeq) || errors.Is(uperr, UploadNoSuchUpload) {
 		return uperr
 	}
 
