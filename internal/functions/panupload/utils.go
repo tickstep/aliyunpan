@@ -35,7 +35,10 @@ const (
 	// MaxRapidUploadSize 秒传文件支持的最大文件大小
 	MaxRapidUploadSize = 20 * converter.GB
 
+	// UploadingFileName 上传文件上传状态的文件名
 	UploadingFileName = "aliyunpan_uploading.json"
+	// UploadingBackupFileName 上传文件上传状态的副本
+	UploadingBackupFileName = "aliyunpan_uploading.json.bak"
 )
 
 var (

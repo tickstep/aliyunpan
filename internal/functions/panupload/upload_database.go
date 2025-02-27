@@ -16,6 +16,7 @@ package panupload
 import (
 	"errors"
 	"github.com/tickstep/library-go/logger"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,6 +49,7 @@ type (
 func NewUploadingDatabase() (ud *UploadingDatabase, err error) {
 	file, err := os.OpenFile(filepath.Join(config.GetConfigDir(), UploadingFileName), os.O_CREATE|os.O_RDWR, 0777)
 	if err != nil {
+		// 打开文件错误，一般是文件权限问题
 		return nil, err
 	}
 
@@ -65,7 +67,20 @@ func NewUploadingDatabase() (ud *UploadingDatabase, err error) {
 
 	err = jsonhelper.UnmarshalData(file, ud)
 	if err != nil {
-		return nil, err
+		// 上传数据库文件内容解析错误
+		// 尝试从备份的文件读取数据
+		bakFile, err1 := os.OpenFile(filepath.Join(config.GetConfigDir(), UploadingBackupFileName), os.O_CREATE|os.O_RDONLY, 0777)
+		if err1 != nil {
+			return nil, err
+		}
+		err2 := jsonhelper.UnmarshalData(bakFile, ud)
+		if err2 != nil {
+			return nil, err
+		}
+		bakFile.Close()
+		// 旧的备份文件可以正常使用，复制备份的数据文件到当前数据文件中
+		ud.copyFile(filepath.Join(config.GetConfigDir(), UploadingFileName), filepath.Join(config.GetConfigDir(), UploadingBackupFileName))
+		return ud, nil
 	}
 
 	return ud, nil
@@ -87,17 +102,49 @@ func (ud *UploadingDatabase) Save() error {
 		panic(err)
 	}
 
+	// 备份旧的数据库文件
+	// 因为下面有文件内容清空、写入新内容的操作。有小概率出现文件保存没有完成程序就退出的问题，这会导致数据库内容丢失。所以这里必须备份一下旧文件
+	err1 := ud.copyFile(filepath.Join(config.GetConfigDir(), UploadingBackupFileName), filepath.Join(config.GetConfigDir(), UploadingFileName))
+	if err1 != nil {
+		logger.Verboseln("备份上传数据库文件出错： {}", err1)
+	} else {
+		logger.Verboseln("成功备份旧的上传数据库文件")
+	}
+
+	logger.Verboseln("保存最新上传数据库内容")
+	// 清空文件旧内容
 	err = ud.dataFile.Truncate(int64(builder.Len()))
 	if err != nil {
 		return err
 	}
 
+	// 写入新内容
 	str := builder.String()
 	_, err = ud.dataFile.WriteAt(converter.ToBytes(str), 0)
 	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+// copyFile 复制文件
+func (ud *UploadingDatabase) copyFile(dstFilePath string, srcFilePath string) error {
+	os.Remove(dstFilePath)
+	dstFile, err1 := os.OpenFile(dstFilePath, os.O_CREATE|os.O_WRONLY, 0777)
+	if err1 != nil {
+		return err1
+	}
+	srcFile, err2 := os.OpenFile(srcFilePath, os.O_CREATE|os.O_RDONLY, 0777)
+	if err2 != nil {
+		return err2
+	}
+	_, err3 := io.Copy(dstFile, srcFile)
+	if err3 != nil {
+		return err3
+	}
+	dstFile.Close()
+	srcFile.Close()
 	return nil
 }
 
