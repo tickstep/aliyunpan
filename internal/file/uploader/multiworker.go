@@ -35,10 +35,17 @@ type (
 	workerList []*worker
 )
 
+// Readed 获取已上传大小
 func (werl *workerList) Readed() int64 {
 	var readed int64
 	for _, wer := range *werl {
-		readed += wer.splitUnit.Readed()
+		if wer.uploadDone {
+			// 已经上传完成的分片
+			readed += wer.splitUnit.Range().End - wer.splitUnit.Range().Begin
+		} else {
+			// 正在上传中的分片
+			readed += wer.splitUnit.Readed()
+		}
 	}
 	return readed
 }
