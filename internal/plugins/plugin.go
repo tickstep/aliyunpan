@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -164,10 +164,10 @@ type (
 		// SyncScanLocalFilePrepareCallback 同步备份-扫描本地文件的回调函数
 		SyncScanLocalFilePrepareCallback(context *Context, params *SyncScanLocalFilePrepareParams) (*SyncScanLocalFilePrepareResult, error)
 
-		// SyncScanPanFilePrepareCallback 同步备份-扫描本地文件的回调函数
+		// SyncScanPanFilePrepareCallback 同步备份-扫描云盘文件的回调函数
 		SyncScanPanFilePrepareCallback(context *Context, params *SyncScanPanFilePrepareParams) (*SyncScanPanFilePrepareResult, error)
 
-		// SyncFileFinishCallback 同步备份-同步文件完成的回调函数
+		// SyncFileFinishCallback 同步备份-同步一个文件完成时的回调函数
 		SyncFileFinishCallback(context *Context, params *SyncFileFinishParams) error
 
 		// UserTokenRefreshFinishCallback 用户Token刷新完成后回调函数
@@ -177,5 +177,3 @@ type (
 		Stop() error
 	}
 )
-
-var ()
