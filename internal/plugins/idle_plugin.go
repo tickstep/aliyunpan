@@ -44,6 +44,9 @@ func (p *IdlePlugin) SyncFileFinishCallback(context *Context, params *SyncFileFi
 	return nil
 }
 
+func (p *IdlePlugin) SyncAllFileFinishCallback(context *Context, params *SyncAllFileFinishParams) error {
+	return nil
+}
 func (p *IdlePlugin) UserTokenRefreshFinishCallback(context *Context, params *UserTokenRefreshFinishParams) error {
 	return nil
 }

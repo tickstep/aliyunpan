@@ -12,12 +12,12 @@
 // 参数说明
 // context - 当前调用的上下文信息
 // {
-// 	"appName": "aliyunpan",
-// 	"version": "v0.1.3",
-// 	"userId": "11001d48564f43b3bc5662874f04bb11",
-// 	"nickname": "tickstep",
-// 	"fileDriveId": "19519111",
-// 	"albumDriveId": "29519122"
+//  "appName": "aliyunpan",
+//  "version": "v0.1.3",
+//  "userId": "11001d48564f43b3bc5662874f04bb11",
+//  "nickname": "tickstep",
+//  "fileDriveId": "19519111",
+//  "albumDriveId": "29519122"
 // }
 // appName - 应用名称，当前固定为aliyunpan
 // version - 版本号
@@ -28,14 +28,14 @@
 //
 // params - 文件下载前参数
 // {
-// 	"driveId": "19519221",
-// 	"driveFileName": "token.bat",
-// 	"driveFilePath": "/aliyunpan/Downloads/token.bat",
-// 	"driveFileSha1": "08FBE28A5B8791A2F50225E2EC5CEEC3C7955A11",
-// 	"driveFileSize": 125330,
-// 	"driveFileType": "file",
-// 	"driveFileUpdatedAt": "2022-04-14 07:05:12",
-// 	"localFilePath": "aliyunpan\\Downloads\\token.bat"
+//  "driveId": "19519221",
+//  "driveFileName": "token.bat",
+//  "driveFilePath": "/aliyunpan/Downloads/token.bat",
+//  "driveFileSha1": "08FBE28A5B8791A2F50225E2EC5CEEC3C7955A11",
+//  "driveFileSize": 125330,
+//  "driveFileType": "file",
+//  "driveFileUpdatedAt": "2022-04-14 07:05:12",
+//  "localFilePath": "aliyunpan\\Downloads\\token.bat"
 // }
 // driveId - 网盘ID
 // driveFileName - 网盘文件名
@@ -48,8 +48,8 @@
 // 
 // 返回值说明
 // {
-// 	"downloadApproved": "yes",
-// 	"localFilePath": "newfolder\\token.bat"
+//  "downloadApproved": "yes",
+//  "localFilePath": "newfolder\\token.bat"
 // }
 // downloadApproved - 该文件是否下载，yes-确认下载，no-取消下载
 // localFilePath - 文件保存的本地路径，这个是相对路径，如果为空""代表保持原本的目标路径。
@@ -83,12 +83,12 @@ function downloadFilePrepareCallback(context, params) {
 // 参数说明
 // context - 当前调用的上下文信息
 // {
-// 	"appName": "aliyunpan",
-// 	"version": "v0.1.3",
-// 	"userId": "11001d48564f43b3bc5662874f04bb11",
-// 	"nickname": "tickstep",
-// 	"fileDriveId": "19519111",
-// 	"albumDriveId": "29519122"
+//  "appName": "aliyunpan",
+//  "version": "v0.1.3",
+//  "userId": "11001d48564f43b3bc5662874f04bb11",
+//  "nickname": "tickstep",
+//  "fileDriveId": "19519111",
+//  "albumDriveId": "29519122"
 // }
 // appName - 应用名称，当前固定为aliyunpan
 // version - 版本号
@@ -99,15 +99,15 @@ function downloadFilePrepareCallback(context, params) {
 //
 // params - 文件下载结束参数
 // {
-// 	"driveId": "19519221",
-// 	"driveFileName": "token.bat",
-// 	"driveFilePath": "/aliyunpan/Downloads/token.bat",
-// 	"driveFileSha1": "08FBE28A5B8791A2F50225E2EC5CEEC3C7955A11",
-// 	"driveFileSize": 125330,
-// 	"driveFileType": "file",
-// 	"driveFileUpdatedAt": "2022-04-14 07:05:12",
+//  "driveId": "19519221",
+//  "driveFileName": "token.bat",
+//  "driveFilePath": "/aliyunpan/Downloads/token.bat",
+//  "driveFileSha1": "08FBE28A5B8791A2F50225E2EC5CEEC3C7955A11",
+//  "driveFileSize": 125330,
+//  "driveFileType": "file",
+//  "driveFileUpdatedAt": "2022-04-14 07:05:12",
 //  "downloadResult": "success",
-// 	"localFilePath": "aliyunpan\\Downloads\\token.bat"
+//  "localFilePath": "aliyunpan\\Downloads\\token.bat"
 // }
 // driveId - 网盘ID
 // driveFileName - 网盘文件名

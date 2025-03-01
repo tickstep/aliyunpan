@@ -122,7 +122,7 @@ type (
 		SyncScanPanApproved string `json:"syncScanPanApproved"`
 	}
 
-	// SyncFileFinishParams 同步备份-文件同步结束-回调参数
+	// SyncFileFinishParams 同步备份-一个文件同步结束-回调参数
 	SyncFileFinishParams struct {
 		Action        string `json:"action"`
 		ActionResult  string `json:"actionResult"`
@@ -133,6 +133,28 @@ type (
 		FileSize      int64  `json:"fileSize"`
 		FileType      string `json:"fileType"`
 		FileUpdatedAt string `json:"fileUpdatedAt"`
+	}
+
+	// SyncAllFileFinishParams 同步备份-全部文件同步结束-回调参数
+	SyncAllFileFinishParams struct {
+		// Name 任务名称
+		Name string `json:"name"`
+		// Id 任务ID
+		Id string `json:"id"`
+		// UserId 账号ID
+		UserId string `json:"userId"`
+		// DriveName 网盘名称，backup-备份盘，resource-资源盘
+		DriveName string `json:"driveName"`
+		// DriveId 网盘ID，目前支持文件网盘
+		DriveId string `json:"driveId"`
+		// LocalFolderPath 本地目录
+		LocalFolderPath string `json:"localFolderPath"`
+		// PanFolderPath 云盘目录
+		PanFolderPath string `json:"panFolderPath"`
+		// Mode 备份模式
+		Mode string `json:"mode"`
+		// Policy 备份策略
+		Policy string `json:"policy"`
 	}
 
 	// UserTokenRefreshFinishParams 用户Token刷新完成后回调函数
@@ -169,6 +191,9 @@ type (
 
 		// SyncFileFinishCallback 同步备份-同步一个文件完成时的回调函数
 		SyncFileFinishCallback(context *Context, params *SyncFileFinishParams) error
+
+		// SyncAllFileFinishCallback 同步备份-同步全部文件完成时的回调函数
+		SyncAllFileFinishCallback(context *Context, params *SyncAllFileFinishParams) error
 
 		// UserTokenRefreshFinishCallback 用户Token刷新完成后回调函数
 		UserTokenRefreshFinishCallback(context *Context, params *UserTokenRefreshFinishParams) error

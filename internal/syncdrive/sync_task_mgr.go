@@ -235,3 +235,12 @@ func (m *SyncTaskManager) IsAllTaskCompletely() bool {
 	}
 	return true
 }
+
+// DoTaskSyncCompletelyPluginCallback 调用任务同步完成的回调函数
+func (m *SyncTaskManager) DoTaskSyncCompletelyPluginCallback() {
+	for _, task := range m.syncDriveConfig.SyncTaskList {
+		if task.IsTaskCompletely() {
+			task.doAllFileSyncPluginCallback()
+		}
+	}
+}

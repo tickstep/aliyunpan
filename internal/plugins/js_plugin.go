@@ -223,6 +223,26 @@ func (js *JsPlugin) SyncFileFinishCallback(context *Context, params *SyncFileFin
 	return nil
 }
 
+// SyncAllFileFinishCallback 同步备份-同步全部文件完成时的回调函数
+func (js *JsPlugin) SyncAllFileFinishCallback(context *Context, params *SyncAllFileFinishParams) error {
+	var fn func(*Context, *SyncAllFileFinishParams) error
+	if !js.isHandlerFuncExisted("syncAllFileFinishCallback") {
+		return nil
+	}
+	err := js.vm.ExportTo(js.vm.Get("syncAllFileFinishCallback"), &fn)
+	if err != nil {
+		logger.Verboseln("Js函数映射到 Go 函数失败！")
+		return nil
+	}
+	er := fn(context, params)
+	if er != nil {
+		logger.Verboseln(er)
+		return nil
+	}
+	return nil
+}
+
+// UserTokenRefreshFinishCallback 用户Token刷新完成后回调函数
 func (js *JsPlugin) UserTokenRefreshFinishCallback(context *Context, params *UserTokenRefreshFinishParams) error {
 	var fn func(*Context, *UserTokenRefreshFinishParams) error
 	if !js.isHandlerFuncExisted("userTokenRefreshFinishCallback") {

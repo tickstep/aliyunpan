@@ -271,7 +271,6 @@ func (f *FileActionTaskManager) doFileDiffRoutine(localFiles LocalFileList, panF
 		// 本地文件和云盘文件SHA1不一样
 		// 不同模式同步策略不一样
 		if f.task.Mode == Upload {
-
 			// 不再这里计算SHA1，待到上传的时候再计算
 			//if localFile.Sha1Hash == "" {
 			//	// 计算本地文件SHA1

@@ -398,6 +398,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, cycleMode syncdrive.CycleMode, fil
 				}
 				time.Sleep(5 * time.Second)
 			}
+			syncMgr.DoTaskSyncCompletelyPluginCallback()
 		}
 	} else {
 		if cycleMode == syncdrive.CycleInfiniteLoop {
@@ -423,6 +424,7 @@ func RunSync(defaultTask *syncdrive.SyncTask, cycleMode syncdrive.CycleMode, fil
 				}
 				time.Sleep(5 * time.Second)
 			}
+			syncMgr.DoTaskSyncCompletelyPluginCallback()
 		}
 	}
 

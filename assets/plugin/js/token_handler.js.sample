@@ -12,12 +12,12 @@
 // 参数说明
 // context - 当前调用的上下文信息
 // {
-// 	"appName": "aliyunpan",
-// 	"version": "v0.1.3",
-// 	"userId": "11001d48564f43b3bc5662874f04bb11",
-// 	"nickname": "tickstep",
-// 	"fileDriveId": "19519111",
-// 	"albumDriveId": "29519122"
+//  "appName": "aliyunpan",
+//  "version": "v0.1.3",
+//  "userId": "11001d48564f43b3bc5662874f04bb11",
+//  "nickname": "tickstep",
+//  "fileDriveId": "19519111",
+//  "albumDriveId": "29519122"
 // }
 // appName - 应用名称，当前固定为aliyunpan
 // version - 版本号
@@ -28,11 +28,11 @@
 //
 // params - Token刷新参数
 // {
-// 	"result": "success",
-// 	"message": "ok",
-// 	"oldToken": "aa31fcc229c54d5ab6d8bfb17aff3711",
-// 	"newToken": "bb31fcc229c54d5ab6d8bfb17aff3722",
-// 	"updatedAt": "2022-04-14 07:05:12"
+//  "result": "success",
+//  "message": "ok",
+//  "oldToken": "aa31fcc229c54d5ab6d8bfb17aff3711",
+//  "newToken": "bb31fcc229c54d5ab6d8bfb17aff3722",
+//  "updatedAt": "2022-04-14 07:05:12"
 // }
 // result - Token刷新的结果，success-成功，fail-失败
 // message - 消息说明，如果失败这里会有原因说明

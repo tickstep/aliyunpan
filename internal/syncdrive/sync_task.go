@@ -803,3 +803,24 @@ func (t *SyncTask) scanPanFile(ctx context.Context) {
 		}
 	}
 }
+
+// doAllFileSyncPluginCallback 全部文件同步完成回调方法
+func (t *SyncTask) doAllFileSyncPluginCallback() {
+	// 插件回调
+	pluginParam := &plugins.SyncAllFileFinishParams{
+		Name:            t.Name,
+		Id:              t.Id,
+		UserId:          t.UserId,
+		DriveName:       t.DriveName,
+		DriveId:         t.DriveId,
+		LocalFolderPath: t.LocalFolderPath,
+		PanFolderPath:   t.PanFolderPath,
+		Mode:            string(t.Mode),
+		Policy:          string(t.Policy),
+	}
+	t.pluginMutex.Lock()
+	defer t.pluginMutex.Unlock()
+	if er := t.plugin.SyncAllFileFinishCallback(plugins.GetContext(t.panUser), pluginParam); er == nil {
+		logger.Verboseln("成功调用同步任务完成插件回调方法：" + t.Id)
+	}
+}
