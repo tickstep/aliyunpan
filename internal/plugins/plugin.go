@@ -166,6 +166,42 @@ type (
 		UpdatedAt string `json:"updatedAt"`
 	}
 
+	// RemoveFilePrepareParams 删除文件前的回调函数-参数
+	RemoveFilePrepareParams struct {
+		Count int                      `json:"count"`
+		Items []*RemoveFilePrepareItem `json:"items"`
+	}
+	RemoveFilePrepareItem struct {
+		// DriveId 网盘ID
+		DriveId string `json:"driveId"`
+		// DriveFileId 网盘文件的ID
+		DriveFileId string `json:"driveFileId"`
+		// DriveFileName 网盘文件名
+		DriveFileName string `json:"driveFileName"`
+		// DriveFilePath 网盘文件路径
+		DriveFilePath string `json:"driveFilePath"`
+		// DriveFileSize 网盘文件大小
+		DriveFileSize int64 `json:"driveFileSize"`
+		// DriveFileType 网盘文件类型，file-文件，folder-文件夹
+		DriveFileType string `json:"driveFileType"`
+		// DriveFileUpdatedAt 网盘文件修改时间，格式：2025-03-03 10:39:14
+		DriveFileUpdatedAt string `json:"driveFileUpdatedAt"`
+		// DriveFileCreatedAt 网盘文件创建时间，格式：2025-03-03 10:39:14
+		DriveFileCreatedAt string `json:"driveFileCreatedAt"`
+	}
+	// RemoveFilePrepareResult 删除文件前的回调函数-返回结果
+	RemoveFilePrepareResult struct {
+		Result []*RemoveFilePrepareResultItem `json:"result"`
+	}
+	RemoveFilePrepareResultItem struct {
+		// DriveId 网盘ID
+		DriveId string `json:"driveId"`
+		// DriveFileId 网盘文件的ID
+		DriveFileId string `json:"driveFileId"`
+		// RemoveApproved 确认该文件是否删除。yes-删除 no-不删除
+		RemoveApproved string `json:"removeApproved"`
+	}
+
 	// Plugin 插件接口
 	Plugin interface {
 		// Start 启动
@@ -197,6 +233,9 @@ type (
 
 		// UserTokenRefreshFinishCallback 用户Token刷新完成后回调函数
 		UserTokenRefreshFinishCallback(context *Context, params *UserTokenRefreshFinishParams) error
+
+		// RemoveFilePrepareCallback 删除文件前的回调函数
+		RemoveFilePrepareCallback(context *Context, params *RemoveFilePrepareParams) (*RemoveFilePrepareResult, error)
 
 		// Stop 停止
 		Stop() error

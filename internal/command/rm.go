@@ -19,10 +19,12 @@ import (
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/urfave/cli"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 )
 
 func CmdRm() cli.Command {
@@ -75,6 +77,8 @@ func CmdRm() cli.Command {
 // RunRemove 执行 批量删除文件/目录
 func RunRemove(driveId string, paths ...string) {
 	activeUser := GetActiveUser()
+	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
+	plugin, _ := pluginManger.GetPlugin()
 
 	cacheCleanDirs := []string{}
 	failedRmPaths := make([]string, 0, len(paths))
@@ -88,11 +92,54 @@ func RunRemove(driveId string, paths ...string) {
 			continue
 		}
 		if fileList == nil || len(fileList) == 0 {
-			// 失败，文件不存在
+			// 跳过，没有满足条件的文件
 			failedRmPaths = append(failedRmPaths, absolutePath)
 			continue
 		}
+		// 调用插件
+		approvedToRemoveFiles := []*aliyunpan.FileEntity{}
+		pluginParam := &plugins.RemoveFilePrepareParams{
+			Count: len(fileList),
+			Items: make([]*plugins.RemoveFilePrepareItem, 0),
+		}
 		for _, f := range fileList {
+			pluginParam.Items = append(pluginParam.Items, &plugins.RemoveFilePrepareItem{
+				DriveId:            f.DriveId,
+				DriveFileId:        f.FileId,
+				DriveFileName:      f.FileName,
+				DriveFilePath:      f.Path,
+				DriveFileSize:      f.FileSize,
+				DriveFileType:      f.FileType,
+				DriveFileUpdatedAt: f.UpdatedAt,
+				DriveFileCreatedAt: f.CreatedAt,
+			})
+		}
+		if removeFilePrepareResult, er := plugin.RemoveFilePrepareCallback(plugins.GetContext(config.Config.ActiveUser()), pluginParam); er == nil && removeFilePrepareResult != nil {
+			for _, f := range fileList {
+				matchResult := false
+				for _, r := range removeFilePrepareResult.Result {
+					if strings.Compare(f.FileId, r.DriveFileId) == 0 {
+						matchResult = true
+						if strings.Compare("yes", r.RemoveApproved) != 0 {
+							// skip this file
+							fmt.Printf("插件不允许删除该文件: %s\n", f.Path)
+						} else {
+							approvedToRemoveFiles = append(approvedToRemoveFiles, f)
+						}
+						break
+					}
+				}
+				if !matchResult {
+					// 该文件没有确认结果，则默认删除
+					approvedToRemoveFiles = append(approvedToRemoveFiles, f)
+				}
+			}
+		} else {
+			// 默认删除全部文件
+			approvedToRemoveFiles = fileList
+		}
+
+		for _, f := range approvedToRemoveFiles {
 			// 删除匹配的文件
 			fdr, err := activeUser.PanClient().OpenapiPanClient().FileDelete(&aliyunpan.FileBatchActionParam{
 				DriveId: driveId,
@@ -127,5 +174,7 @@ func RunRemove(driveId string, paths ...string) {
 		fmt.Println("操作成功, 以下文件/目录已删除, 可在云盘文件回收站找回: ")
 		pnt()
 		activeUser.DeleteCache(cacheCleanDirs)
+	} else {
+		fmt.Println("本次操作没有删除任何文件")
 	}
 }

@@ -51,6 +51,10 @@ func (p *IdlePlugin) UserTokenRefreshFinishCallback(context *Context, params *Us
 	return nil
 }
 
+func (p *IdlePlugin) RemoveFilePrepareCallback(context *Context, params *RemoveFilePrepareParams) (*RemoveFilePrepareResult, error) {
+	return nil, nil
+}
+
 func (p *IdlePlugin) Stop() error {
 	return nil
 }

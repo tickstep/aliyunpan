@@ -261,6 +261,25 @@ func (js *JsPlugin) UserTokenRefreshFinishCallback(context *Context, params *Use
 	return nil
 }
 
+// RemoveFilePrepareCallback 删除文件前的回调函数
+func (js *JsPlugin) RemoveFilePrepareCallback(context *Context, params *RemoveFilePrepareParams) (*RemoveFilePrepareResult, error) {
+	var fn func(*Context, *RemoveFilePrepareParams) (*RemoveFilePrepareResult, error)
+	if !js.isHandlerFuncExisted("removeFilePrepareCallback") {
+		return nil, nil
+	}
+	err := js.vm.ExportTo(js.vm.Get("removeFilePrepareCallback"), &fn)
+	if err != nil {
+		logger.Verboseln("Js函数映射到 Go 函数失败！")
+		return nil, nil
+	}
+	r, er := fn(context, params)
+	if er != nil {
+		logger.Verboseln(er)
+		return nil, er
+	}
+	return r, nil
+}
+
 func (js *JsPlugin) Stop() error {
 	return nil
 }
