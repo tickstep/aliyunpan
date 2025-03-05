@@ -4,6 +4,8 @@ import (
 	"crypto/tls"
 	"github.com/jordan-wright/email"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/bolt"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
@@ -58,6 +60,30 @@ func DeleteLocalFile(localFilePath string) bool {
 	} else {
 		// 删除成功
 		return true
+	}
+	return false
+}
+
+// DeletePanFile 删除云盘文件，支持文件和文件夹
+func DeletePanFile(userId, driveId, panFileId string) bool {
+	if userId == "" || driveId == "" || panFileId == "" {
+		return false
+	}
+	logger.Verboseln("[Plugin] try to delete pan file: userId=" + userId + ", driveId=" + driveId + ", panFileId=" + panFileId)
+	user := config.Config.UserList.GetUserByUserId(userId)
+	if user == nil {
+		logger.Verboseln("[Plugin] user not existed: ", userId)
+		return false
+	}
+	fdr, err := user.PanClient().OpenapiPanClient().FileDelete(&aliyunpan.FileBatchActionParam{
+		DriveId: driveId,
+		FileId:  panFileId,
+	})
+	if err != nil || !fdr.Success {
+		logger.Verboseln("[Plugin] delete pan file error: ", err)
+		return false
+	} else {
+		logger.Verboseln("[Plugin] delete pan file success: ", panFileId)
 	}
 	return false
 }

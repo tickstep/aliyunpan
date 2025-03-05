@@ -403,6 +403,7 @@ func (dtu *DownloadTaskUnit) pluginCallback(result string) {
 	plugin, _ := pluginManger.GetPlugin()
 	pluginParam := &plugins.DownloadFileFinishParams{
 		DriveId:            dtu.fileInfo.DriveId,
+		DriveFileId:        dtu.fileInfo.FileId,
 		DriveFilePath:      dtu.fileInfo.Path,
 		DriveFileName:      dtu.fileInfo.FileName,
 		DriveFileSize:      dtu.fileInfo.FileSize,

@@ -79,6 +79,7 @@ type (
 	// DownloadFileFinishParams 下载文件结束的回调函数-参数
 	DownloadFileFinishParams struct {
 		DriveId            string `json:"driveId"`
+		DriveFileId        string `json:"driveFileId"`
 		DriveFileName      string `json:"driveFileName"`
 		DriveFilePath      string `json:"driveFilePath"`
 		DriveFileSha1      string `json:"driveFileSha1"`
@@ -127,6 +128,7 @@ type (
 		Action        string `json:"action"`
 		ActionResult  string `json:"actionResult"`
 		DriveId       string `json:"driveId"`
+		DriveFileId   string `json:"driveFileId"`
 		FileName      string `json:"fileName"`
 		FilePath      string `json:"filePath"`
 		FileSha1      string `json:"fileSha1"`

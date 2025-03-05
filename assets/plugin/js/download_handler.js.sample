@@ -100,6 +100,7 @@ function downloadFilePrepareCallback(context, params) {
 // params - 文件下载结束参数
 // {
 //  "driveId": "19519221",
+//  "driveFileId": "65ebb9396d66dfcd9f25414bbdd81594ecb9fcd6",
 //  "driveFileName": "token.bat",
 //  "driveFilePath": "/aliyunpan/Downloads/token.bat",
 //  "driveFileSha1": "08FBE28A5B8791A2F50225E2EC5CEEC3C7955A11",
@@ -110,6 +111,7 @@ function downloadFilePrepareCallback(context, params) {
 //  "localFilePath": "aliyunpan\\Downloads\\token.bat"
 // }
 // driveId - 网盘ID
+// driveFileId - 网盘文件ID
 // driveFileName - 网盘文件名
 // driveFilePath - 网盘文件绝对完整路径
 // driveFileSize - 网盘文件大小，单位B
@@ -124,4 +126,17 @@ function downloadFilePrepareCallback(context, params) {
 // ------------------------------------------------------------------------------------------
 function downloadFileFinishCallback(context, params) {
     console.log(params)
+
+    // 云盘文件成功下载到本地后，删除云盘的文件
+    // if (params["downloadResult"] == "success") {
+    //     if (params["driveFileType"] == "file") {
+    //         // 文件下载成功，删除该云盘文件
+    //         var userId = context["userId"]
+    //         var driveId = params["driveId"]
+    //         var driveFileId = params["driveFileId"]
+    //         if (PluginUtil.PanFS.deleteFile(userId, driveId, driveFileId)) {
+    //             console.log("插件删除云盘文件成功：" + params["driveFilePath"])
+    //         }
+    //     }
+    // }
 }

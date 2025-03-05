@@ -46,6 +46,16 @@ func (pl *PanUserList) String() string {
 	return builder.String()
 }
 
+// GetUserByUserId 根据用户ID获取用户信息
+func (pl *PanUserList) GetUserByUserId(userId string) *PanUser {
+	for _, u := range *pl {
+		if u.UserId == userId {
+			return u
+		}
+	}
+	return nil
+}
+
 // AverageParallel 返回平均的下载最大并发量
 func AverageParallel(parallel, downloadLoad int) int {
 	if downloadLoad < 1 {

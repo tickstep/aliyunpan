@@ -178,6 +178,7 @@ function syncScanPanFilePrepareCallback(context, params) {
 //  "action": "upload",
 //  "actionResult": "success",
 //  "driveId": "19519221",
+//  "driveFileId": "65ebb9396d66dfcd9f25414bbdd81594ecb9fcd6",
 //  "fileName": "1.txt",
 //  "filePath": "D:/goprojects/dev/upload/1.txt",
 //  "fileSha1": "294C8F24C56042710813E95C55A0B018299BA9A7",
@@ -185,15 +186,10 @@ function syncScanPanFilePrepareCallback(context, params) {
 //  "fileType": "file",
 //  "fileUpdatedAt": "2022-03-04 15:19:47"
 // }
-// action - 同步动作，
-//          download-下载文件，
-//          upload-上传文件，
-//          delete_local-删除本地文件，
-//          delete_pan-删除云盘文件，
-//          create_local_folder-创建本地文件夹，
-//          create_pan_folder-创建云盘文件夹
+// action - 同步动作，download-下载文件，upload-上传文件
 // actionResult - 同步结果，success-成功，fail-失败
 // driveId - 网盘ID
+// driveFileId - 网盘文件ID，只有download模式才会有这个字段
 // fileName - 文件名称
 // filePath - 文件完整路径
 // fileSha1 - 文件SHA1
