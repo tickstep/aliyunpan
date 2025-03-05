@@ -84,8 +84,8 @@ func DeletePanFile(userId, driveId, panFileId string) bool {
 		return false
 	} else {
 		logger.Verboseln("[Plugin] delete pan file success: ", panFileId)
+		return true
 	}
-	return false
 }
 
 // SendTextMail 发送文本邮件

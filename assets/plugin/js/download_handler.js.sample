@@ -127,16 +127,16 @@ function downloadFilePrepareCallback(context, params) {
 function downloadFileFinishCallback(context, params) {
     console.log(params)
 
-    // 云盘文件成功下载到本地后，删除云盘的文件
-    if (params["downloadResult"] == "success") {
-        if (params["driveFileType"] == "file") {
-            // 文件下载成功，删除该云盘文件
-            var userId = context["userId"]
-            var driveId = params["driveId"]
-            var driveFileId = params["driveFileId"]
-            if (PluginUtil.PanFS.deleteFile(userId, driveId, driveFileId)) {
-                console.log("插件删除云盘文件成功：" + params["driveFilePath"])
-            }
-        }
-    }
+    // // 云盘文件成功下载到本地后，删除云盘的文件
+    // if (params["downloadResult"] == "success") {
+    //     if (params["driveFileType"] == "file") {
+    //         // 文件下载成功，删除该云盘文件
+    //         var userId = context["userId"]
+    //         var driveId = params["driveId"]
+    //         var driveFileId = params["driveFileId"]
+    //         if (PluginUtil.PanFS.deleteFile(userId, driveId, driveFileId)) {
+    //             console.log("插件删除云盘文件成功：" + params["driveFilePath"])
+    //         }
+    //     }
+    // }
 }
