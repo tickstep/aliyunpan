@@ -66,10 +66,10 @@ func DeleteLocalFile(localFilePath string) bool {
 
 // DeletePanFile 删除云盘文件，支持文件和文件夹
 func DeletePanFile(userId, driveId, panFileId string) bool {
+	logger.Verboseln("[Plugin] try to delete pan file: userId=" + userId + ", driveId=" + driveId + ", panFileId=" + panFileId)
 	if userId == "" || driveId == "" || panFileId == "" {
 		return false
 	}
-	logger.Verboseln("[Plugin] try to delete pan file: userId=" + userId + ", driveId=" + driveId + ", panFileId=" + panFileId)
 	user := config.Config.UserList.GetUserByUserId(userId)
 	if user == nil {
 		logger.Verboseln("[Plugin] user not existed: ", userId)

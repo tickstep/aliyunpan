@@ -47,7 +47,8 @@
             + [3.下载文件并截断过长的文件名](#3.下载文件并截断过长的文件名)
             + [4.上传文件去掉文件名包含的部分字符](#4.上传文件去掉文件名包含的部分字符)
             + [5.上传文件时去掉指定目录或者文件](#5.上传文件时去掉指定目录或者文件)
-            + [6.Token刷新失败发送外部通知](#6.Token刷新失败发送外部通知)
+            + [6.下载云盘文件到本地后删除云盘对应的文件](#6.下载云盘文件到本地后删除云盘对应的文件)
+            + [7.Token刷新失败发送外部通知](#7.Token刷新失败发送外部通知)
     * [显示和修改程序配置项](#显示和修改程序配置项)
 - [常见问题Q&A](#常见问题Q&A)
     * [1. 如何开启Debug调试日志](#1-如何开启Debug调试日志)
@@ -928,12 +929,17 @@ JS插件的样本文件默认存放在程序所在的plugin/js文件夹下，分
 ### JS中内置的函数
 目前只开放了如下函数，你可以在你的js脚本中直接调用   
 1.console.log()   
-打印日志
+打印日志，这个日志需要开启debug日志才会在控制台窗口显示
 ```js
 console.log("hello world");
 ```
+2.console.println()   
+打印日志，这个日志会直接在控制台窗口显示，无需开启debug日志
+```js
+console.println("hello world");
+```
 
-2.PluginUtil.Http.get()   
+3.PluginUtil.Http.get()   
 发起HTTP的get请求
 ```js
     var header = {
@@ -951,7 +957,7 @@ console.log("hello world");
     }
 ```
 
-3.PluginUtil.Http.post()   
+4.PluginUtil.Http.post()   
 发起HTTP的post请求
 ```js
     var header = {
@@ -975,13 +981,38 @@ console.log("hello world");
     }
 ```
 
-4.PluginUtil.LocalFS.deleteFile()   
+5.PluginUtil.LocalFS.deleteFile()   
 删除本地指定文件，不支持文件夹
+```
+PluginUtil.LocalFS.deleteFile(localFilePath);
+其中：
+localFilePath - 本地文件的绝对完整路径
+```
+样例
 ```js
-PluginUtil.LocalFS.deleteFile(params["localFilePath"]);
+PluginUtil.LocalFS.deleteFile("/Users/tickstep/Downloads/IMG_0884.HEIC");
 ```
 
-5.PluginUtil.Email.sendTextMail()
+6.PluginUtil.PanFS.deleteFile()   
+删除云盘指定文件，支持文件、文件夹
+```
+PluginUtil.PanFS.deleteFile(userId, driveId, panFileId);
+其中：
+userId - 登录的用户ID
+driveId - 网盘ID
+panFileId - 网盘文件ID
+```
+样例
+```js
+var userId = context["userId"]
+var driveId = params["driveId"]
+var driveFileId = params["driveFileId"]
+if (PluginUtil.PanFS.deleteFile(userId, driveId, driveFileId)) {
+    console.println("插件删除云盘文件成功")
+}
+```
+
+7.PluginUtil.Email.sendTextMail()
 发送文本邮件，定义如下
 ```
 PluginUtil.Email.sendTextMail(mailServer, userName, password, to, subject, body)
@@ -999,7 +1030,7 @@ body - 邮件内容，纯文本
 PluginUtil.Email.sendTextMail("smtp.qq.com:465", "123xxx@qq.com", "pwdxxxxxx", "12545xxx@qq.com", "文件上传通知", "该文件已经上传完毕");
 ```
 
-6.PluginUtil.Email.sendHtmlMail()
+8.PluginUtil.Email.sendHtmlMail()
 发送HTML富文本邮件，定义如下
 ```
 PluginUtil.Email.sendHtmlMail(mailServer, userName, password, to, subject, body)
@@ -1023,7 +1054,7 @@ var html = "<html>"
 PluginUtil.Email.sendHtmlMail("smtp.qq.com:465", "123xxx@qq.com", "pwdxxxxxx", "12545xxx@qq.com", "文件上传通知", html);
 ```
 
-7.PluginUtil.KV.putString()
+9.PluginUtil.KV.putString()
 存储键值对，定义如下
 ```
 PluginUtil.KV.putString(key, value)
@@ -1037,7 +1068,7 @@ value - 值，字符串
 PluginUtil.KV.putString("mykey", "1670419352");
 ```
 
-8.PluginUtil.KV.getString()
+10.PluginUtil.KV.getString()
 获取存储的键值，指定对应的键，返回存储的值，如果没有则返回空字符串，定义如下
 ```
 PluginUtil.KV.getString(key)
@@ -1250,8 +1281,26 @@ function uploadFilePrepareCallback(context, params) {
     return result;
 }
 ```
+#### 6.下载云盘文件到本地后删除云盘对应的文件
+```js
+function downloadFileFinishCallback(context, params) {
+    console.log(params)
+    // 云盘文件成功下载到本地后，删除云盘的文件
+    if (params["downloadResult"] == "success") {
+        if (params["driveFileType"] == "file") {
+            // 文件下载成功，删除该云盘文件
+            var userId = context["userId"]
+            var driveId = params["driveId"]
+            var driveFileId = params["driveFileId"]
+            if (PluginUtil.PanFS.deleteFile(userId, driveId, driveFileId)) {
+                console.log("插件删除云盘文件成功：" + params["driveFilePath"])
+            }
+        }
+    }
+}
+```
 
-#### 6.Token刷新失败发送外部通知
+#### 7.Token刷新失败发送外部通知
 Token刷新失败发送外部通知，例如Server酱
 ```js
 function userTokenRefreshFinishCallback(context, params) {
@@ -1286,7 +1335,6 @@ function userTokenRefreshFinishCallback(context, params) {
     }
 }
 ```
-
 或者发送邮件通知
 ```js
 function userTokenRefreshFinishCallback(context, params) {
