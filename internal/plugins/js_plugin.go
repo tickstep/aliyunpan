@@ -31,6 +31,15 @@ func jsLog(call goja.FunctionCall) goja.Value {
 	return str
 }
 
+// jsLog 支持js中的console.log方法
+func jsPrintln(call goja.FunctionCall) goja.Value {
+	str := call.Argument(0)
+	buf := &strings.Builder{}
+	fmt.Fprintf(buf, "[PLUGIN] %+v\n", str.Export())
+	fmt.Println(buf.String())
+	return str
+}
+
 func (js *JsPlugin) Start() error {
 	js.Name = "JsPlugin"
 	js.vm = goja.New()
@@ -38,8 +47,9 @@ func (js *JsPlugin) Start() error {
 
 	// 内置log
 	console := js.vm.NewObject()
-	console.Set("log", jsLog)
-	js.vm.Set("console", console) // console.log()
+	js.vm.Set("console", console)
+	console.Set("log", jsLog)         // console.log()
+	console.Set("println", jsPrintln) // console.println()
 
 	// 内置系统函数PluginUtil
 	pluginObj := js.vm.NewObject()
