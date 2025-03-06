@@ -40,7 +40,7 @@
         + [Docker运行](#Docker运行)
     * [JavaScript插件](#JavaScript插件)
     * [显示和修改程序配置项](#显示和修改程序配置项)
-- [常见问题Q&A](#常见问题Q&A)
+- [常见问题Q&A](#常见问题QA)
     * [1. 如何开启Debug调试日志](#1-如何开启Debug调试日志)
 
 # 命令列表及说明
@@ -895,7 +895,7 @@ function syncScanPanFilePrepareCallback(context, params) {
 ```
 
 ## JavaScript插件
-本程序支持javascript插件，更多细节请查看文档：[JavaScript插件手册](https://github.com/tickstep/aliyunpan/blob/master/docs/plugin_manual.md)
+本程序支持javascript插件，更多细节请查看文档：[JavaScript插件手册](https://github.com/tickstep/aliyunpan/blob/main/docs/plugin_manual.md)
 
 ## 显示和修改程序配置项
 ```
