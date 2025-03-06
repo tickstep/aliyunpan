@@ -2,24 +2,24 @@
 - [简介](#简介)
 - [如何使用](#如何使用)
 - [JS中内置的函数](#JS中内置的函数)
-    + [console.log()](#console.log())
-    + [console.println()](#console.println())
-    + [PluginUtil.Http.get()](#PluginUtil.Http.get())
-    + [PluginUtil.Http.post()](#PluginUtil.Http.post())
-    + [PluginUtil.LocalFS.deleteFile()](#PluginUtil.LocalFS.deleteFile())
-    + [PluginUtil.PanFS.deleteFile()](#PluginUtil.PanFS.deleteFile())
-    + [PluginUtil.Email.sendTextMail()](#PluginUtil.Email.sendTextMail())
-    + [PluginUtil.Email.sendHtmlMail()](#PluginUtil.Email.sendHtmlMail())
-    + [PluginUtil.KV.putString()](#PluginUtil.KV.putString())
-    + [PluginUtil.KV.getString()](#PluginUtil.KV.getString())
+    + [console.log()](#consolelog)
+    + [console.println()](#consoleprintln)
+    + [PluginUtil.Http.get()](#PluginUtilHttpget)
+    + [PluginUtil.Http.post()](#PluginUtilHttppost)
+    + [PluginUtil.LocalFS.deleteFile()](#PluginUtilLocalFSdeleteFile)
+    + [PluginUtil.PanFS.deleteFile()](#PluginUtilPanFSdeleteFile)
+    + [PluginUtil.Email.sendTextMail()](#PluginUtilEmailsendTextMail)
+    + [PluginUtil.Email.sendHtmlMail()](#PluginUtilEmailsendHtmlMail)
+    + [PluginUtil.KV.putString()](#PluginUtilKVputString)
+    + [PluginUtil.KV.getString()](#PluginUtilKVgetString)
 - [常见场景样例](#常见场景样例)
-    + [1.禁止特定文件上传](#1.禁止特定文件上传)
-    + [2.上传文件后删除本地文件](#2.上传文件后删除本地文件)
-    + [3.下载文件并截断过长的文件名](#3.下载文件并截断过长的文件名)
-    + [4.上传文件去掉文件名包含的部分字符](#4.上传文件去掉文件名包含的部分字符)
-    + [5.上传文件时去掉指定目录或者文件](#5.上传文件时去掉指定目录或者文件)
-    + [6.下载云盘文件到本地后删除云盘对应的文件](#6.下载云盘文件到本地后删除云盘对应的文件)
-    + [7.Token刷新失败发送外部通知](#7.Token刷新失败发送外部通知)
+    + [1.禁止特定文件上传](#1禁止特定文件上传)
+    + [2.上传文件后删除本地文件](#2上传文件后删除本地文件)
+    + [3.下载文件并截断过长的文件名](#3下载文件并截断过长的文件名)
+    + [4.上传文件去掉文件名包含的部分字符](#4上传文件去掉文件名包含的部分字符)
+    + [5.上传文件时过滤指定目录或者文件路径](#5上传文件时过滤指定目录或者文件路径)
+    + [6.下载云盘文件到本地后删除云盘对应的文件](#6下载云盘文件到本地后删除云盘对应的文件)
+    + [7.Token刷新失败发送外部通知](#7Token刷新失败发送外部通知)
 
 # 简介
 本程序支持javascript插件。通过JS插件，你可以按照自己的需要定制上传、下载、同步、删除过程中关键步骤的行为，最大程度满足自己的个性化需求。   
@@ -50,18 +50,18 @@ JS插件的样本文件默认存放在程序所在的```plugin/js```文件夹下
 # JS中内置的函数
 目前开放了如下函数，你可以在你的js脚本中直接调用，以用于增强JS脚本的扩展性、可玩性以及可适用性。  
 
-## console.log()   
+## console.log()
 打印日志，这个日志需要开启debug日志才会在控制台窗口显示
 ```js
 console.log("hello world");
 ```
-## console.println()   
+## console.println()
 打印日志，这个日志会直接在控制台窗口显示，无需开启debug日志
 ```js
 console.println("hello world");
 ```
 
-## PluginUtil.Http.get()   
+## PluginUtil.Http.get()
 发起HTTP的get请求
 ```js
     var header = {
@@ -79,7 +79,7 @@ console.println("hello world");
     }
 ```
 
-## PluginUtil.Http.post()   
+## PluginUtil.Http.post()
 发起HTTP的post请求
 ```js
     var header = {
@@ -103,7 +103,7 @@ console.println("hello world");
     }
 ```
 
-## PluginUtil.LocalFS.deleteFile()   
+## PluginUtil.LocalFS.deleteFile()
 删除本地指定文件，不支持文件夹
 ```
 PluginUtil.LocalFS.deleteFile(localFilePath);
@@ -115,7 +115,7 @@ localFilePath - 本地文件的绝对完整路径
 PluginUtil.LocalFS.deleteFile("/Users/tickstep/Downloads/IMG_0884.HEIC");
 ```
 
-## PluginUtil.PanFS.deleteFile()   
+## PluginUtil.PanFS.deleteFile()
 删除云盘指定文件，支持文件、文件夹
 ```
 PluginUtil.PanFS.deleteFile(userId, driveId, panFileId);
