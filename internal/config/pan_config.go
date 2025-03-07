@@ -115,6 +115,9 @@ type PanConfig struct {
 	ClientId     string `json:"clientId"`
 	ClientSecret string `json:"clientSecret"`
 
+	// 本地工作目录（lcd/lpwd/lls命令使用）
+	LocalWorkdir string `json:"localWorkdir"`
+
 	configFilePath string
 	configFile     *os.File
 	fileMu         sync.Mutex

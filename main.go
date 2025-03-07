@@ -15,6 +15,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/tickstep/aliyunpan/internal/command_local"
 	"github.com/tickstep/aliyunpan/internal/global"
 	"io/ioutil"
 	"os"
@@ -679,6 +680,13 @@ func main() {
 				return nil
 			},
 		},
+
+		// 当前本地工作目录
+		command_local.CmdLocalPwd(),
+		// 切换本地工作目录
+		command_local.CmdLocalCd(),
+		// 展示本地目录文件列表
+		command_local.CmdLocalLs(),
 
 		// 调试用 debug
 		//{
