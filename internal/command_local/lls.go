@@ -23,21 +23,12 @@ import (
 	"github.com/urfave/cli"
 	"log"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 )
 
-type (
-	// LsOptions 列目录可选项
-	LsOptions struct {
-		Total bool
-	}
-
-	// SearchOptions 搜索可选项
-	SearchOptions struct {
-		Total   bool
-		Recurse bool
-	}
-)
+type ()
 
 const (
 	opLs int = iota
@@ -66,9 +57,13 @@ func CmdLocalLs() cli.Command {
 		Before: command.ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			var (
-				orderBy   aliyunpan.FileOrderBy        = aliyunpan.FileOrderByUpdatedAt
-				orderSort aliyunpan.FileOrderDirection = aliyunpan.FileOrderDirectionDesc
+				orderBy     aliyunpan.FileOrderBy        = aliyunpan.FileOrderByUpdatedAt
+				orderSort   aliyunpan.FileOrderDirection = aliyunpan.FileOrderDirectionDesc
+				showAllFile bool                         = false
 			)
+			if c.IsSet("a") {
+				showAllFile = true
+			}
 
 			switch {
 			case c.IsSet("asc"):
@@ -90,13 +85,14 @@ func CmdLocalLs() cli.Command {
 				orderBy = aliyunpan.FileOrderByUpdatedAt
 			}
 
-			RunLocalLs(c.Args().Get(0), &LsOptions{
-				Total: c.Bool("l") || c.Parent().Args().Get(0) == "ll",
-			}, orderBy, orderSort)
-
+			RunLocalLs(c.Args().Get(0), showAllFile, orderBy, orderSort)
 			return nil
 		},
 		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "a",
+				Usage: "显示所有文件",
+			},
 			cli.BoolFlag{
 				Name:  "asc",
 				Usage: "升序排序",
@@ -122,7 +118,7 @@ func CmdLocalLs() cli.Command {
 }
 
 func RunLocalLs(targetPath string,
-	lsOptions *LsOptions,
+	showAllFile bool,
 	orderBy aliyunpan.FileOrderBy, orderDirection aliyunpan.FileOrderDirection) {
 	targetPath = localPathJoin(targetPath)
 
@@ -142,15 +138,67 @@ func RunLocalLs(targetPath string,
 		log.Fatal(err)
 	}
 	fileInfoList := []os.FileInfo{}
+	folderInfoList := []os.FileInfo{}
 	for _, entry := range fileEntryList {
 		if fi, e := entry.Info(); e == nil {
-			fileInfoList = append(fileInfoList, fi)
+			if strings.HasPrefix(fi.Name(), ".") {
+				if !showAllFile {
+					continue
+				}
+			}
+			if fi.IsDir() {
+				folderInfoList = append(folderInfoList, fi)
+			} else {
+				fileInfoList = append(fileInfoList, fi)
+			}
 		}
 	}
-	renderTable(opLs, lsOptions.Total, targetPath, fileInfoList)
+	// 过滤
+
+	// 排序
+	sortFileInfoList(folderInfoList, orderBy, orderDirection)
+	sortFileInfoList(fileInfoList, orderBy, orderDirection)
+
+	// 合并并渲染列表
+	renderFileList := append(folderInfoList, fileInfoList...)
+	renderTable(targetPath, renderFileList)
 }
 
-func renderTable(op int, isTotal bool, path string, files []os.FileInfo) {
+func sortFileInfoList(fileInfoList []os.FileInfo,
+	orderBy aliyunpan.FileOrderBy, orderDirection aliyunpan.FileOrderDirection) []os.FileInfo {
+	switch orderBy {
+	case aliyunpan.FileOrderByUpdatedAt: // 基于修改时间排序
+		sort.Slice(fileInfoList, func(i, j int) bool {
+			if orderDirection == aliyunpan.FileOrderDirectionAsc {
+				return fileInfoList[i].ModTime().UnixMilli() < fileInfoList[j].ModTime().UnixMilli()
+			} else {
+				return fileInfoList[i].ModTime().UnixMilli() > fileInfoList[j].ModTime().UnixMilli()
+			}
+		})
+		break
+	case aliyunpan.FileOrderByName: // 基于文件名排序
+		sort.Slice(fileInfoList, func(i, j int) bool {
+			if orderDirection == aliyunpan.FileOrderDirectionAsc {
+				return fileInfoList[i].Name() < fileInfoList[j].Name()
+			} else {
+				return fileInfoList[i].Name() > fileInfoList[j].Name()
+			}
+		})
+		break
+	case aliyunpan.FileOrderBySize: // 基于文件大小排序
+		sort.Slice(fileInfoList, func(i, j int) bool {
+			if orderDirection == aliyunpan.FileOrderDirectionAsc {
+				return fileInfoList[i].Size() < fileInfoList[j].Size()
+			} else {
+				return fileInfoList[i].Size() > fileInfoList[j].Size()
+			}
+		})
+		break
+	}
+	return fileInfoList
+}
+
+func renderTable(path string, files []os.FileInfo) {
 	tb := cmdtable.NewTable(os.Stdout)
 	var (
 		fileCount, dirCount, totalSize int64
@@ -168,9 +216,9 @@ func renderTable(op int, isTotal bool, path string, files []os.FileInfo) {
 		totalSize += file.Size()
 		tb.Append([]string{strconv.Itoa(k + 1), converter.ConvertFileSize(file.Size(), 2), file.ModTime().Format("2006-01-02 15:04:05"), file.Name()})
 	}
-	tb.Append([]string{"", "总: " + converter.ConvertFileSize(totalSize, 2), "", fmt.Sprintf("文件总数: %d, 目录总数: %d", fileCount, dirCount)})
+	tb.Append([]string{"", "总大小: " + converter.ConvertFileSize(totalSize, 2), "", fmt.Sprintf("文件总数: %d, 目录总数: %d", fileCount, dirCount)})
 
-	fmt.Printf("\n当前目录: %s\n", path)
+	fmt.Printf("\n本地当前目录: %s\n", path)
 	fmt.Printf("----\n")
 	tb.Render()
 	fmt.Printf("----\n")
