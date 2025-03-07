@@ -19,6 +19,8 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
 	"os"
+	"runtime"
+	"strings"
 )
 
 // CmdLocalCd 切换本地工作目录
@@ -26,7 +28,7 @@ func CmdLocalCd() cli.Command {
 	return cli.Command{
 		Name:     "lcd",
 		Category: "本地命令",
-		Usage:    "切换工作目录",
+		Usage:    "切换本地工作目录",
 		Description: `
 	aliyunpan lcd <本地目录, 绝对路径或相对路径>
 
@@ -59,7 +61,7 @@ func CmdLocalCd() cli.Command {
 func CmdLocalPwd() cli.Command {
 	return cli.Command{
 		Name:     "lpwd",
-		Usage:    "输出工作目录",
+		Usage:    "输出本地工作目录",
 		Category: "本地命令",
 		Before:   command.ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
@@ -68,6 +70,12 @@ func CmdLocalPwd() cli.Command {
 				// 默认为用户主页目录
 				lwd = getLocalHomeDir()
 				config.Config.LocalWorkdir = lwd
+			}
+			if runtime.GOOS == "windows" {
+				lwd = strings.ReplaceAll(lwd, "/", "\\")
+			} else {
+				// Unix-like system, so just assume Unix
+				lwd = strings.ReplaceAll(lwd, "\\", "/")
 			}
 			fmt.Println(lwd)
 			return nil
@@ -88,6 +96,6 @@ func RunChangeLocalDirectory(targetPath string) {
 		fmt.Printf("错误: %s 不是一个目录 (文件夹)\n", targetPath)
 		return
 	}
-	config.Config.LocalWorkdir = targetPath
+	config.Config.LocalWorkdir = strings.ReplaceAll(targetPath, "\\", "/")
 	fmt.Printf("改变本地工作目录: %s\n", config.Config.LocalWorkdir)
 }

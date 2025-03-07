@@ -39,7 +39,7 @@ func CmdLocalLs() cli.Command {
 	return cli.Command{
 		Name:     "lls",
 		Category: "本地命令",
-		Usage:    "列出目录",
+		Usage:    "列出本地目录",
 		Description: `
 	列出当前本地工作目录内的文件和目录, 或指定目录内的文件和目录
 
