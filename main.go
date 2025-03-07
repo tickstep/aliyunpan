@@ -186,12 +186,11 @@ func main() {
 		// tab 自动补全命令
 		line.State.SetCompleter(func(line string) (s []string) {
 			var (
-				lineArgs                   = args.Parse(line)
-				numArgs                    = len(lineArgs)
+				lineArgs = args.Parse(line)
+				numArgs  = len(lineArgs)
+				// 支持TAB补全文件路径的命令
 				acceptCompleteFileCommands = []string{
-					"cd", "cp", "xcp", "download", "ls", "mkdir", "mv", "pwd", "rename", "rm", "share", "save", "upload", "login", "loglist", "logout",
-					"clear", "quit", "exit", "quota", "who", "sign", "update", "who", "su", "config",
-					"drive", "export", "import", "sync", "tree",
+					"cd", "cp", "xcp", "download", "ls", "mkdir", "mv", "rename", "rm", "upload", "tree",
 				}
 				closed = strings.LastIndex(line, " ") == len(line)-1
 			)
@@ -220,6 +219,7 @@ func main() {
 				return
 			}
 
+			// 检测输入的命令是否支持tab补全
 			if !cmdutil.ContainsString(acceptCompleteFileCommands, thisCmd.FullName()) {
 				return
 			}
