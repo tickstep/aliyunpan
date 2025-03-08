@@ -28,13 +28,6 @@ import (
 	"strings"
 )
 
-type ()
-
-const (
-	opLs int = iota
-	opSearch
-)
-
 func CmdLocalLs() cli.Command {
 	return cli.Command{
 		Name:     "lls",
@@ -216,7 +209,7 @@ func renderTable(path string, files []os.FileInfo) {
 		totalSize += file.Size()
 		tb.Append([]string{strconv.Itoa(k + 1), converter.ConvertFileSize(file.Size(), 2), file.ModTime().Format("2006-01-02 15:04:05"), file.Name()})
 	}
-	tb.Append([]string{"", "总大小: " + converter.ConvertFileSize(totalSize, 2), "", fmt.Sprintf("文件总数: %d, 目录总数: %d", fileCount, dirCount)})
+	tb.Append([]string{"", "总: " + converter.ConvertFileSize(totalSize, 2), "", fmt.Sprintf("文件总数: %d, 目录总数: %d", fileCount, dirCount)})
 
 	fmt.Printf("\n本地当前目录: %s\n", path)
 	fmt.Printf("----\n")

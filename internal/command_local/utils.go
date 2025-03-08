@@ -5,6 +5,7 @@ import (
 	"github.com/tickstep/aliyunpan/library/homedir"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -19,8 +20,8 @@ func getLocalHomeDir() string {
 
 // localPathJoin 拼接本地路径
 func localPathJoin(p string) string {
-	p = strings.ReplaceAll(p, "\\", "/")
-	if path.IsAbs(p) {
+	p = path.Clean(strings.ReplaceAll(p, "\\", "/"))
+	if filepath.IsAbs(p) {
 		return p
 	} else if strings.HasPrefix(p, "~") {
 		if d, e := homedir.Expand(p); e == nil {

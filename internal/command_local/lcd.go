@@ -77,7 +77,7 @@ func CmdLocalPwd() cli.Command {
 				// Unix-like system, so just assume Unix
 				lwd = strings.ReplaceAll(lwd, "\\", "/")
 			}
-			fmt.Println(lwd)
+			fmt.Println("本地工作目录: " + lwd)
 			return nil
 		},
 	}
