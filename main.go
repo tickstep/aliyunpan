@@ -203,6 +203,7 @@ func main() {
 				closed = strings.LastIndex(line, " ") == len(line)-1
 			)
 
+			// 开始补全命令名称
 			for _, cmd := range app.Commands {
 				for _, name := range cmd.Names() {
 					if !strings.HasPrefix(name, line) {
@@ -750,6 +751,11 @@ func panFilePathCompleter(line string, lineArgs []string, numArgs int, closed bo
 		}
 		s = append(s, appendLine+" ")
 		continue
+	}
+
+	// 没有命中的路径，返回当前用户输入的内容即可
+	if len(s) == 0 {
+		s = append(s, line)
 	}
 	return
 }
