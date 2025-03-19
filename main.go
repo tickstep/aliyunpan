@@ -15,8 +15,23 @@ package main
 
 import (
 	"fmt"
+	"github.com/olekukonko/tablewriter"
+	"github.com/peterh/liner"
+	"github.com/tickstep/aliyunpan/cmder"
+	"github.com/tickstep/aliyunpan/cmder/cmdliner"
+	"github.com/tickstep/aliyunpan/cmder/cmdliner/args"
+	"github.com/tickstep/aliyunpan/cmder/cmdtable"
+	"github.com/tickstep/aliyunpan/cmder/cmdutil"
+	"github.com/tickstep/aliyunpan/cmder/cmdutil/escaper"
+	"github.com/tickstep/aliyunpan/internal/command"
 	"github.com/tickstep/aliyunpan/internal/command_local"
+	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/global"
+	"github.com/tickstep/aliyunpan/internal/panupdate"
+	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/library-go/converter"
+	"github.com/tickstep/library-go/logger"
+	"github.com/urfave/cli"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -28,22 +43,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-
-	"github.com/olekukonko/tablewriter"
-	"github.com/peterh/liner"
-	"github.com/tickstep/aliyunpan/cmder"
-	"github.com/tickstep/aliyunpan/cmder/cmdliner"
-	"github.com/tickstep/aliyunpan/cmder/cmdliner/args"
-	"github.com/tickstep/aliyunpan/cmder/cmdtable"
-	"github.com/tickstep/aliyunpan/cmder/cmdutil"
-	"github.com/tickstep/aliyunpan/cmder/cmdutil/escaper"
-	"github.com/tickstep/aliyunpan/internal/command"
-	"github.com/tickstep/aliyunpan/internal/config"
-	"github.com/tickstep/aliyunpan/internal/panupdate"
-	"github.com/tickstep/aliyunpan/internal/utils"
-	"github.com/tickstep/library-go/converter"
-	"github.com/tickstep/library-go/logger"
-	"github.com/urfave/cli"
 )
 
 const (
@@ -186,13 +185,21 @@ func main() {
 
 		// tab 自动补全命令
 		line.State.SetCompleter(func(line string) (s []string) {
+			// 命令补全处理器
+			// line: 输入的命令行完整字符，包括命令名称、空格、（完整或部分）路径字符
+			// s: 返回的满足符合条件的提示列表，命令名称、或者文件完整路径
+
 			var (
 				lineArgs = args.Parse(line)
 				numArgs  = len(lineArgs)
 				// 支持TAB补全文件路径的命令
-				acceptCompleteFileCommands = []string{
+				acceptCompleteFilePanCommands = []string{ // 云盘命令
 					"cd", "cp", "xcp", "download", "ls", "mkdir", "mv", "rename", "rm", "upload", "tree",
 				}
+				acceptCompleteFileLocalCommands = []string{ // 本地命令
+					"lcd", "lls",
+				}
+				// 检查是否是命令输入的结尾
 				closed = strings.LastIndex(line, " ") == len(line)-1
 			)
 
@@ -201,7 +208,6 @@ func main() {
 					if !strings.HasPrefix(name, line) {
 						continue
 					}
-
 					s = append(s, name+" ")
 				}
 			}
@@ -215,109 +221,19 @@ func main() {
 				}
 			}
 
+			// 开始补全文件路径
 			thisCmd := app.Command(lineArgs[0])
 			if thisCmd == nil {
 				return
 			}
 
-			// 检测输入的命令是否支持tab补全
-			if !cmdutil.ContainsString(acceptCompleteFileCommands, thisCmd.FullName()) {
-				return
-			}
-
-			var (
-				activeUser  = config.Config.ActiveUser()
-				runeFunc    = unicode.IsSpace
-				cmdRuneFunc = func(r rune) bool {
-					switch r {
-					case '\'', '"':
-						return true
-					}
-					return unicode.IsSpace(r)
-				}
-				targetPath string
-			)
-
-			if activeUser == nil {
-				return
-			}
-
-			if !closed {
-				targetPath = lineArgs[numArgs-1]
-				escaper.EscapeStringsByRuneFunc(lineArgs[:numArgs-1], runeFunc) // 转义
-			} else {
-				escaper.EscapeStringsByRuneFunc(lineArgs, runeFunc)
-			}
-
-			switch {
-			case targetPath == "." || strings.HasSuffix(targetPath, "/."):
-				s = append(s, line+"/")
-				return
-			case targetPath == ".." || strings.HasSuffix(targetPath, "/.."):
-				s = append(s, line+"/")
-				return
-			}
-
-			var (
-				targetDir string
-				isAbs     = path.IsAbs(targetPath)
-				isDir     = strings.LastIndex(targetPath, "/") == len(targetPath)-1
-			)
-
-			if isAbs {
-				targetDir = path.Dir(targetPath)
-			} else {
-				wd := "/"
-				if activeUser.IsFileDriveActive() {
-					wd = activeUser.Workdir
-				} else if activeUser.IsResourceDriveActive() {
-					wd = activeUser.ResourceWorkdir
-				} else if activeUser.IsAlbumDriveActive() {
-					wd = activeUser.AlbumWorkdir
-				}
-				targetDir = path.Join(wd, targetPath)
-				if !isDir {
-					targetDir = path.Dir(targetDir)
-				}
-			}
-
-			// tab键补全路径
-			files, err := activeUser.CacheFilesDirectoriesList(targetDir)
-			if err != nil {
-				return
-			}
-			for _, file := range files {
-				if file == nil {
-					continue
-				}
-
-				var (
-					appendLine string
-				)
-
-				// 已经有的情况
-				if !closed {
-					if !strings.HasPrefix(file.Path, path.Clean(path.Join(targetDir, path.Base(targetPath)))) {
-						if path.Base(targetDir) == path.Base(targetPath) {
-							appendLine = strings.Join(append(lineArgs[:numArgs-1], escaper.EscapeByRuneFunc(path.Join(targetPath, file.FileName), cmdRuneFunc)), " ")
-							goto handle
-						}
-						continue
-					}
-					appendLine = strings.Join(append(lineArgs[:numArgs-1], escaper.EscapeByRuneFunc(path.Clean(path.Join(path.Dir(targetPath), file.FileName)), cmdRuneFunc)), " ")
-					goto handle
-				}
-				// 没有的情况
-				appendLine = strings.Join(append(lineArgs, escaper.EscapeByRuneFunc(file.FileName, cmdRuneFunc)), " ")
-				goto handle
-
-			handle:
-				if file.IsFolder() {
-					s = append(s, appendLine+"/")
-					continue
-				}
-				s = append(s, appendLine+" ")
-				continue
+			// 检测输入的命令是否支持tab补全路径
+			if cmdutil.ContainsString(acceptCompleteFilePanCommands, thisCmd.FullName()) {
+				// 云盘文件路径的补全
+				return panFilePathCompleter(line, lineArgs, numArgs, closed)
+			} else if cmdutil.ContainsString(acceptCompleteFileLocalCommands, thisCmd.FullName()) {
+				// 本地文件路径的补全
+				return localFilePathCompleter(line, lineArgs, numArgs, closed)
 			}
 			return
 		})
@@ -737,4 +653,108 @@ func main() {
 	sort.Sort(cli.FlagsByName(app.Flags))
 	sort.Sort(cli.CommandsByName(app.Commands))
 	app.Run(os.Args)
+}
+
+// panFilePathCompleter 云盘文件路径Tab补全处理器
+func panFilePathCompleter(line string, lineArgs []string, numArgs int, closed bool) (s []string) {
+	var (
+		activeUser  = config.Config.ActiveUser()
+		runeFunc    = unicode.IsSpace
+		cmdRuneFunc = func(r rune) bool {
+			switch r {
+			case '\'', '"':
+				return true
+			}
+			return unicode.IsSpace(r)
+		}
+		targetPath string
+	)
+
+	if activeUser == nil {
+		return
+	}
+
+	if !closed {
+		targetPath = lineArgs[numArgs-1]
+		escaper.EscapeStringsByRuneFunc(lineArgs[:numArgs-1], runeFunc) // 转义
+	} else {
+		escaper.EscapeStringsByRuneFunc(lineArgs, runeFunc)
+	}
+
+	switch {
+	case targetPath == "." || strings.HasSuffix(targetPath, "/."):
+		s = append(s, line+"/")
+		return
+	case targetPath == ".." || strings.HasSuffix(targetPath, "/.."):
+		s = append(s, line+"/")
+		return
+	}
+
+	var (
+		targetDir string
+		isAbs     = path.IsAbs(targetPath)
+		isDir     = strings.LastIndex(targetPath, "/") == len(targetPath)-1
+	)
+
+	if isAbs {
+		targetDir = path.Dir(targetPath)
+	} else {
+		wd := "/"
+		if activeUser.IsFileDriveActive() {
+			wd = activeUser.Workdir
+		} else if activeUser.IsResourceDriveActive() {
+			wd = activeUser.ResourceWorkdir
+		} else if activeUser.IsAlbumDriveActive() {
+			wd = activeUser.AlbumWorkdir
+		}
+		targetDir = path.Join(wd, targetPath)
+		if !isDir {
+			targetDir = path.Dir(targetDir)
+		}
+	}
+
+	// tab键补全路径
+	files, err := activeUser.CacheFilesDirectoriesList(targetDir)
+	if err != nil {
+		return
+	}
+	for _, file := range files {
+		if file == nil {
+			continue
+		}
+
+		var (
+			appendLine string
+		)
+
+		// 用户已经输入了部分路径字符，搜索匹配路径需要匹配用户输入的路径字符前缀
+		if !closed {
+			if !strings.HasPrefix(file.Path, path.Clean(path.Join(targetDir, path.Base(targetPath)))) {
+				if path.Base(targetDir) == path.Base(targetPath) {
+					appendLine = strings.Join(append(lineArgs[:numArgs-1], escaper.EscapeByRuneFunc(path.Join(targetPath, file.FileName), cmdRuneFunc)), " ")
+					goto handle
+				}
+				continue
+			}
+			appendLine = strings.Join(append(lineArgs[:numArgs-1], escaper.EscapeByRuneFunc(path.Clean(path.Join(path.Dir(targetPath), file.FileName)), cmdRuneFunc)), " ")
+			goto handle
+		}
+		// 没有输入任何路径字符，默认都符合条件，全部显示到提示列表
+		appendLine = strings.Join(append(lineArgs, escaper.EscapeByRuneFunc(file.FileName, cmdRuneFunc)), " ")
+		goto handle
+
+	handle:
+		if file.IsFolder() {
+			s = append(s, appendLine+"/")
+			continue
+		}
+		s = append(s, appendLine+" ")
+		continue
+	}
+	return
+}
+
+// localFilePathCompleter 本地文件路径Tab补全处理器
+func localFilePathCompleter(line string, lineArgs []string, numArgs int, closed bool) (s []string) {
+	return nil
 }
