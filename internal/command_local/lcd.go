@@ -68,7 +68,7 @@ func CmdLocalPwd() cli.Command {
 			lwd := config.Config.LocalWorkdir
 			if lwd == "" {
 				// 默认为用户主页目录
-				lwd = getLocalHomeDir()
+				lwd = GetLocalHomeDir()
 				config.Config.LocalWorkdir = lwd
 			}
 			if runtime.GOOS == "windows" {
@@ -84,7 +84,7 @@ func CmdLocalPwd() cli.Command {
 }
 
 func RunChangeLocalDirectory(targetPath string) {
-	targetPath = localPathJoin(targetPath)
+	targetPath = LocalPathJoin(targetPath)
 
 	// 获取目标路径文件信息
 	localFileInfo, er := os.Stat(targetPath)

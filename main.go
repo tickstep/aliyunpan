@@ -29,6 +29,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/global"
 	"github.com/tickstep/aliyunpan/internal/panupdate"
 	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/aliyunpan/library/homedir"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
@@ -231,10 +232,15 @@ func main() {
 			// 检测输入的命令是否支持tab补全路径
 			if cmdutil.ContainsString(acceptCompleteFilePanCommands, thisCmd.FullName()) {
 				// 云盘文件路径的补全
-				return panFilePathCompleter(line, lineArgs, numArgs, closed)
+				if thisCmd.FullName() == "ls" || thisCmd.FullName() == "cd" {
+					// 树状结构，需要补全文件夹路径
+					return panFilePathCompleter(line, lineArgs, numArgs, closed, true)
+				} else {
+					return panFilePathCompleter(line, lineArgs, numArgs, closed, false)
+				}
 			} else if cmdutil.ContainsString(acceptCompleteFileLocalCommands, thisCmd.FullName()) {
 				// 本地文件路径的补全
-				return localFilePathCompleter(line, lineArgs, numArgs, closed)
+				return localFilePathCompleter(line, lineArgs, numArgs, closed, true)
 			}
 			return
 		})
@@ -657,9 +663,17 @@ func main() {
 }
 
 // panFilePathCompleter 云盘文件路径Tab补全处理器
-func panFilePathCompleter(line string, lineArgs []string, numArgs int, closed bool) (s []string) {
+func panFilePathCompleter(line string, lineArgs []string, numArgs int, closed bool, onlyNeedFolder bool) (s []string) {
+	return filePathCompleterProcessor(line, lineArgs, numArgs, closed, onlyNeedFolder, getPanFileListByTargetPath)
+}
+
+// localFilePathCompleter 本地文件路径Tab补全处理器
+func localFilePathCompleter(line string, lineArgs []string, numArgs int, closed bool, onlyNeedFolder bool) (s []string) {
+	return filePathCompleterProcessor(line, lineArgs, numArgs, closed, onlyNeedFolder, getLocalFileListByTargetPath)
+}
+
+func filePathCompleterProcessor(line string, lineArgs []string, numArgs int, closed bool, onlyNeedFolder bool, fileListFunc getFileListByTargetPath) (s []string) {
 	var (
-		activeUser  = config.Config.ActiveUser()
 		runeFunc    = unicode.IsSpace
 		cmdRuneFunc = func(r rune) bool {
 			switch r {
@@ -670,10 +684,6 @@ func panFilePathCompleter(line string, lineArgs []string, numArgs int, closed bo
 		}
 		targetPath string
 	)
-
-	if activeUser == nil {
-		return
-	}
 
 	if !closed {
 		targetPath = lineArgs[numArgs-1]
@@ -690,37 +700,19 @@ func panFilePathCompleter(line string, lineArgs []string, numArgs int, closed bo
 		s = append(s, line+"/")
 		return
 	}
-
-	var (
-		targetDir string
-		isAbs     = path.IsAbs(targetPath)
-		isDir     = strings.LastIndex(targetPath, "/") == len(targetPath)-1
-	)
-
-	if isAbs {
-		targetDir = path.Dir(targetPath)
-	} else {
-		wd := "/"
-		if activeUser.IsFileDriveActive() {
-			wd = activeUser.Workdir
-		} else if activeUser.IsResourceDriveActive() {
-			wd = activeUser.ResourceWorkdir
-		} else if activeUser.IsAlbumDriveActive() {
-			wd = activeUser.AlbumWorkdir
-		}
-		targetDir = path.Join(wd, targetPath)
-		if !isDir {
-			targetDir = path.Dir(targetDir)
+	if strings.HasPrefix(targetPath, "~") {
+		if p, e := homedir.Expand(targetPath); e == nil {
+			targetPath = p
 		}
 	}
 
-	// tab键补全路径
-	files, err := activeUser.CacheFilesDirectoriesList(targetDir)
-	if err != nil {
-		return
-	}
+	targetDir, files := fileListFunc(targetPath)
 	for _, file := range files {
 		if file == nil {
+			continue
+		}
+		if onlyNeedFolder && !file.IsFolder {
+			// 过滤文件，只需要文件夹
 			continue
 		}
 
@@ -745,7 +737,7 @@ func panFilePathCompleter(line string, lineArgs []string, numArgs int, closed bo
 		goto handle
 
 	handle:
-		if file.IsFolder() {
+		if file.IsFolder {
 			s = append(s, appendLine+"/")
 			continue
 		}
@@ -760,7 +752,95 @@ func panFilePathCompleter(line string, lineArgs []string, numArgs int, closed bo
 	return
 }
 
-// localFilePathCompleter 本地文件路径Tab补全处理器
-func localFilePathCompleter(line string, lineArgs []string, numArgs int, closed bool) (s []string) {
-	return nil
+type fileEntity struct {
+	FileName string
+	Path     string
+	IsFolder bool
+}
+type getFileListByTargetPath func(targetPath string) (string, []*fileEntity)
+
+// getPanFileListByTargetPath 通过路径获取云盘文件列表
+func getPanFileListByTargetPath(targetPath string) (string, []*fileEntity) {
+	var (
+		activeUser = config.Config.ActiveUser()
+		targetDir  string
+		isAbs      = path.IsAbs(targetPath)
+		isDir      = strings.LastIndex(targetPath, "/") == len(targetPath)-1
+		r          = []*fileEntity{}
+	)
+	if activeUser == nil {
+		return targetDir, r
+	}
+
+	if isAbs {
+		targetDir = path.Dir(targetPath)
+	} else {
+		wd := "/"
+		if activeUser.IsFileDriveActive() {
+			wd = activeUser.Workdir
+		} else if activeUser.IsResourceDriveActive() {
+			wd = activeUser.ResourceWorkdir
+		} else if activeUser.IsAlbumDriveActive() {
+			wd = activeUser.AlbumWorkdir
+		}
+		targetDir = path.Join(wd, targetPath)
+		if !isDir {
+			targetDir = path.Dir(targetDir)
+		}
+	}
+
+	files, err := activeUser.CacheFilesDirectoriesList(targetDir)
+	if err != nil {
+		return targetDir, r
+	}
+
+	for _, file := range files {
+		if file == nil {
+			continue
+		}
+		r = append(r, &fileEntity{
+			FileName: file.FileName,
+			Path:     file.Path,
+			IsFolder: file.IsFolder(),
+		})
+	}
+	return targetDir, r
+}
+
+// getLocalFileListByTargetPath 通过路径获取本地文件列表
+func getLocalFileListByTargetPath(targetPath string) (string, []*fileEntity) {
+	var (
+		targetDir string
+		isAbs     = filepath.IsAbs(targetPath)
+		isDir     = strings.LastIndex(targetPath, "/") == len(targetPath)-1
+		r         = []*fileEntity{}
+	)
+
+	if isAbs {
+		targetDir = path.Dir(targetPath)
+	} else {
+		targetDir = command_local.LocalPathJoin(targetPath)
+		if !isDir {
+			targetDir = path.Dir(targetDir)
+		}
+	}
+
+	fileEntryList, err := os.ReadDir(targetDir)
+	if err != nil {
+		return targetDir, r
+	}
+	for _, file := range fileEntryList {
+		if file == nil {
+			continue
+		}
+		if strings.HasPrefix(file.Name(), ".") {
+			continue
+		}
+		r = append(r, &fileEntity{
+			FileName: file.Name(),
+			Path:     path.Join(targetDir, file.Name()),
+			IsFolder: file.IsDir(),
+		})
+	}
+	return targetDir, r
 }

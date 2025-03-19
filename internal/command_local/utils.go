@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// getLocalHomeDir 获取本地用户主目录
-func getLocalHomeDir() string {
+// GetLocalHomeDir 获取本地用户主目录
+func GetLocalHomeDir() string {
 	// 默认为用户主页目录
 	if hd, e := os.UserHomeDir(); e == nil {
 		return hd
@@ -18,8 +18,8 @@ func getLocalHomeDir() string {
 	return ""
 }
 
-// localPathJoin 拼接本地路径
-func localPathJoin(p string) string {
+// LocalPathJoin 拼接本地路径
+func LocalPathJoin(p string) string {
 	p = path.Clean(strings.ReplaceAll(p, "\\", "/"))
 	if filepath.IsAbs(p) {
 		return p
@@ -30,7 +30,7 @@ func localPathJoin(p string) string {
 	}
 	wd := config.Config.LocalWorkdir
 	if wd == "" {
-		wd = getLocalHomeDir()
+		wd = GetLocalHomeDir()
 	}
 	return path.Join(wd, p)
 }

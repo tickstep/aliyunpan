@@ -113,7 +113,7 @@ func CmdLocalLs() cli.Command {
 func RunLocalLs(targetPath string,
 	showAllFile bool,
 	orderBy aliyunpan.FileOrderBy, orderDirection aliyunpan.FileOrderDirection) {
-	targetPath = localPathJoin(targetPath)
+	targetPath = LocalPathJoin(targetPath)
 
 	// 获取目标路径文件信息
 	localFileInfo, er := os.Stat(targetPath)
