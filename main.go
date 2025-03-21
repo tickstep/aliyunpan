@@ -200,9 +200,12 @@ func main() {
 				acceptCompleteFileLocalCommands = []string{ // 本地命令
 					"lcd", "lls",
 				}
-				// 检查是否是命令输入的结尾
-				closed = strings.LastIndex(line, " ") == len(line)-1
+				closed = false
 			)
+			// 检查是否是命令输入的结尾
+			if strings.LastIndex(line, " ") == len(line)-1 {
+				closed = true
+			}
 
 			// 开始补全命令名称
 			for _, cmd := range app.Commands {
@@ -233,14 +236,15 @@ func main() {
 			if cmdutil.ContainsString(acceptCompleteFilePanCommands, thisCmd.FullName()) {
 				// 云盘文件路径的补全
 				if thisCmd.FullName() == "ls" || thisCmd.FullName() == "cd" {
-					// 树状结构，需要补全文件夹路径
-					return panFilePathCompleter(line, lineArgs, numArgs, closed, true)
+					// 只需要补全文件夹路径
+					return panFilePathCompleter(line, lineArgs, numArgs, true)
 				} else {
-					return panFilePathCompleter(line, lineArgs, numArgs, closed, false)
+					// 文件夹、文件都需要
+					return panFilePathCompleter(line, lineArgs, numArgs, false)
 				}
 			} else if cmdutil.ContainsString(acceptCompleteFileLocalCommands, thisCmd.FullName()) {
 				// 本地文件路径的补全
-				return localFilePathCompleter(line, lineArgs, numArgs, closed, true)
+				return localFilePathCompleter(line, lineArgs, numArgs, true)
 			}
 			return
 		})
@@ -663,16 +667,26 @@ func main() {
 }
 
 // panFilePathCompleter 云盘文件路径Tab补全处理器
-func panFilePathCompleter(line string, lineArgs []string, numArgs int, closed bool, onlyNeedFolder bool) (s []string) {
-	return filePathCompleterProcessor(line, lineArgs, numArgs, closed, onlyNeedFolder, getPanFileListByTargetPath)
+func panFilePathCompleter(line string, lineArgs []string, numArgs int, onlyNeedFolder bool) (s []string) {
+	return filePathCompleterProcessor("pan", line, lineArgs, numArgs, onlyNeedFolder, getPanFileListByTargetPath)
 }
 
 // localFilePathCompleter 本地文件路径Tab补全处理器
-func localFilePathCompleter(line string, lineArgs []string, numArgs int, closed bool, onlyNeedFolder bool) (s []string) {
-	return filePathCompleterProcessor(line, lineArgs, numArgs, closed, onlyNeedFolder, getLocalFileListByTargetPath)
+func localFilePathCompleter(line string, lineArgs []string, numArgs int, onlyNeedFolder bool) (s []string) {
+	return filePathCompleterProcessor("local", line, lineArgs, numArgs, onlyNeedFolder, getLocalFileListByTargetPath)
 }
 
-func filePathCompleterProcessor(line string, lineArgs []string, numArgs int, closed bool, onlyNeedFolder bool, fileListFunc getFileListByTargetPath) (s []string) {
+// filePathCompleterProcessor 路径自动补充处理器
+// 典型测试样例
+// lls d:\
+// lls ~/
+// lls ~\
+// lls ~\Doc
+// ls ~/
+// ls<空格><tab>
+// ls app<tab>
+// ls /doc<tab>
+func filePathCompleterProcessor(targetType string, line string, lineArgs []string, numArgs int, onlyNeedFolder bool, fileListFunc getFileListByTargetPath) (s []string) {
 	var (
 		runeFunc    = unicode.IsSpace
 		cmdRuneFunc = func(r rune) bool {
@@ -683,15 +697,18 @@ func filePathCompleterProcessor(line string, lineArgs []string, numArgs int, clo
 			return unicode.IsSpace(r)
 		}
 		targetPath string
+		// 路径的结尾是否是有前缀，如果有前缀则文件、文件夹名称需要匹配前缀
+		endPathHasPrefixStr = false
 	)
-
-	if !closed {
+	if numArgs > 1 {
 		targetPath = lineArgs[numArgs-1]
-		escaper.EscapeStringsByRuneFunc(lineArgs[:numArgs-1], runeFunc) // 转义
 	} else {
-		escaper.EscapeStringsByRuneFunc(lineArgs, runeFunc)
+		// 没有输入文件路径的时候，默认为当前目录
+		targetPath = "./"
+		line += targetPath
+		lineArgs = append(lineArgs, targetPath)
+		numArgs = 2
 	}
-
 	switch {
 	case targetPath == "." || strings.HasSuffix(targetPath, "/."):
 		s = append(s, line+"/")
@@ -700,13 +717,33 @@ func filePathCompleterProcessor(line string, lineArgs []string, numArgs int, clo
 		s = append(s, line+"/")
 		return
 	}
+	// 主目录"~"特殊路径处理
 	if strings.HasPrefix(targetPath, "~") {
-		if p, e := homedir.Expand(targetPath); e == nil {
-			targetPath = p
+		if targetType == "local" {
+			if p, e := homedir.Expand(targetPath); e == nil {
+				targetPath = p
+			}
+		} else {
+			// 云盘的主目录~默认为根目录
+			targetPath = strings.ReplaceAll(strings.Replace(targetPath, "~", "/", 1), "//", "/")
 		}
 	}
+	// 完整路径是需要“/”作为结尾，否则默认用户只输入了一部分文件名，输入的部分字符作为文件名前缀进行搜索匹配
+	// 如果用户输入：/Users/tickstep/doc，则自动补全的路径需要在/Users/tickstep/目录下搜索并且文件名必须包含doc这个前缀，例如：/Users/tickstep/document/ 和 /Users/tickstep/doc/ 都是匹配项
+	// 如果用户输入：/Users/tickstep/，则自动补全的路径需要在/Users/tickstep/目录下搜索即可，例如：/Users/tickstep/photo/ 和 /Users/tickstep/doc/ 都是匹配项
+	if strings.HasSuffix(targetPath, "/") {
+		endPathHasPrefixStr = false
+	} else {
+		endPathHasPrefixStr = true
+	}
 
-	targetDir, files := fileListFunc(targetPath)
+	if endPathHasPrefixStr {
+		escaper.EscapeStringsByRuneFunc(lineArgs[:numArgs-1], runeFunc) // 转义
+	} else {
+		escaper.EscapeStringsByRuneFunc(lineArgs, runeFunc)
+	}
+
+	targetFullPath, targetDir, files := fileListFunc(targetPath)
 	for _, file := range files {
 		if file == nil {
 			continue
@@ -720,20 +757,22 @@ func filePathCompleterProcessor(line string, lineArgs []string, numArgs int, clo
 			appendLine string
 		)
 
-		// 用户已经输入了部分路径字符，搜索匹配路径需要匹配用户输入的路径字符前缀
-		if !closed {
-			if !strings.HasPrefix(file.Path, path.Clean(path.Join(targetDir, path.Base(targetPath)))) {
-				if path.Base(targetDir) == path.Base(targetPath) {
+		// 用户已经输入了部分路径字符，搜索匹配文件路径需要匹配用户输入的路径字符串前缀
+		if endPathHasPrefixStr {
+			fp := command_local.LocalPathClean(file.Path)
+			tp := command_local.LocalPathClean(targetFullPath)
+			if !strings.HasPrefix(fp, tp) {
+				if command_local.LocalPathBase(targetDir) == command_local.LocalPathBase(targetFullPath) {
 					appendLine = strings.Join(append(lineArgs[:numArgs-1], escaper.EscapeByRuneFunc(path.Join(targetPath, file.FileName), cmdRuneFunc)), " ")
 					goto handle
 				}
 				continue
 			}
-			appendLine = strings.Join(append(lineArgs[:numArgs-1], escaper.EscapeByRuneFunc(path.Clean(path.Join(path.Dir(targetPath), file.FileName)), cmdRuneFunc)), " ")
+			appendLine = strings.Join(append(lineArgs[:numArgs-1], escaper.EscapeByRuneFunc(command_local.LocalPathClean(path.Join(command_local.LocalPathDir(targetPath), file.FileName)), cmdRuneFunc)), " ")
 			goto handle
 		}
-		// 没有输入任何路径字符，默认都符合条件，全部显示到提示列表
-		appendLine = strings.Join(append(lineArgs, escaper.EscapeByRuneFunc(file.FileName, cmdRuneFunc)), " ")
+		// 没有输入任何路径前缀字符，默认都符合条件，全部显示到提示列表
+		appendLine = strings.Join(append(lineArgs[:numArgs-1], escaper.EscapeByRuneFunc(command_local.LocalPathClean(path.Join(targetPath, file.FileName)), cmdRuneFunc)), " ")
 		goto handle
 
 	handle:
@@ -757,23 +796,25 @@ type fileEntity struct {
 	Path     string
 	IsFolder bool
 }
-type getFileListByTargetPath func(targetPath string) (string, []*fileEntity)
+type getFileListByTargetPath func(targetPath string) (string, string, []*fileEntity)
 
 // getPanFileListByTargetPath 通过路径获取云盘文件列表
-func getPanFileListByTargetPath(targetPath string) (string, []*fileEntity) {
+func getPanFileListByTargetPath(targetPath string) (string, string, []*fileEntity) {
 	var (
-		activeUser = config.Config.ActiveUser()
-		targetDir  string
-		isAbs      = path.IsAbs(targetPath)
-		isDir      = strings.LastIndex(targetPath, "/") == len(targetPath)-1
-		r          = []*fileEntity{}
+		activeUser     = config.Config.ActiveUser()
+		targetDir      string
+		targetFullPath string
+		isAbs          = path.IsAbs(targetPath)
+		isDir          = strings.LastIndex(targetPath, "/") == len(targetPath)-1
+		r              = []*fileEntity{}
 	)
 	if activeUser == nil {
-		return targetDir, r
+		return targetFullPath, targetDir, r
 	}
 
 	if isAbs {
 		targetDir = path.Dir(targetPath)
+		targetFullPath = targetPath
 	} else {
 		wd := "/"
 		if activeUser.IsFileDriveActive() {
@@ -783,7 +824,8 @@ func getPanFileListByTargetPath(targetPath string) (string, []*fileEntity) {
 		} else if activeUser.IsAlbumDriveActive() {
 			wd = activeUser.AlbumWorkdir
 		}
-		targetDir = path.Join(wd, targetPath)
+		targetFullPath = path.Join(wd, targetPath)
+		targetDir = targetFullPath
 		if !isDir {
 			targetDir = path.Dir(targetDir)
 		}
@@ -791,7 +833,7 @@ func getPanFileListByTargetPath(targetPath string) (string, []*fileEntity) {
 
 	files, err := activeUser.CacheFilesDirectoriesList(targetDir)
 	if err != nil {
-		return targetDir, r
+		return targetFullPath, targetDir, r
 	}
 
 	for _, file := range files {
@@ -804,43 +846,66 @@ func getPanFileListByTargetPath(targetPath string) (string, []*fileEntity) {
 			IsFolder: file.IsFolder(),
 		})
 	}
-	return targetDir, r
+	return targetFullPath, targetDir, r
 }
 
 // getLocalFileListByTargetPath 通过路径获取本地文件列表
-func getLocalFileListByTargetPath(targetPath string) (string, []*fileEntity) {
+func getLocalFileListByTargetPath(targetPath string) (string, string, []*fileEntity) {
+	targetPath = strings.ReplaceAll(targetPath, "\\", "/")
 	var (
-		targetDir string
-		isAbs     = filepath.IsAbs(targetPath)
-		isDir     = strings.LastIndex(targetPath, "/") == len(targetPath)-1
-		r         = []*fileEntity{}
+		targetDir      string
+		targetFullPath string
+		isAbs          = filepath.IsAbs(targetPath)
+		isDir          = strings.HasSuffix(targetPath, "/")
+		r              = []*fileEntity{}
 	)
 
 	if isAbs {
-		targetDir = path.Dir(targetPath)
-	} else {
-		targetDir = command_local.LocalPathJoin(targetPath)
+		// 绝对路径
+		targetDir = targetPath
+		targetFullPath = targetPath
 		if !isDir {
-			targetDir = path.Dir(targetDir)
+			targetDir = command_local.LocalPathDir(targetDir)
+		}
+	} else {
+		// 相对路径
+		targetFullPath = command_local.LocalPathJoin(targetPath)
+		targetDir = targetFullPath
+		if !isDir {
+			targetDir = command_local.LocalPathDir(targetDir)
+		}
+	}
+	// windows
+	if runtime.GOOS == "windows" {
+		if strings.HasSuffix(targetDir, ":") {
+			targetDir += "/"
 		}
 	}
 
 	fileEntryList, err := os.ReadDir(targetDir)
 	if err != nil {
-		return targetDir, r
+		return targetFullPath, targetDir, r
 	}
 	for _, file := range fileEntryList {
 		if file == nil {
 			continue
 		}
-		if strings.HasPrefix(file.Name(), ".") {
-			continue
+
+		if runtime.GOOS == "windows" { // windows隐藏文件
+			if strings.HasPrefix(file.Name(), "$") {
+				continue
+			}
+		} else { // linux / macOS隐藏文件
+			if strings.HasPrefix(file.Name(), ".") {
+				continue
+			}
 		}
+
 		r = append(r, &fileEntity{
 			FileName: file.Name(),
 			Path:     path.Join(targetDir, file.Name()),
 			IsFolder: file.IsDir(),
 		})
 	}
-	return targetDir, r
+	return targetFullPath, targetDir, r
 }

@@ -34,3 +34,29 @@ func LocalPathJoin(p string) string {
 	}
 	return path.Join(wd, p)
 }
+
+// LocalPathDir 获取当前文件夹的父文件夹路径
+func LocalPathDir(p string) string {
+	p = strings.ReplaceAll(p, "\\", "/")
+	if strings.HasSuffix(p, ":/") { // windows卷标路径，例如：C:\ 、D:\、E:\
+		return p
+	}
+	parentDirPath := path.Dir(LocalPathClean(p))
+	return parentDirPath
+}
+
+// LocalPathBase 获取当前路径的文件（文件夹）名
+func LocalPathBase(p string) string {
+	p = strings.ReplaceAll(p, "\\", "/")
+	if strings.HasSuffix(p, ":/") { // windows卷标路径，例如：C:\ 、D:\、E:\
+		return ""
+	}
+	baseName := path.Base(LocalPathClean(p))
+	return baseName
+}
+
+// LocalPathClean 规范化本地文件夹路径
+func LocalPathClean(p string) string {
+	cleanPath := path.Clean(strings.ReplaceAll(p, "\\", "/"))
+	return cleanPath
+}
