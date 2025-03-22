@@ -38,6 +38,8 @@ import (
 type (
 	//DownloadOptions 下载可选参数
 	DownloadOptions struct {
+		// DownloadActionId 下载动作ID，唯一标识一次下载动作的ID。这个ID每次下载任务启动的时候会自动生成，同一次下载任务下载的文件，这个ID都是同一个值。
+		DownloadActionId     string
 		IsPrintStatus        bool
 		IsExecutedPermission bool
 		IsOverwrite          bool
@@ -131,6 +133,7 @@ func CmdDownload() cli.Command {
 			}
 
 			do := &DownloadOptions{
+				DownloadActionId:     utils.UuidStr(),
 				IsPrintStatus:        c.Bool("status"),
 				IsExecutedPermission: c.Bool("x"),
 				IsOverwrite:          c.Bool("ow"),
@@ -405,6 +408,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 
 			// 匹配的文件
 			unit := pandownload.DownloadTaskUnit{
+				DownloadActionId:     options.DownloadActionId,
 				Cfg:                  &newCfg, // 复制一份新的cfg
 				PanClient:            panClient,
 				SubPanClientList:     subPanClientList,

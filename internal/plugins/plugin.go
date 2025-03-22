@@ -66,6 +66,7 @@ type (
 		DriveFileType      string `json:"driveFileType"`
 		DriveFileUpdatedAt string `json:"driveFileUpdatedAt"`
 		LocalFilePath      string `json:"localFilePath"`
+		DownloadActionId   string `json:"downloadActionId"`
 	}
 
 	// DownloadFilePrepareResult 上传文件前的回调函数-返回结果
@@ -88,6 +89,7 @@ type (
 		DriveFileUpdatedAt string `json:"driveFileUpdatedAt"`
 		DownloadResult     string `json:"downloadResult"`
 		LocalFilePath      string `json:"localFilePath"`
+		DownloadActionId   string `json:"downloadActionId"`
 	}
 
 	// SyncScanLocalFilePrepareParams 同步备份-扫描本地文件前参数

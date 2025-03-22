@@ -43,7 +43,9 @@ import (
 type (
 	// DownloadTaskUnit 下载的任务单元
 	DownloadTaskUnit struct {
-		taskInfo *taskframework.TaskInfo // 任务信息
+		// DownloadActionId 下载动作ID，唯一标识一次下载动作的ID。这个ID每次下载任务启动的时候会自动生成，同一次下载任务下载的文件，这个ID都是同一个值。
+		DownloadActionId string
+		taskInfo         *taskframework.TaskInfo // 任务信息
 
 		Cfg                *downloader.Config
 		PanClient          *config.PanClient
@@ -402,6 +404,7 @@ func (dtu *DownloadTaskUnit) pluginCallback(result string) {
 	pluginManger := plugins.NewPluginManager(config.GetPluginDir())
 	plugin, _ := pluginManger.GetPlugin()
 	pluginParam := &plugins.DownloadFileFinishParams{
+		DownloadActionId:   dtu.DownloadActionId,
 		DriveId:            dtu.fileInfo.DriveId,
 		DriveFileId:        dtu.fileInfo.FileId,
 		DriveFilePath:      dtu.fileInfo.Path,
@@ -464,6 +467,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	localFilePath := strings.TrimPrefix(dtu.SavePath, dtu.OriginSaveRootPath)
 	localFilePath = strings.TrimPrefix(strings.TrimPrefix(localFilePath, "\\"), "/")
 	pluginParam := &plugins.DownloadFilePrepareParams{
+		DownloadActionId:   dtu.DownloadActionId,
 		DriveId:            dtu.fileInfo.DriveId,
 		DriveFilePath:      dtu.fileInfo.Path,
 		DriveFileName:      dtu.fileInfo.FileName,
