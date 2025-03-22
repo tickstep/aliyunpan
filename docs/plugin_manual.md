@@ -12,6 +12,7 @@
     + [PluginUtil.Email.sendHtmlMail()](#PluginUtilEmailsendHtmlMail)
     + [PluginUtil.KV.putString()](#PluginUtilKVputString)
     + [PluginUtil.KV.getString()](#PluginUtilKVgetString)
+    + [PluginUtil.HashTool.md5Hex()](#PluginUtilHashToolmd5Hex)
 - [常见场景样例](#常见场景样例)
     + [1.禁止特定文件上传](#1禁止特定文件上传)
     + [2.上传文件后删除本地文件](#2上传文件后删除本地文件)
@@ -201,6 +202,19 @@ key - 键，字符串
 样例
 ```js
 var value = PluginUtil.KV.getString("mykey");
+```
+
+## PluginUtil.HashTool.md5Hex()
+计算指定字符串text的MD5值，返回hex格式的字符串MD5，定义如下
+```
+PluginUtil.HashTool.md5Hex(text)
+
+其中：
+text - 字符串
+```
+样例
+```js
+var md5 = PluginUtil.HashTool.md5Hex("123456");
 ```
 
 # 常见场景样例

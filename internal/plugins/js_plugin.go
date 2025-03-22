@@ -84,6 +84,11 @@ func (js *JsPlugin) Start() error {
 	kvObj.Set("getString", GetString) // PluginUtil.KV.getString()
 	kvObj.Set("putString", PutString) // PluginUtil.KV.putString()
 
+	// PluginUtil.HashTool
+	hashTool := js.vm.NewObject()
+	pluginObj.Set("HashTool", hashTool)
+	hashTool.Set("md5Hex", Md5Hex) // PluginUtil.HashTool.md5Hex()
+
 	return nil
 }
 

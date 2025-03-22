@@ -1,7 +1,9 @@
 package plugins
 
 import (
+	"crypto/md5"
 	"crypto/tls"
+	"fmt"
 	"github.com/jordan-wright/email"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
@@ -191,4 +193,10 @@ func PutString(key, value string) bool {
 		return false
 	}
 	return true
+}
+
+// Md5Hex md5加密
+func Md5Hex(text string) string {
+	hash := md5.Sum([]byte(text))
+	return fmt.Sprintf("%x", hash[:])
 }
