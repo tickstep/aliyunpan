@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
@@ -144,7 +145,11 @@ func RunLs(driveId, targetPath string, lsOptions *LsOptions,
 	// 获取目标路径文件信息
 	targetPathInfo, err := activeUser.PanClient().OpenapiPanClient().FileInfoByPath(driveId, targetPath)
 	if err != nil {
-		fmt.Println(err)
+		if err.Code == apierror.ApiCodeFileNotFoundCode {
+			fmt.Println("指定目录不存在: " + targetPath)
+		} else {
+			fmt.Println(err)
+		}
 		return
 	}
 
