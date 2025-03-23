@@ -30,12 +30,13 @@ func GetContext(user *config.PanUser) *Context {
 		}
 	}
 	return &Context{
-		AppName:      "aliyunpan",
-		Version:      global.AppVersion,
-		UserId:       user.UserId,
-		Nickname:     user.Nickname,
-		FileDriveId:  user.DriveList.GetFileDriveId(),
-		AlbumDriveId: user.DriveList.GetFileDriveId(),
+		AppName:         "aliyunpan",
+		Version:         global.AppVersion,
+		UserId:          user.UserId,
+		Nickname:        user.Nickname,
+		FileDriveId:     user.DriveList.GetFileDriveId(),     // 备份盘
+		AlbumDriveId:    user.DriveList.GetAlbumDriveId(),    // 相册盘，在OpenAPI接口中，这个相册盘ID是获取不到的
+		ResourceDriveId: user.DriveList.GetResourceDriveId(), // 资源盘
 	}
 }
 

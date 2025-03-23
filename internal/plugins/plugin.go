@@ -16,12 +16,16 @@ package plugins
 type (
 	// Context 插件回调函数上下文信息
 	Context struct {
-		AppName      string `json:"appName"`
-		Version      string `json:"version"`
-		UserId       string `json:"userId"`
-		Nickname     string `json:"nickname"`
-		FileDriveId  string `json:"fileDriveId"`
+		AppName  string `json:"appName"`
+		Version  string `json:"version"`
+		UserId   string `json:"userId"`
+		Nickname string `json:"nickname"`
+		// FileDriveId 备份盘
+		FileDriveId string `json:"fileDriveId"`
+		// AlbumDriveId 相册盘
 		AlbumDriveId string `json:"albumDriveId"`
+		// ResourceDriveId 资源盘
+		ResourceDriveId string `json:"resourceDriveId"`
 	}
 
 	// UploadFilePrepareParams 上传文件前的回调函数-参数

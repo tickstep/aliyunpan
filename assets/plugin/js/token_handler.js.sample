@@ -17,14 +17,14 @@
 //  "userId": "11001d48564f43b3bc5662874f04bb11",
 //  "nickname": "tickstep",
 //  "fileDriveId": "19519111",
-//  "albumDriveId": "29519122"
+//  "resourceDriveId": "29519122"
 // }
 // appName - 应用名称，当前固定为aliyunpan
 // version - 版本号
 // userId - 当前登录用户的ID
 // nickname - 用户昵称
-// fileDriveId - 用户文件网盘ID
-// albumDriveId - 用户相册网盘ID
+// fileDriveId - 用户备份网盘ID
+// resourceDriveId - 用户资源网盘ID
 //
 // params - Token刷新参数
 // {
