@@ -403,7 +403,6 @@ func RunDownload(paths []string, options *DownloadOptions) {
 			return fileList[i].FileName < fileList[j].FileName
 		})
 		// 逐一下载
-
 		for _, f := range fileList {
 			newCfg := *cfg
 

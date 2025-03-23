@@ -21,6 +21,7 @@
     + [5.上传文件时过滤指定目录或者文件路径](#5上传文件时过滤指定目录或者文件路径)
     + [6.下载云盘文件到本地后删除云盘对应的文件](#6下载云盘文件到本地后删除云盘对应的文件)
     + [7.Token刷新失败发送外部通知](#7Token刷新失败发送外部通知)
+    + [8.每次只下载指定数量的文件](#8每次只下载指定数量的文件)
 
 # 简介
 本程序支持javascript插件。通过JS插件，你可以按照自己的需要定制上传、下载、同步、删除过程中关键步骤的行为，最大程度满足自己的个性化需求。   
@@ -496,5 +497,57 @@ function userTokenRefreshFinishCallback(context, params) {
             throw e;
         }
     }
+}
+```
+## 8.每次只下载指定数量的文件
+每次运行download下载命令，只下载指定数量的文件，只要数量够了其他文件就跳过不再下载，其他文件等下一次运行download命令的时候再下载。
+```js
+function downloadFilePrepareCallback(context, params) {
+    var result = {
+        "downloadApproved": "yes",
+        "localFilePath": ""
+    };
+
+    // 这次下载限制的最大文件总数量
+    const maxCountOfDownloadAction = 3;
+
+    // 只处理文件
+    if (params["driveFileType"] != "file") {
+        return
+    }
+
+    // 获取这次下载动作，已经下载的文件数量
+    var keyOfThisDownloadAction = "download:" + params["downloadActionId"];
+    var valueOfThisDownloadAction = PluginUtil.KV.getString(keyOfThisDownloadAction);
+    if (valueOfThisDownloadAction == "") {
+        valueOfThisDownloadAction = "0";
+    }
+    var countOfThisDownloadAction = parseInt(valueOfThisDownloadAction);
+    if (countOfThisDownloadAction >= maxCountOfDownloadAction) {
+        // 下载数量已达到最大，其他文件不再下载
+        result["downloadApproved"] = "no";
+        return result;
+    }
+
+    // 该文件需要下载，记录相关信息
+    var keyOfThisDownloadFile = "file:" + PluginUtil.HashTool.md5Hex(params["driveFilePath"]);
+    var valueOfThisDownloadFile = PluginUtil.KV.getString(keyOfThisDownloadFile);
+    if (valueOfThisDownloadFile == "finish") {
+        // 已经在下载的文件不做处理
+        return result;
+    }
+    PluginUtil.KV.putString(keyOfThisDownloadFile, "downloading");
+
+    // 更新下载总数量
+    countOfThisDownloadAction += 1;
+    PluginUtil.KV.putString(keyOfThisDownloadAction, String(countOfThisDownloadAction));
+
+    return result;
+}
+
+function downloadFileFinishCallback(context, params) {
+  var keyOfThisDownloadFile = "file:" + PluginUtil.HashTool.md5Hex(params["driveFilePath"]);
+  console.log(keyOfThisDownloadFile)
+  PluginUtil.KV.putString(keyOfThisDownloadFile, "finish");
 }
 ```
