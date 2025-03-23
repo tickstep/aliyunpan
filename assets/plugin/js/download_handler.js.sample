@@ -38,7 +38,7 @@
 //  "driveFileUpdatedAt": "2022-04-14 07:05:12",
 //  "localFilePath": "aliyunpan\\Downloads\\token.bat"
 // }
-// downloadActionId - 下载动作ID。同一次下载动作(download命令)下载的文件，这个ID都是同一个值。注意这个ID不是永久的，每执行一次download命令对生成一个对应ID。
+// downloadActionId - 下载动作ID。同一次下载动作(download命令)下载的文件，这个ID都是同一个值。注意这个ID不是永久的，每执行一次download命令会生成一个对应ID。
 // driveId - 网盘ID
 // driveFileName - 网盘文件名
 // driveFilePath - 网盘文件绝对完整路径
@@ -113,7 +113,7 @@ function downloadFilePrepareCallback(context, params) {
 //  "downloadResult": "success",
 //  "localFilePath": "aliyunpan\\Downloads\\token.bat"
 // }
-// downloadActionId - 下载动作ID。同一次下载动作(download命令)下载的文件，这个ID都是同一个值。注意这个ID不是永久的，每执行一次download命令对生成一个对应ID。
+// downloadActionId - 下载动作ID。同一次下载动作(download命令)下载的文件，这个ID都是同一个值。注意这个ID不是永久的，每执行一次download命令会生成一个对应ID。
 // driveId - 网盘ID
 // driveFileId - 网盘文件ID
 // driveFileName - 网盘文件名
