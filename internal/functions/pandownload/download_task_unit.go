@@ -35,6 +35,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -552,6 +553,10 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		}
 		time.Sleep(1 * time.Second)
 
+		// 排序，按名称排序，从小到大
+		sort.Slice(fileList, func(i, j int) bool {
+			return fileList[i].FileName < fileList[j].FileName
+		})
 		// 创建对应的任务进行下载
 		for k := range fileList {
 			fileList[k].Path = path.Join(dtu.FilePanPath, fileList[k].FileName)

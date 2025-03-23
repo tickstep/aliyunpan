@@ -33,6 +33,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 )
 
 type (
@@ -397,6 +398,12 @@ func RunDownload(paths []string, options *DownloadOptions) {
 			fmt.Printf("文件不存在: %s\n", paths[k])
 			continue
 		}
+		// 排序，按名称排序，从小到大
+		sort.Slice(fileList, func(i, j int) bool {
+			return fileList[i].FileName < fileList[j].FileName
+		})
+		// 逐一下载
+
 		for _, f := range fileList {
 			newCfg := *cfg
 
