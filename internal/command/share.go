@@ -21,6 +21,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/urfave/cli"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -196,7 +197,7 @@ func RunOpenShareSet(modeFlag, driveId string, paths []string, expiredTime strin
 		}
 
 		fmt.Printf("创建快传链接成功\n")
-		fmt.Printf("链接：%s\n", r.ShareUrl)
+		fmt.Printf("链接：%s\n", strings.ReplaceAll(r.ShareUrl, "https://www.aliyundrive.com", "https://www.alipan.com"))
 	} else {
 		// 分享
 		r, err1 := panClient.OpenapiPanClient().ShareLinkCreate(aliyunpan.ShareCreateParam{
@@ -219,10 +220,11 @@ func RunOpenShareSet(modeFlag, driveId string, paths []string, expiredTime strin
 		} else if modeFlag == "2" {
 			fmt.Printf("创建公开分享链接成功\n")
 		}
+		shareUrl := strings.ReplaceAll(r.ShareUrl, "https://www.aliyundrive.com", "https://www.alipan.com")
 		if len(sharePwd) > 0 {
-			fmt.Printf("链接：%s 提取码：%s\n", r.ShareUrl, r.SharePwd)
+			fmt.Printf("链接：%s 提取码：%s\n", shareUrl, r.SharePwd)
 		} else {
-			fmt.Printf("链接：%s\n", r.ShareUrl)
+			fmt.Printf("链接：%s\n", shareUrl)
 		}
 	}
 }
