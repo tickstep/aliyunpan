@@ -21,6 +21,12 @@ type LoginHelper struct {
 	webHost string
 }
 
+// 通用接口错误
+type respCommonResult struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+}
+
 type LoginHttpResult struct {
 	Code int         `json:"code"`
 	Msg  string      `json:"msg"`
@@ -86,6 +92,16 @@ func (h *LoginHelper) GetQRCodeLoginUrl(keyStr string) (*QRCodeUrlResult, error)
 		return nil, err
 	}
 
+	// 通用接口错误
+	commonResult := &respCommonResult{}
+	if err1 := json.Unmarshal(body, commonResult); err1 != nil {
+		logger.Verboseln("parse openapi result json error ", err1)
+		return nil, err1
+	}
+	if commonResult.Code != 0 {
+		return nil, fmt.Errorf(commonResult.Msg)
+	}
+
 	errResp := &LoginHttpResult{}
 	if err1 := json.Unmarshal(body, errResp); err1 != nil {
 		logger.Verboseln("parse qrcode result json error ", err1)
@@ -137,6 +153,16 @@ func (h *LoginHelper) GetQRCodeLoginResult(tokenId string) (*QRCodeLoginResult, 
 		return nil, err
 	}
 
+	// 通用接口错误
+	commonResult := &respCommonResult{}
+	if err1 := json.Unmarshal(body, commonResult); err1 != nil {
+		logger.Verboseln("parse openapi result json error ", err1)
+		return nil, err1
+	}
+	if commonResult.Code != 0 {
+		return nil, fmt.Errorf(commonResult.Msg)
+	}
+
 	errResp := &LoginHttpResult{}
 	if err1 := json.Unmarshal(body, errResp); err1 != nil {
 		logger.Verboseln("parse qrcode result json error ", err1)
@@ -175,6 +201,16 @@ func (h *LoginHelper) GetRefreshToken(tokenId string) (*QRCodeLoginResult, error
 	if err != nil {
 		logger.Verboseln("get refresh token result error ", err)
 		return nil, err
+	}
+
+	// 通用接口错误
+	commonResult := &respCommonResult{}
+	if err1 := json.Unmarshal(body, commonResult); err1 != nil {
+		logger.Verboseln("parse openapi result json error ", err1)
+		return nil, err1
+	}
+	if commonResult.Code != 0 {
+		return nil, fmt.Errorf(commonResult.Msg)
 	}
 
 	errResp := &LoginHttpResult{}
@@ -254,6 +290,16 @@ func (h *LoginHelper) GetWebapiNewToken(ticketId, userId, oldAccessToken string)
 		return nil, err
 	}
 
+	// 通用接口错误
+	commonResult := &respCommonResult{}
+	if err1 := json.Unmarshal(body, commonResult); err1 != nil {
+		logger.Verboseln("parse openapi result json error ", err1)
+		return nil, err1
+	}
+	if commonResult.Code != 0 {
+		return nil, fmt.Errorf(commonResult.Msg)
+	}
+
 	errResp := &LoginHttpResult{}
 	if err1 := json.Unmarshal(body, errResp); err1 != nil {
 		logger.Verboseln("parse result json error ", err1)
@@ -295,6 +341,17 @@ func (h *LoginHelper) GetOpenapiNewToken(ticketId, userId, oldAccessToken string
 		return nil, err
 	}
 
+	// 通用接口错误
+	commonResult := &respCommonResult{}
+	if err1 := json.Unmarshal(body, commonResult); err1 != nil {
+		logger.Verboseln("parse openapi result json error ", err1)
+		return nil, err1
+	}
+	if commonResult.Code != 0 {
+		return nil, fmt.Errorf(commonResult.Msg)
+	}
+
+	// 解析结果
 	errResp := &LoginHttpResult{}
 	if err1 := json.Unmarshal(body, errResp); err1 != nil {
 		logger.Verboseln("parse result json error ", err1)
@@ -333,6 +390,16 @@ func (h *LoginHelper) GetLoginToken(ticketId string) (*CommonTokenEntity, error)
 	if err != nil {
 		logger.Verboseln("get login token result error ", err)
 		return nil, err
+	}
+
+	// 通用接口错误
+	commonResult := &respCommonResult{}
+	if err1 := json.Unmarshal(body, commonResult); err1 != nil {
+		logger.Verboseln("parse openapi result json error ", err1)
+		return nil, err1
+	}
+	if commonResult.Code != 0 {
+		return nil, fmt.Errorf(commonResult.Msg)
 	}
 
 	errResp := &LoginHttpResult{}
