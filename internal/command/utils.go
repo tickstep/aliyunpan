@@ -23,6 +23,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
+	"math"
 	"math/rand"
 	"net/url"
 	"path"
@@ -142,9 +143,9 @@ func NewWebLoginToken(accessToken string, expired int64) aliyunpan_web.WebLoginT
 }
 
 // RefreshWebTokenInNeed 刷新 webapi access token
-func RefreshWebTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
+func RefreshWebTokenInNeed(activeUser *config.PanUser) *panlogin.CommonResultError {
 	if activeUser == nil {
-		return false
+		return panlogin.NewCommonResultError("activeUser is nil")
 	}
 
 	// refresh expired web token
@@ -153,7 +154,7 @@ func RefreshWebTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 			cz := time.FixedZone("CST", 8*3600) // 东8区
 			expiredTime := time.Unix(activeUser.WebapiToken.Expired, 0).In(cz)
 			now := time.Now()
-			if (expiredTime.Unix() - now.Unix()) <= (2 * 60) { // 有效期小于2min就刷新
+			if (expiredTime.Unix() - now.Unix()) <= (10 * 60) { // 有效期小于10min就刷新
 				pluginManger := plugins.NewPluginManager(config.GetPluginDir())
 				plugin, _ := pluginManger.GetPlugin()
 				params := &plugins.UserTokenRefreshFinishParams{
@@ -167,9 +168,12 @@ func RefreshWebTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 				// need update refresh token
 				logger.Verboseln("web access token expired, get new from server")
 				loginHelper := panlogin.NewLoginHelper(config.DefaultTokenServiceWebHost)
-				wt, e := loginHelper.GetWebapiNewToken(activeUser.TicketId, activeUser.UserId, activeUser.PanClient().WebapiPanClient().GetAccessToken())
-				if e != nil {
-					logger.Verboseln("get web token from server error: ", e)
+				wt, re := loginHelper.GetWebapiNewToken(activeUser.TicketId, activeUser.UserId, activeUser.PanClient().WebapiPanClient().GetAccessToken())
+				if re != nil {
+					logger.Verboseln("get web token from server error: ", re.Msg)
+					if re.Code != panlogin.SUCCESS {
+						return re
+					}
 				}
 				if wt != nil {
 					params.Result = "success"
@@ -191,42 +195,51 @@ func RefreshWebTokenInNeed(activeUser *config.PanUser, deviceName string) bool {
 					}
 
 					// create new signature
-					_, e := activeUser.PanClient().WebapiPanClient().CreateSession(nil)
-					if e != nil {
-						logger.Verboseln("call CreateSession error in RefreshWebTokenInNeed: " + e.Error())
+					_, e1 := activeUser.PanClient().WebapiPanClient().CreateSession(nil)
+					if e1 != nil {
+						logger.Verboseln("call CreateSession error in RefreshWebTokenInNeed: " + e1.Error())
 					}
-					return true
+					return &panlogin.CommonResultError{
+						Code: 0,
+						Msg:  "",
+					}
 				} else {
 					// token refresh error
 					// if token has expired, callback plugin api for notify
 					if now.Unix() >= expiredTime.Unix() {
 						params.Result = "fail"
-						params.Message = e.Error()
+						params.Message = re.Msg
 						params.OldToken = activeUser.WebapiToken.AccessToken
 						if er1 := plugin.UserTokenRefreshFinishCallback(plugins.GetContext(activeUser), params); er1 != nil {
 							logger.Verbosef("UserTokenRefreshFinishCallback error: " + er1.Error())
 						}
 					}
 				}
+			} else {
+				return &panlogin.CommonResultError{
+					Code: 0,
+					Msg:  "web token is validate, not need to refresh",
+				}
 			}
 		}
 	}
-	return false
+	return panlogin.NewCommonResultError("activeUser is invalidate")
 }
 
 // RefreshOpenTokenInNeed 刷新 openapi access token
-func RefreshOpenTokenInNeed(activeUser *config.PanUser) bool {
+func RefreshOpenTokenInNeed(activeUser *config.PanUser) *panlogin.CommonResultError {
 	if activeUser == nil {
-		return false
+		return panlogin.NewCommonResultError("activeUser is nil")
 	}
 
+	// OpenAPI的token只有2个小时有效期，需要在token过期之前进行刷新并把获取到的新token存储在本地
 	// refresh expired openapi token
 	if activeUser.PanClient().OpenapiPanClient() != nil {
 		if activeUser.OpenapiToken != nil && len(activeUser.OpenapiToken.AccessToken) > 0 {
 			cz := time.FixedZone("CST", 8*3600) // 东8区
 			expiredTime := time.Unix(activeUser.OpenapiToken.Expired, 0).In(cz)
 			now := time.Now().In(cz)
-			if (expiredTime.Unix() - now.Unix()) <= (2 * 60) { // 有效期小于2min就刷新
+			if (expiredTime.Unix() - now.Unix()) <= (10 * 60) { // 有效期小于10min就刷新
 				pluginManger := plugins.NewPluginManager(config.GetPluginDir())
 				plugin, _ := pluginManger.GetPlugin()
 				params := &plugins.UserTokenRefreshFinishParams{
@@ -240,11 +253,15 @@ func RefreshOpenTokenInNeed(activeUser *config.PanUser) bool {
 				// need update refresh token
 				logger.Verboseln("openapi access token expired, get new from server")
 				loginHelper := panlogin.NewLoginHelper(config.DefaultTokenServiceWebHost)
-				wt, e := loginHelper.GetOpenapiNewToken(activeUser.TicketId, activeUser.UserId, activeUser.PanClient().OpenapiPanClient().GetAccessToken())
-				if e != nil {
-					logger.Verboseln("get openapi token from server error: ", e)
+				wt, re := loginHelper.GetOpenapiNewToken(activeUser.TicketId, activeUser.UserId, activeUser.PanClient().OpenapiPanClient().GetAccessToken())
+				if re != nil {
+					logger.Verboseln("get openapi token from server error: ", re.Msg)
+					if re.Code != panlogin.SUCCESS {
+						return re
+					}
 				}
 				if wt != nil {
+					// 存储新token到本地
 					params.Result = "success"
 					params.OldToken = activeUser.OpenapiToken.AccessToken
 					params.NewToken = wt.AccessToken
@@ -261,23 +278,109 @@ func RefreshOpenTokenInNeed(activeUser *config.PanUser) bool {
 						logger.Verbosef("UserTokenRefreshFinishCallback error: " + er1.Error())
 					}
 
-					return true
+					return &panlogin.CommonResultError{
+						Code: 0,
+						Msg:  "",
+					}
 				} else {
 					// token refresh error
 					// if token has expired, callback plugin api for notify
 					if now.Unix() >= expiredTime.Unix() {
 						params.Result = "fail"
-						params.Message = e.Error()
-						params.OldToken = activeUser.WebapiToken.AccessToken
+						params.Message = re.Msg
+						params.OldToken = activeUser.OpenapiToken.AccessToken
 						if er1 := plugin.UserTokenRefreshFinishCallback(plugins.GetContext(activeUser), params); er1 != nil {
 							logger.Verbosef("UserTokenRefreshFinishCallback error: " + er1.Error())
 						}
 					}
 				}
+			} else {
+				return &panlogin.CommonResultError{
+					Code: 0,
+					Msg:  "openapi token is validate, not need to refresh",
+				}
 			}
 		}
 	}
-	return false
+	return panlogin.NewCommonResultError("activeUser is invalidate")
+}
+
+// AutomaticallyRefreshTokenTask 自动刷新Token的后台任务
+func AutomaticallyRefreshTokenTask() {
+	go func() {
+		// 检测延迟时间（分钟）
+		delayMinuteTime := time.Duration(1) * time.Minute
+		//delayMinuteTime := time.Duration(10) * time.Second // for test
+		// 请求重试次数
+		attempt := 1
+		for {
+			// Token刷新进程，不管是CLI命令行模式，还是直接命令模式，本刷新任务都会执行
+			time.Sleep(delayMinuteTime) // 定时器，每1分钟调用一次
+
+			// 重新加载配置文件
+			ReloadConfigFunc(nil)
+			activeUser := config.Config.ActiveUser()
+			if activeUser != nil && activeUser.UserId != "" && activeUser.PanClient() != nil {
+				// 刷新Openapi端Token
+				errResult := RefreshOpenTokenInNeed(activeUser)
+				attempt += 1
+				if errResult != nil && errResult.Code == panlogin.SUCCESS {
+					// 刷新成功，重置定时器
+					attempt = 1
+					delayMinuteTime = time.Duration(1) * time.Minute
+
+					// 刷新Web端Token
+					RefreshWebTokenInNeed(activeUser)
+
+					// 保存新token到配置文件
+					SaveConfigFunc(nil)
+				} else {
+					// 刷新Token失败
+					logger.Verboseln("刷新Token失败：", errResult.Msg)
+					if errResult.Code == panlogin.ERROR_NEED_LOGIN_AGAIN {
+						// token已经失效，需要重新登录
+						logger.Verboseln("token已经失效，需要重新登录，退出自动刷新Token任务")
+						return
+					} else if errResult.Code == panlogin.ERROR {
+						// 访问错误
+						delayMinuteTime = ProgressiveBackoffAlg(attempt)
+					} else if errResult.Code == panlogin.ERROR_TOO_MANY_REQUESTS {
+						// 请求过于频繁
+						delayMinuteTime = ProgressiveBackoffAlg(attempt)
+					}
+				}
+			}
+		}
+	}()
+}
+
+// ProgressiveBackoffAlg 指数退降算法
+func ProgressiveBackoffAlg(attempt int) time.Duration {
+	maxRetries := 120
+	baseDelay := float64(1)
+	maxDelay := float64(1440)
+
+	if attempt >= maxRetries {
+		return time.Duration(maxDelay) * time.Minute
+	}
+
+	// 计算当前延迟
+	var delay float64
+	if attempt < 100 {
+		// 前 100 次：线性增长 + 小指数基数（缓慢增加）
+		delay = baseDelay * (1 + float64(attempt)/5) // 调整分母控制增长速度
+	} else {
+		// 100 次后：标准指数退避
+		delay = baseDelay * math.Pow(1.5, float64(attempt-100))
+		if delay > maxDelay {
+			delay = maxDelay
+		}
+	}
+
+	// 添加随机抖动（最多 20% 的扰动）
+	jitterSec := rand.Float64() * delay * 0.2 // ±20% 随机扰动
+	delay += jitterSec
+	return time.Duration(delay * float64(time.Minute))
 }
 
 func isIncludeFile(pattern string, fileName string) bool {

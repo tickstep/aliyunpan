@@ -24,6 +24,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/aliyunpan/internal/file/downloader"
 	"github.com/tickstep/aliyunpan/internal/functions/pandownload"
+	"github.com/tickstep/aliyunpan/internal/functions/panlogin"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
@@ -628,7 +629,8 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 	go func(flag *int32) {
 		for atomic.LoadInt32(flag) == 0 {
 			time.Sleep(time.Duration(1) * time.Minute)
-			if RefreshWebTokenInNeed(activeUser, config.Config.DeviceName) {
+			re := RefreshWebTokenInNeed(activeUser)
+			if re.Code == panlogin.SUCCESS {
 				logger.Verboseln("update access token for download task")
 			}
 		}

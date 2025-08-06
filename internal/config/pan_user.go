@@ -161,7 +161,7 @@ doOpenLoginAct:
 			tryRefreshOpenToken = false
 			wt, e := loginHelper.GetOpenapiNewToken(ticketId, userId, openapiToken.AccessToken)
 			if e != nil {
-				logger.Verboseln("get openapi token from server error: ", e)
+				logger.Verboseln("get openapi token from server error: ", e.Msg)
 				return nil, apierror.NewFailedApiError("get new openapi token error, try login again")
 			}
 			if wt != nil {
@@ -169,7 +169,11 @@ doOpenLoginAct:
 					AccessToken: wt.AccessToken,
 					Expired:     wt.Expired,
 				}
+
+				// 检查token有效期
 			}
+
+			// 回到token检测流程，必须确保token是有效
 			time.Sleep(time.Duration(1) * time.Second)
 			goto doOpenLoginAct
 		}
@@ -207,7 +211,7 @@ doWebLoginAct:
 				tryRefreshWebToken = false
 				wt, e := loginHelper.GetWebapiNewToken(ticketId, userId, webapiToken.AccessToken)
 				if e != nil {
-					logger.Verboseln("get web token from server error: ", e)
+					logger.Verboseln("get web token from server error: ", e.Msg)
 				}
 				if wt != nil {
 					webapiToken = &PanClientToken{
