@@ -43,8 +43,6 @@ func CmdLocalCd() cli.Command {
 	切换根目录:
 	aliyunpan lcd /
 `,
-		Before: command.ReloadConfigFunc,
-		After:  command.SaveConfigFunc,
 		Action: func(c *cli.Context) error {
 			if c.NArg() == 0 {
 				cli.ShowCommandHelp(c, c.Command.Name)

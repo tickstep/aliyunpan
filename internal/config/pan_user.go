@@ -152,16 +152,23 @@ doOpenLoginAct:
 		AccessToken: openapiToken.AccessToken,
 		ExpiredAt:   openapiToken.Expired,
 	}, nil)
+	openPanClient.SetAccessTokenRefreshCallback(func(userId string, newToken openapi.ApiToken) error {
+		// api层自动刷新Token，回调通知程序
+		logger.Verboseln("openapi token refresh, use new token")
+		openapiToken.AccessToken = newToken.AccessToken
+		openapiToken.Expired = newToken.ExpiredAt
+		return nil
+	})
 
 	// open api token maybe expired
 	// check & refresh new one
 	openUserInfo, err := openPanClient.GetUserInfo()
 	if err != nil {
-		if err.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshOpenToken {
+		if err.Code == apierror.ApiCodeTokenExpiredCode && tryRefreshOpenToken { // 如果是token过期，则尝试刷新
 			tryRefreshOpenToken = false
-			wt, e := loginHelper.GetOpenapiNewToken(ticketId, userId, openapiToken.AccessToken)
-			if e != nil {
-				logger.Verboseln("get openapi token from server error: ", e.Msg)
+			wt, re := loginHelper.GetOpenapiNewToken(ticketId, userId, openapiToken.AccessToken)
+			if re != nil {
+				logger.Verboseln("get openapi token from server error: ", re.Msg)
 				return nil, apierror.NewFailedApiError("get new openapi token error, try login again")
 			}
 			if wt != nil {
@@ -170,7 +177,7 @@ doOpenLoginAct:
 					Expired:     wt.Expired,
 				}
 
-				// 检查token有效期
+				// TODO: 检查token有效期
 			}
 
 			// 回到token检测流程，必须确保token是有效
@@ -250,6 +257,7 @@ doWebLoginAct:
 		WorkdirFileEntity: *aliyunpan.NewFileEntityForRootDir(),
 	}
 	u.PanClient().OpenapiPanClient().SetAccessTokenRefreshCallback(func(userId string, newToken openapi.ApiToken) error {
+		// api层自动刷新Token，回调通知程序
 		logger.Verboseln("openapi token refresh, update for user")
 		u.OpenapiToken = &PanClientToken{
 			AccessToken: newToken.AccessToken,

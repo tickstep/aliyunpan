@@ -70,6 +70,7 @@ func CmdLs() cli.Command {
 `,
 		Category: "阿里云盘",
 		Before:   ReloadConfigFunc,
+		After:    SaveConfigFunc,
 		Action: func(c *cli.Context) error {
 			if config.Config.ActiveUser() == nil {
 				fmt.Println("未登录账号")

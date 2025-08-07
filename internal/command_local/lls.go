@@ -18,7 +18,6 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
-	"github.com/tickstep/aliyunpan/internal/command"
 	"github.com/tickstep/library-go/converter"
 	"github.com/urfave/cli"
 	"log"
@@ -47,7 +46,6 @@ func CmdLocalLs() cli.Command {
 	详细列出 我的资源 内的文件和目录
 	aliyunpan lls /我的资源
 `,
-		Before: command.ReloadConfigFunc,
 		Action: func(c *cli.Context) error {
 			var (
 				orderBy     aliyunpan.FileOrderBy        = aliyunpan.FileOrderByUpdatedAt

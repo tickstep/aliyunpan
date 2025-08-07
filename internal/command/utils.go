@@ -308,6 +308,9 @@ func RefreshOpenTokenInNeed(activeUser *config.PanUser) *panlogin.CommonResultEr
 // AutomaticallyRefreshTokenTask 自动刷新Token的后台任务
 func AutomaticallyRefreshTokenTask() {
 	go func() {
+		// 延迟启动自动刷新Token任务，因为主程序启动的时候默认会进行Token的初始化和刷新，避免无效的并行初始化Token
+		time.Sleep(time.Duration(15) * time.Minute)
+
 		// 检测延迟时间（分钟）
 		delayMinuteTime := time.Duration(1) * time.Minute
 		//delayMinuteTime := time.Duration(10) * time.Second // for test
@@ -329,7 +332,7 @@ func AutomaticallyRefreshTokenTask() {
 					attempt = 1
 					delayMinuteTime = time.Duration(1) * time.Minute
 
-					// 刷新Web端Token
+					// 刷新Webapi端Token
 					RefreshWebTokenInNeed(activeUser)
 
 					// 保存新token到配置文件

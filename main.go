@@ -84,16 +84,14 @@ func init() {
 
 func checkLoginExpiredAndRelogin() {
 	command.ReloadConfigFunc(nil)
-	activeUser := config.Config.ActiveUser()
-	if activeUser == nil || activeUser.UserId == "" {
-		// maybe expired, try to login
-		command.TryLogin()
-	} else {
+	// 尝试登录
+	activeUser := command.TryLogin()
+	if activeUser != nil && activeUser.UserId != "" {
 		// 刷新过期Token并保存到配置文件
-		command.RefreshWebTokenInNeed(activeUser, config.Config.DeviceName)
+		command.RefreshWebTokenInNeed(activeUser)
 		command.RefreshOpenTokenInNeed(activeUser)
+		command.SaveConfigFunc(nil)
 	}
-	command.SaveConfigFunc(nil)
 }
 
 func main() {
@@ -103,20 +101,7 @@ func main() {
 	checkLoginExpiredAndRelogin()
 
 	// check token expired task
-	go func() {
-		for {
-			// Token刷新进程，不管是CLI命令行模式，还是直接命令模式，本刷新任务都会执行
-			time.Sleep(time.Duration(1) * time.Minute)
-			//time.Sleep(time.Duration(5) * time.Second)
-			for _, u := range config.Config.UserList {
-				if u.UserId == config.Config.ActiveUID {
-					if u.PanClient() != nil {
-						checkLoginExpiredAndRelogin()
-					}
-				}
-			}
-		}
-	}()
+	command.AutomaticallyRefreshTokenTask() // Token刷新进程，不管是CLI命令行模式，还是直接命令模式，本刷新任务都会执行
 
 	app := cli.NewApp()
 	cmder.SetApp(app)
@@ -253,8 +238,10 @@ func main() {
 		fmt.Printf("提示: Ctrl + A / E 跳转命令 首 / 尾.\n")
 		fmt.Printf("提示: 输入 help 获取帮助.\n")
 
-		// check update
+		// 刷新配置文件
 		command.ReloadConfigFunc(c)
+
+		// check update
 		if config.Config.UpdateCheckInfo.LatestVer != "" {
 			if utils.ParseVersionNum(config.Config.UpdateCheckInfo.LatestVer) > utils.ParseVersionNum(global.AppVersion) {
 				fmt.Printf("\n当前的软件版本为：%s， 现在有新版本 %s 可供更新，强烈推荐进行更新！（可以输入 update 命令进行更新）\n\n",
@@ -262,6 +249,7 @@ func main() {
 			}
 		}
 		go func() {
+			// 新版本检测异步任务
 			latestCheckTime := config.Config.UpdateCheckInfo.CheckTime
 			nowTime := time.Now().Unix()
 			secsOf12Hour := int64(43200)
@@ -279,14 +267,22 @@ func main() {
 			}
 		}()
 
-		for {
+		for { // 命令行交互进程，每一次命令执行都会进入到这个for循环
 			var (
 				prompt     string
 				activeUser = config.Config.ActiveUser()
 			)
 
 			if activeUser == nil {
+				// 尝试重新登录并获取新的token
 				activeUser = command.TryLogin()
+
+				// 自动登录成功
+				if activeUser != nil {
+					logger.Verboseln("自动重新登录成功")
+					// 保存新token到配置文件
+					command.SaveConfigFunc(c)
+				}
 			}
 
 			if activeUser != nil && activeUser.Nickname != "" {
@@ -309,14 +305,14 @@ func main() {
 				prompt = app.Name + " > "
 			}
 
-			commandLine, err := line.State.Prompt(prompt)
-			switch err {
+			commandLine, err1 := line.State.Prompt(prompt)
+			switch err1 {
 			case liner.ErrPromptAborted:
 				return
 			case nil:
 				// continue
 			default:
-				fmt.Println(err)
+				fmt.Println(err1)
 				return
 			}
 
@@ -332,9 +328,9 @@ func main() {
 
 			// 恢复原始终端状态
 			// 防止运行命令时程序被结束, 终端出现异常
-			line.Pause()
+			//line.Pause()
 			c.App.Run(s)
-			line.Resume()
+			//line.Resume()
 		}
 	}
 
