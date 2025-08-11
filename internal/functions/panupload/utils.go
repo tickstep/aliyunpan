@@ -87,7 +87,7 @@ func IsVideoFile(fileName string) bool {
 
 // CalcFilePreHash 计算文件 PreHash
 func CalcFilePreHash(filePath string) string {
-	localFile, _ := os.Open(filePath)
+	localFile, _ := os.OpenFile(filePath, os.O_RDONLY, 0)
 	defer localFile.Close()
 	bytes := make([]byte, 1024)
 	localFile.ReadAt(bytes, 0)
