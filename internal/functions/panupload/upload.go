@@ -72,6 +72,10 @@ func (pu *PanUpload) Precreate() (err error) {
 }
 
 func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int64, partEnd int64, r rio.ReaderLen64, uploadClient *requester.HTTPClient) (uploadDone bool, uperr error) {
+	if len(pu.uploadOpEntity.PartInfoList) == 0 {
+		return true, nil
+	}
+
 	pu.lazyInit()
 
 	// check url expired or not
