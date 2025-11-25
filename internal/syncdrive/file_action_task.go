@@ -528,6 +528,15 @@ func (f *FileActionTask) uploadFile(ctx context.Context) error {
 			return nil
 		}
 	} else {
+		if len(f.syncItem.UploadEntity.PartInfoList) == 0 {
+			// finished
+			f.syncItem.Status = SyncFileStatusSuccess
+			f.syncItem.StatusUpdateTime = utils.NowTimeStr()
+			f.syncFileDb.Update(f.syncItem)
+
+			PromptPrintln("上传完毕：" + f.syncItem.getPanFileFullPath())
+			return nil
+		}
 		// 检测链接是否过期
 		// check url expired or not
 		uploadUrl := f.syncItem.UploadEntity.PartInfoList[f.syncItem.UploadPartSeq].UploadURL
