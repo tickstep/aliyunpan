@@ -26,6 +26,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/plugins"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
+	"github.com/tickstep/aliyunpan/internal/ui"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
@@ -74,6 +75,9 @@ type (
 
 		// 下载文件记录器
 		FileRecorder *log.FileRecorder
+
+		UI         *ui.DownloadDashboard
+		skipReason string
 	}
 )
 
@@ -108,6 +112,21 @@ func (dtu *DownloadTaskUnit) verboseInfof(format string, a ...interface{}) {
 	if dtu.VerbosePrinter != nil {
 		dtu.VerbosePrinter.Infof(format, a...)
 	}
+}
+
+func (dtu *DownloadTaskUnit) logf(format string, a ...interface{}) {
+	if dtu.UI != nil {
+		dtu.UI.Logf(format, a...)
+		return
+	}
+	fmt.Printf(format, a...)
+}
+
+func (dtu *DownloadTaskUnit) setUIState(state ui.TaskState, message string) {
+	if dtu.UI == nil {
+		return
+	}
+	dtu.UI.MarkTaskState(dtu.taskInfo.Id(), state, message)
 }
 
 // download 执行下载文件（非目录）
@@ -189,6 +208,10 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	// 这里用共享变量的方式
 	isComplete := false
 	der.OnDownloadStatusEvent(func(status transfer.DownloadStatuser, workersCallback func(downloader.RangeWorkerFunc)) {
+		if dtu.UI != nil {
+			dtu.UI.UpdateTaskProgress(dtu.taskInfo.Id(), status.Downloaded(), status.TotalSize(), status.SpeedsPerSecond(), status.TimeLeft())
+			return
+		}
 		// 这里可能会下载结束了, 还会输出内容
 		builder := &strings.Builder{}
 		if dtu.IsPrintStatus {
@@ -236,7 +259,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	})
 
 	der.OnExecute(func() {
-		fmt.Printf("[%s] 下载开始\n", dtu.taskInfo.Id())
+		dtu.logf("[%s] 下载开始\n", dtu.taskInfo.Id())
 	})
 
 	err = der.Execute()
@@ -253,7 +276,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 			if removeErr != nil {
 				dtu.verboseInfof("[%s] remove file error: %s\n", dtu.taskInfo.Id(), removeErr)
 			}
-			fmt.Printf("[%s] 下载失败，文件不合法或者被禁止下载: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
+			dtu.logf("[%s] 下载失败，文件不合法或者被禁止下载: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
 			return err
 		} else {
 			// 下载发生错误
@@ -278,10 +301,12 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	if dtu.IsExecutedPermission {
 		err = file.Chmod(0766)
 		if err != nil {
-			fmt.Printf("[%s] 警告, 加执行权限错误: %s\n", dtu.taskInfo.Id(), err)
+			dtu.logf("[%s] 警告, 加执行权限错误: %s\n", dtu.taskInfo.Id(), err)
 		}
 	}
-	fmt.Printf("\n[%s] 下载完成, 保存位置: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
+	if dtu.UI == nil {
+		fmt.Printf("\n[%s] 下载完成, 保存位置: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
+	}
 
 	return nil
 }
@@ -321,7 +346,9 @@ func (dtu *DownloadTaskUnit) checkFileValid(result *taskframework.TaskUnitRunRes
 
 	if dtu.fileInfo.FileSize >= 128*converter.MB {
 		// 大文件, 输出一句提示消息
-		fmt.Printf("[%s] 开始检验文件有效性, 请稍候...\n", dtu.taskInfo.Id())
+		if dtu.UI == nil {
+			fmt.Printf("[%s] 开始检验文件有效性, 请稍候...\n", dtu.taskInfo.Id())
+		}
 	}
 
 	// 就在这里处理校验出错
@@ -334,7 +361,9 @@ func (dtu *DownloadTaskUnit) checkFileValid(result *taskframework.TaskUnitRunRes
 			// 文件不支持校验
 			result.ResultMessage = "检验文件有效性"
 			result.Err = err
-			fmt.Printf("[%s] 检验文件有效性: %s\n", dtu.taskInfo.Id(), err)
+			if dtu.UI == nil {
+				fmt.Printf("[%s] 检验文件有效性: %s\n", dtu.taskInfo.Id(), err)
+			}
 			return true
 		case ErrDownloadFileBanned:
 			// 违规文件
@@ -352,7 +381,9 @@ func (dtu *DownloadTaskUnit) checkFileValid(result *taskframework.TaskUnitRunRes
 		}
 	}
 
-	fmt.Printf("[%s] 检验文件有效性成功: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
+	if dtu.UI == nil {
+		fmt.Printf("[%s] 检验文件有效性成功: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
+	}
 	return true
 }
 
@@ -360,15 +391,20 @@ func (dtu *DownloadTaskUnit) OnRetry(lastRunResult *taskframework.TaskUnitRunRes
 	// 输出错误信息
 	if lastRunResult.Err == nil {
 		// result中不包含Err, 忽略输出
-		fmt.Printf("[%s] %s, 重试 %d/%d\n", dtu.taskInfo.Id(), lastRunResult.ResultMessage, dtu.taskInfo.Retry(), dtu.taskInfo.MaxRetry())
+		dtu.logf("[%s] %s, 重试 %d/%d\n", dtu.taskInfo.Id(), lastRunResult.ResultMessage, dtu.taskInfo.Retry(), dtu.taskInfo.MaxRetry())
 		return
 	}
-	fmt.Printf("[%s] %s, %s, 重试 %d/%d\n", dtu.taskInfo.Id(), lastRunResult.ResultMessage, lastRunResult.Err, dtu.taskInfo.Retry(), dtu.taskInfo.MaxRetry())
+	dtu.logf("[%s] %s, %s, 重试 %d/%d\n", dtu.taskInfo.Id(), lastRunResult.ResultMessage, lastRunResult.Err, dtu.taskInfo.Retry(), dtu.taskInfo.MaxRetry())
 }
 
 func (dtu *DownloadTaskUnit) OnSuccess(lastRunResult *taskframework.TaskUnitRunResult) {
 	// 执行插件
 	dtu.pluginCallback("success")
+	if dtu.skipReason != "" {
+		dtu.setUIState(ui.TaskSkipped, dtu.skipReason)
+	} else {
+		dtu.setUIState(ui.TaskSuccess, "")
+	}
 
 	// 下载文件数据记录
 	if config.Config.FileRecordConfig == "1" {
@@ -388,14 +424,19 @@ func (dtu *DownloadTaskUnit) OnSuccess(lastRunResult *taskframework.TaskUnitRunR
 func (dtu *DownloadTaskUnit) OnFailed(lastRunResult *taskframework.TaskUnitRunResult) {
 	// 失败
 	dtu.pluginCallback("fail")
+	failedMessage := lastRunResult.ResultMessage
+	if lastRunResult.Err != nil {
+		failedMessage = fmt.Sprintf("%s, %s", lastRunResult.ResultMessage, lastRunResult.Err)
+	}
+	dtu.setUIState(ui.TaskFailed, failedMessage)
 
 	// 失败
 	if lastRunResult.Err == nil {
 		// result中不包含Err, 忽略输出
-		fmt.Printf("[%s] %s\n", dtu.taskInfo.Id(), lastRunResult.ResultMessage)
+		dtu.logf("[%s] %s\n", dtu.taskInfo.Id(), lastRunResult.ResultMessage)
 		return
 	}
-	fmt.Printf("[%s] %s, %s\n", dtu.taskInfo.Id(), lastRunResult.ResultMessage, lastRunResult.Err)
+	dtu.logf("[%s] %s, %s\n", dtu.taskInfo.Id(), lastRunResult.ResultMessage, lastRunResult.Err)
 }
 
 func (dtu *DownloadTaskUnit) pluginCallback(result string) {
@@ -428,7 +469,7 @@ func (dtu *DownloadTaskUnit) OnComplete(lastRunResult *taskframework.TaskUnitRun
 }
 
 func (dtu *DownloadTaskUnit) OnCancel(lastRunResult *taskframework.TaskUnitRunResult) {
-
+	dtu.setUIState(ui.TaskCanceled, "取消: "+dtu.FilePanPath)
 }
 
 func (dtu *DownloadTaskUnit) RetryWait() time.Duration {
@@ -437,6 +478,7 @@ func (dtu *DownloadTaskUnit) RetryWait() time.Duration {
 
 func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	result = &taskframework.TaskUnitRunResult{}
+	dtu.setUIState(ui.TaskRunning, "")
 	// 获取文件信息
 	var apierr *apierror.ApiError
 	if dtu.fileInfo == nil || dtu.taskInfo.Retry() > 0 {
@@ -453,10 +495,15 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		}
 		time.Sleep(1 * time.Second)
 	}
+	if dtu.UI != nil && dtu.fileInfo != nil {
+		dtu.UI.UpdateTaskInfo(dtu.taskInfo.Id(), dtu.fileInfo.FileName, dtu.fileInfo.FileSize, dtu.fileInfo.IsFile())
+	}
 
 	// 输出文件信息
-	fmt.Print("\n")
-	fmt.Printf("[%s] ----\n%s\n", dtu.taskInfo.Id(), dtu.fileInfo.String())
+	if dtu.UI == nil {
+		fmt.Print("\n")
+		fmt.Printf("[%s] ----\n%s\n", dtu.taskInfo.Id(), dtu.fileInfo.String())
+	}
 
 	// 调用插件
 	ft := "file"
@@ -481,7 +528,8 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	if downloadFilePrepareResult, er := plugin.DownloadFilePrepareCallback(plugins.GetContext(config.Config.ActiveUser()), pluginParam); er == nil && downloadFilePrepareResult != nil {
 		if strings.Compare("yes", downloadFilePrepareResult.DownloadApproved) != 0 {
 			// skip download this file
-			fmt.Printf("插件取消了该文件下载: %s\n", dtu.fileInfo.Path)
+			dtu.logf("插件取消了该文件下载: %s\n", dtu.fileInfo.Path)
+			dtu.setUIState(ui.TaskCanceled, "取消: "+dtu.fileInfo.Path)
 			result.Succeed = false
 			result.Cancel = true
 			return
@@ -490,7 +538,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			targetSaveRelativePath := strings.TrimPrefix(downloadFilePrepareResult.LocalFilePath, "/")
 			targetSaveRelativePath = strings.TrimPrefix(targetSaveRelativePath, "\\")
 			dtu.SavePath = path.Clean(dtu.OriginSaveRootPath + string(os.PathSeparator) + targetSaveRelativePath)
-			fmt.Printf("插件修改文件下载保存路径为: %s\n", dtu.SavePath)
+			dtu.logf("插件修改文件下载保存路径为: %s\n", dtu.SavePath)
 		}
 	}
 
@@ -563,7 +611,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 
 			// 是否排除下载
 			if utils.IsExcludeFile(fileList[k].Path, &dtu.Cfg.ExcludeNames) {
-				fmt.Printf("排除文件: %s\n", fileList[k].Path)
+				dtu.logf("排除文件: %s\n", fileList[k].Path)
 				continue
 			}
 
@@ -580,10 +628,14 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 			subUnit.FilePanSource = dtu.FilePanSource
 			subUnit.FilePanPath = fileList[k].Path
 			subUnit.SavePath = filepath.Join(dtu.OriginSaveRootPath, fileList[k].Path) // 保存位置
+			subUnit.skipReason = ""
 
 			// 加入父队列，按照队列调度进行下载
 			info := dtu.ParentTaskExecutor.Append(&subUnit, dtu.taskInfo.MaxRetry())
-			fmt.Printf("[%s] 加入下载队列: %s\n", info.Id(), fileList[k].Path)
+			if dtu.UI != nil {
+				dtu.UI.RegisterTask(info.Id(), fileList[k].Path, fileList[k].FileSize, fileList[k].IsFile())
+			}
+			dtu.logf("[%s] 加入下载队列: %s\n", info.Id(), fileList[k].Path)
 		}
 
 		// 本下载任务执行成功
@@ -591,7 +643,7 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		return
 	}
 
-	fmt.Printf("[%s] 准备下载: %s\n", dtu.taskInfo.Id(), dtu.FilePanPath)
+	dtu.logf("[%s] 准备下载: %s\n", dtu.taskInfo.Id(), dtu.FilePanPath)
 
 	//if !dtu.IsOverwrite && FileExist(dtu.SavePath) {
 	//	fmt.Printf("[%s] 文件已经存在: %s, 跳过...\n", dtu.taskInfo.Id(), dtu.SavePath)
@@ -600,12 +652,14 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	//}
 	// 支持符号文件，逻辑和注释代码一致
 	if !dtu.IsOverwrite && SymlinkFileExist(dtu.SavePath, dtu.OriginSaveRootPath) {
-		fmt.Printf("[%s] 文件已经存在: %s, 跳过...\n", dtu.taskInfo.Id(), dtu.SavePath)
+		dtu.skipReason = "文件已存在，跳过: " + dtu.SavePath
+		dtu.setUIState(ui.TaskSkipped, dtu.skipReason)
+		dtu.logf("[%s] 文件已经存在: %s, 跳过...\n", dtu.taskInfo.Id(), dtu.SavePath)
 		result.Succeed = true // 执行成功
 		return
 	}
 
-	fmt.Printf("[%s] 将会下载到路径: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
+	dtu.logf("[%s] 将会下载到路径: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
 
 	var ok bool
 	er := dtu.download()

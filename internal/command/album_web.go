@@ -26,6 +26,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/functions/pandownload"
 	"github.com/tickstep/aliyunpan/internal/functions/panlogin"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
+	"github.com/tickstep/aliyunpan/internal/ui"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
@@ -688,8 +689,6 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 		}
 	}
 
-	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s\n\n", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
-
 	var (
 		panClient = activeUser.PanClient()
 	)
@@ -707,6 +706,25 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 	// 全局速度统计
 	globalSpeedsStat := &speeds.Speeds{}
 
+	var dashboard *ui.DownloadDashboard
+	if options.ShowProgress && !options.IsPrintStatus && ui.IsTerminal(os.Stdout) {
+		dashboard = ui.NewDownloadDashboard(cfg.MaxParallel, globalSpeedsStat, &ui.DownloadDashboardOptions{
+			Title: "AliyunPan CLI - 下载中心",
+		})
+	}
+	logf := func(format string, a ...interface{}) {
+		if dashboard != nil {
+			dashboard.Logf(format, a...)
+			return
+		}
+		fmt.Printf(format, a...)
+	}
+	if dashboard != nil {
+		dashboard.Logf("[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
+	} else {
+		fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 下载缓存为: %s\n\n", options.Parallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
+	}
+
 	// 处理队列
 	for k := range albumNames {
 		record := getAlbumFromName(activeUser, albumNames[k])
@@ -718,11 +736,11 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 			AlbumId: record.AlbumId,
 		})
 		if er != nil {
-			fmt.Printf("获取相簿文件出错，请稍后重试: %s\n", albumNames[k])
+			logf("获取相簿文件出错，请稍后重试: %s\n", albumNames[k])
 			continue
 		}
 		if fileList == nil || len(fileList) == 0 {
-			fmt.Printf("相簿里面没有文件: %s\n", albumNames[k])
+			logf("相簿里面没有文件: %s\n", albumNames[k])
 			continue
 		}
 		for _, f := range fileList {
@@ -746,6 +764,7 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 				DriveId:              f.DriveId, // 必须使用文件的DriveId,因为一个相簿的文件会来自多个网盘（资源库/备份盘）
 				GlobalSpeedsStat:     globalSpeedsStat,
 				FileRecorder:         nil,
+				UI:                   dashboard,
 			}
 
 			// TODO: 相册下载需要重构
@@ -762,7 +781,10 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 				unit.SavePath = GetActiveUser().GetSavePath(f.Path)
 			}
 			info := executor.Append(&unit, options.MaxRetry)
-			fmt.Printf("[%s] 加入下载队列: %s\n", info.Id(), f.Path)
+			if dashboard != nil {
+				dashboard.RegisterTask(info.Id(), f.Path, f.FileSize, f.IsFile())
+			}
+			logf("[%s] 加入下载队列: %s\n", info.Id(), f.Path)
 		}
 	}
 
@@ -770,7 +792,13 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 	statistic.StartTimer()
 
 	// 开始执行
+	if dashboard != nil {
+		dashboard.Start()
+	}
 	executor.Execute()
+	if dashboard != nil {
+		dashboard.Close()
+	}
 
 	fmt.Printf("\n下载结束, 时间: %s, 数据总量: %s\n", utils.ConvertTime(statistic.Elapsed()), converter.ConvertFileSize(statistic.TotalSize(), 2))
 
