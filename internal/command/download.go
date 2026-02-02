@@ -23,6 +23,7 @@ import (
 	"github.com/tickstep/aliyunpan/internal/global"
 	"github.com/tickstep/aliyunpan/internal/log"
 	"github.com/tickstep/aliyunpan/internal/taskframework"
+	"github.com/tickstep/aliyunpan/internal/ui"
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/aliyunpan/library/requester/transfer"
 	"github.com/tickstep/library-go/converter"
@@ -326,6 +327,8 @@ func RunDownload(paths []string, options *DownloadOptions) {
 
 	// 多用户下载的辅助账号列表
 	var subPanClientList []*config.PanClient
+	var multiUserNotice string
+	var multiUserErrorNotice string
 	if options.IsMultiUserDownload { // 多用户下载
 		c := config.Config
 		for _, u := range config.Config.UserList {
@@ -349,21 +352,19 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		}
 
 		if subPanClientList == nil || len(subPanClientList) == 0 {
-			fmt.Printf("\n当前登录用户只有一个，无法启用多用户联合下载\n")
+			multiUserErrorNotice = "当前登录用户只有一个，无法启用多用户联合下载"
 			subPanClientList = nil
 		}
 	}
 	if subPanClientList != nil || len(subPanClientList) > 0 {
 		// 已启用多用户下载
 		userCount := len(subPanClientList) + 1
-		fmt.Printf("\n*** 已启用多用户联合下载，用户数: %d ***\n", userCount)
+		multiUserNotice = fmt.Sprintf("*** 已启用多用户联合下载，用户数: %d ***", userCount)
 		// 多用户下载，并发数必须为1，以获得最大下载速度
 		options.Parallel = 1
 		// 阿里OpenAPI规定：文件分片下载的并发数为3，即某用户使用 App 时，可以同时下载 1 个文件的 3 个分片，或者同时下载 3 个文件的各 1 个分片。
 		options.SliceParallel = userCount * 3
 	}
-	fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 单文件下载分片线程数为: %d, 下载缓存为: %s\n", options.Parallel, options.SliceParallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
-
 	var (
 		panClient = activeUser.PanClient()
 	)
@@ -382,6 +383,39 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	// 全局速度统计
 	globalSpeedsStat := &speeds.Speeds{}
 
+	var dashboard *ui.DownloadDashboard
+	if options.ShowProgress && !options.IsPrintStatus && ui.IsTerminal(os.Stdout) {
+		dashboard = ui.NewDownloadDashboard(cfg.MaxParallel, globalSpeedsStat, &ui.DownloadDashboardOptions{
+			Title: "AliyunPan CLI - 下载中心",
+		})
+	}
+	logf := func(format string, a ...interface{}) {
+		if dashboard != nil {
+			dashboard.Logf(format, a...)
+			return
+		}
+		fmt.Printf(format, a...)
+	}
+	if multiUserErrorNotice != "" {
+		if dashboard != nil {
+			dashboard.Logf("%s", multiUserErrorNotice)
+		} else {
+			fmt.Printf("\n%s\n", multiUserErrorNotice)
+		}
+	}
+	if multiUserNotice != "" {
+		if dashboard != nil {
+			dashboard.Logf("%s", multiUserNotice)
+		} else {
+			fmt.Printf("\n%s\n", multiUserNotice)
+		}
+	}
+	if dashboard != nil {
+		dashboard.Logf("[0] 当前文件下载最大并发量为: %d, 单文件下载分片线程数为: %d, 下载缓存为: %s", options.Parallel, options.SliceParallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
+	} else {
+		fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 单文件下载分片线程数为: %d, 下载缓存为: %s\n", options.Parallel, options.SliceParallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
+	}
+
 	// 下载记录器
 	fileRecorder := log.NewFileRecorder(config.GetLogDir() + "/download_file_records.csv")
 
@@ -390,12 +424,12 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		// 使用通配符匹配
 		fileList, err2 := matchPathByShellPattern(options.DriveId, paths[k])
 		if err2 != nil {
-			fmt.Printf("获取文件出错，请稍后重试: %s\n", paths[k])
+			logf("获取文件出错，请稍后重试: %s\n", paths[k])
 			continue
 		}
 		if fileList == nil || len(fileList) == 0 {
 			// 文件不存在
-			fmt.Printf("文件不存在: %s\n", paths[k])
+			logf("文件不存在: %s\n", paths[k])
 			continue
 		}
 		// 排序，按名称排序，从小到大
@@ -408,7 +442,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 
 			// 是否排除下载
 			if utils.IsExcludeFile(f.Path, &newCfg.ExcludeNames) {
-				fmt.Printf("排除文件: %s\n", f.Path)
+				logf("排除文件: %s\n", f.Path)
 				continue
 			}
 
@@ -431,6 +465,7 @@ func RunDownload(paths []string, options *DownloadOptions) {
 				DriveId:              options.DriveId,
 				GlobalSpeedsStat:     globalSpeedsStat,
 				FileRecorder:         fileRecorder,
+				UI:                   dashboard,
 			}
 
 			// 设置储存的路径
@@ -443,7 +478,10 @@ func RunDownload(paths []string, options *DownloadOptions) {
 				unit.SavePath = GetActiveUser().GetSavePath(f.Path)
 			}
 			info := executor.Append(&unit, options.MaxRetry)
-			fmt.Printf("[%s] 加入下载队列: %s\n", info.Id(), f.Path)
+			if dashboard != nil {
+				dashboard.RegisterTask(info.Id(), f.Path, f.FileSize, f.IsFile())
+			}
+			logf("[%s] 加入下载队列: %s\n", info.Id(), f.Path)
 		}
 	}
 
@@ -451,7 +489,13 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	statistic.StartTimer()
 
 	// 开始执行
+	if dashboard != nil {
+		dashboard.Start()
+	}
 	executor.Execute()
+	if dashboard != nil {
+		dashboard.Close()
+	}
 
 	fmt.Printf("\n下载结束, 时间: %s, 数据总量: %s\n", utils.ConvertTime(statistic.Elapsed()), converter.ConvertFileSize(statistic.TotalSize(), 2))
 
