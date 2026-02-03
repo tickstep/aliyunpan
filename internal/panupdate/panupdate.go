@@ -137,18 +137,11 @@ func GetLatestReleaseInfo(showPrompt bool) *ReleaseInfo {
 	client.SetKeepAlive(true)
 
 	// check tickstep srv
-	var tsReleaseInfo *ReleaseInfo = nil
-	for idx := 0; idx < 3; idx++ {
-		tsReleaseInfo = getReleaseFromTicstep(client, showPrompt)
-		if tsReleaseInfo != nil {
-			break
-		}
-		time.Sleep(time.Duration(5) * time.Second)
-	}
+	var tsReleaseInfo *ReleaseInfo = getReleaseFromTicstep(client, showPrompt)
 
 	// github
 	var ghReleaseInfo *ReleaseInfo = nil
-	for idx := 0; idx < 3; idx++ {
+	for idx := 0; idx < 2; idx++ {
 		ghReleaseInfo = getReleaseFromGithub(client, showPrompt)
 		if ghReleaseInfo != nil {
 			break
@@ -158,7 +151,7 @@ func GetLatestReleaseInfo(showPrompt bool) *ReleaseInfo {
 
 	var releaseInfo *ReleaseInfo = nil
 	if config.Config.UpdateCheckInfo.PreferUpdateSrv == "tickstep" {
-		// theoretically, tickstep server will be more faster at mainland
+		// theoretically, tickstep server will be faster at mainland
 		releaseInfo = tsReleaseInfo
 	} else {
 		releaseInfo = ghReleaseInfo
