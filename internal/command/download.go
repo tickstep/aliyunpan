@@ -55,6 +55,7 @@ type (
 		DriveId              string
 		ExcludeNames         []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行下载，支持正则表达式
 		IsMultiUserDownload  bool     // 是否启用多用户联合下载
+		IsUseUIDashboard     bool     // 是否使用UI下载面板显示下载进度
 	}
 
 	// LocateDownloadOption 获取下载链接可选参数
@@ -149,22 +150,10 @@ func CmdDownload() cli.Command {
 				DriveId:              parseDriveId(c),
 				ExcludeNames:         c.StringSlice("exn"),
 				IsMultiUserDownload:  c.Bool("md"),
+				IsUseUIDashboard:     c.Bool("ui"),
 			}
 
-			// 获取下载文件锁，保证下载操作单实例
-			//locker := filelocker.NewFileLocker(config.GetLockerDir() + "/aliyunpan-download")
-			//if e := filelocker.LockFile(locker, 0755, true, 5*time.Second); e != nil {
-			//	logger.Verboseln(e)
-			//	fmt.Println("本应用其他实例正在执行下载，请先停止或者等待其完成")
-			//	return nil
-			//}
-
 			RunDownload(c.Args(), do)
-
-			// 释放文件锁
-			//if locker != nil {
-			//	filelocker.UnlockFile(locker)
-			//}
 			return nil
 		},
 		Flags: []cli.Flag{
@@ -224,6 +213,10 @@ func CmdDownload() cli.Command {
 			cli.BoolFlag{
 				Name:  "md",
 				Usage: "(BETA) Multi-User Download，使用多用户联合下载，可以对单一文件叠加所有登录用户的下载速度",
+			},
+			cli.BoolFlag{
+				Name:  "ui",
+				Usage: "(BETA) 使用UI面板显示下载详情和进度，更加直观和友好",
 			},
 		},
 	}
@@ -327,8 +320,6 @@ func RunDownload(paths []string, options *DownloadOptions) {
 
 	// 多用户下载的辅助账号列表
 	var subPanClientList []*config.PanClient
-	var multiUserNotice string
-	var multiUserErrorNotice string
 	if options.IsMultiUserDownload { // 多用户下载
 		c := config.Config
 		for _, u := range config.Config.UserList {
@@ -352,19 +343,20 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		}
 
 		if subPanClientList == nil || len(subPanClientList) == 0 {
-			multiUserErrorNotice = "当前登录用户只有一个，无法启用多用户联合下载"
+			fmt.Printf("\n当前登录用户只有一个，无法启用多用户联合下载\n")
 			subPanClientList = nil
 		}
 	}
 	if subPanClientList != nil || len(subPanClientList) > 0 {
 		// 已启用多用户下载
 		userCount := len(subPanClientList) + 1
-		multiUserNotice = fmt.Sprintf("*** 已启用多用户联合下载，用户数: %d ***", userCount)
+		fmt.Printf("\n*** 已启用多用户联合下载，用户数: %d ***\n", userCount)
 		// 多用户下载，并发数必须为1，以获得最大下载速度
 		options.Parallel = 1
 		// 阿里OpenAPI规定：文件分片下载的并发数为3，即某用户使用 App 时，可以同时下载 1 个文件的 3 个分片，或者同时下载 3 个文件的各 1 个分片。
 		options.SliceParallel = userCount * 3
 	}
+
 	var (
 		panClient = activeUser.PanClient()
 	)
@@ -383,10 +375,13 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	// 全局速度统计
 	globalSpeedsStat := &speeds.Speeds{}
 
-	var dashboard *ui.DownloadDashboard
-	if options.ShowProgress && !options.IsPrintStatus && ui.IsTerminal(os.Stdout) {
+	// 下载统计UI面板
+	var dashboard *ui.DownloadDashboard = nil
+	if options.IsUseUIDashboard && options.ShowProgress && !options.IsPrintStatus && ui.IsTerminal(os.Stdout) {
 		dashboard = ui.NewDownloadDashboard(cfg.MaxParallel, globalSpeedsStat, &ui.DownloadDashboardOptions{
-			Title: "AliyunPan CLI - 下载中心",
+			Title:       "下载统计UI面板",
+			ActiveSlots: 3,  // 下载文件进度展示，最大同时展示3个
+			MaxHistory:  50, // 下载日志显示，最多同时显示50条，这个会按照窗口大小进行自适应显示
 		})
 	}
 	logf := func(format string, a ...interface{}) {
@@ -396,28 +391,12 @@ func RunDownload(paths []string, options *DownloadOptions) {
 		}
 		fmt.Printf(format, a...)
 	}
-	if multiUserErrorNotice != "" {
-		if dashboard != nil {
-			dashboard.Logf("%s", multiUserErrorNotice)
-		} else {
-			fmt.Printf("\n%s\n", multiUserErrorNotice)
-		}
-	}
-	if multiUserNotice != "" {
-		if dashboard != nil {
-			dashboard.Logf("%s", multiUserNotice)
-		} else {
-			fmt.Printf("\n%s\n", multiUserNotice)
-		}
-	}
-	if dashboard != nil {
-		dashboard.Logf("[0] 当前文件下载最大并发量为: %d, 单文件下载分片线程数为: %d, 下载缓存为: %s", options.Parallel, options.SliceParallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
-	} else {
-		fmt.Printf("\n[0] 当前文件下载最大并发量为: %d, 单文件下载分片线程数为: %d, 下载缓存为: %s\n", options.Parallel, options.SliceParallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
-	}
 
 	// 下载记录器
 	fileRecorder := log.NewFileRecorder(config.GetLogDir() + "/download_file_records.csv")
+
+	// 输出当前下载配置信息
+	logf("\n[0] 当前文件下载最大并发量为: %d, 单文件下载分片线程数为: %d, 下载缓存为: %s\n", options.Parallel, options.SliceParallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
 
 	// 处理队列
 	for k := range paths {
@@ -488,15 +467,20 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	// 开始计时
 	statistic.StartTimer()
 
-	// 开始执行
+	// 启动UI面板显示
 	if dashboard != nil {
 		dashboard.Start()
 	}
+
+	// 开始执行
 	executor.Execute()
+
+	// 关闭UI面板
 	if dashboard != nil {
 		dashboard.Close()
 	}
 
+	// 完成下载，输出统计结果
 	fmt.Printf("\n下载结束, 时间: %s, 数据总量: %s\n", utils.ConvertTime(statistic.Elapsed()), converter.ConvertFileSize(statistic.TotalSize(), 2))
 
 	// 输出失败的文件列表

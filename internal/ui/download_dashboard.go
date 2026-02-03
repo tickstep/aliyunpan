@@ -1,4 +1,4 @@
-// Copyright (c) 2026.
+// Copyright (c) 2020 tickstep.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ type DownloadDashboardOptions struct {
 	Output      io.Writer
 }
 
+// DownloadDashboard 下载任务统计面板使用了很多ANSI转义序列。并不是所有的终端都支持ANSI转义序列，所以需要做兼容性处理。
 type DownloadDashboard struct {
 	mu           sync.Mutex
 	tasks        map[string]*downloadTask
@@ -74,9 +75,9 @@ type downloadTask struct {
 	state      TaskState
 	message    string
 	isFile     bool
-	hasType    bool
 }
 
+// NewDownloadDashboard 创建下载任务统计面板
 func NewDownloadDashboard(parallel int, globalSpeeds *speeds.Speeds, opts *DownloadDashboardOptions) *DownloadDashboard {
 	if parallel < 1 {
 		parallel = 1
@@ -89,7 +90,7 @@ func NewDownloadDashboard(parallel int, globalSpeeds *speeds.Speeds, opts *Downl
 		parallel:     parallel,
 		activeSlots:  5,
 		globalSpeeds: globalSpeeds,
-		title:        "AliyunPan Download",
+		title:        "aliyunpan下载统计",
 		renderEvery:  500 * time.Millisecond,
 		stopCh:       make(chan struct{}),
 		doneCh:       make(chan struct{}),
@@ -115,6 +116,7 @@ func NewDownloadDashboard(parallel int, globalSpeeds *speeds.Speeds, opts *Downl
 	return db
 }
 
+// Start 启动面板
 func (db *DownloadDashboard) Start() {
 	if db == nil {
 		return
@@ -122,7 +124,7 @@ func (db *DownloadDashboard) Start() {
 	db.startOnce.Do(func() {
 		db.startTime = time.Now()
 		enableVirtualTerminalProcessing()
-		fmt.Fprint(db.out, "\x1b[?25l")
+		fmt.Fprint(db.out, "\x1b[?25l") // 隐藏光标
 		db.render()
 		ticker := time.NewTicker(db.renderEvery)
 		go func() {
@@ -131,6 +133,9 @@ func (db *DownloadDashboard) Start() {
 			for {
 				select {
 				case <-db.stopCh:
+					// 延迟1秒
+					time.Sleep(1 * time.Second)
+					// 渲染
 					db.render()
 					return
 				case <-ticker.C:
@@ -141,6 +146,7 @@ func (db *DownloadDashboard) Start() {
 	})
 }
 
+// Close 关闭面板
 func (db *DownloadDashboard) Close() {
 	if db == nil {
 		return
@@ -148,10 +154,11 @@ func (db *DownloadDashboard) Close() {
 	db.closeOnce.Do(func() {
 		close(db.stopCh)
 		<-db.doneCh
-		fmt.Fprint(db.out, "\x1b[?25h")
+		fmt.Fprint(db.out, "\x1b[?25h") // 显示光标
 	})
 }
 
+// RegisterTask 注册任务信息
 func (db *DownloadDashboard) RegisterTask(id, path string, total int64, isFile bool) {
 	if db == nil || id == "" {
 		return
@@ -168,10 +175,10 @@ func (db *DownloadDashboard) RegisterTask(id, path string, total int64, isFile b
 	if total > 0 {
 		task.total = total
 	}
-	task.hasType = true
 	task.isFile = isFile
 }
 
+// UpdateTaskInfo 更新任务信息
 func (db *DownloadDashboard) UpdateTaskInfo(id, name string, total int64, isFile bool) {
 	if db == nil || id == "" {
 		return
@@ -185,10 +192,10 @@ func (db *DownloadDashboard) UpdateTaskInfo(id, name string, total int64, isFile
 	if total > 0 {
 		task.total = total
 	}
-	task.hasType = true
 	task.isFile = isFile
 }
 
+// UpdateTaskProgress 更新任务进度
 func (db *DownloadDashboard) UpdateTaskProgress(id string, downloaded, total, speed int64, eta time.Duration) {
 	if db == nil || id == "" {
 		return
@@ -204,6 +211,7 @@ func (db *DownloadDashboard) UpdateTaskProgress(id string, downloaded, total, sp
 	task.eta = eta
 }
 
+// MarkTaskState 标记任务状态
 func (db *DownloadDashboard) MarkTaskState(id string, state TaskState, message string) {
 	if db == nil || id == "" {
 		return
@@ -221,6 +229,7 @@ func (db *DownloadDashboard) MarkTaskState(id string, state TaskState, message s
 	}
 }
 
+// Logf 增加日志
 func (db *DownloadDashboard) Logf(format string, a ...interface{}) {
 	if db == nil {
 		return
@@ -230,6 +239,10 @@ func (db *DownloadDashboard) Logf(format string, a ...interface{}) {
 	if msg == "" {
 		return
 	}
+	// 去掉开头的换行符
+	msg = strings.TrimPrefix(msg, "\n")
+	// 去掉回车换行符，UI面板的日志只能单行显示
+	msg = strings.ReplaceAll(msg, "\n", " ")
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	db.appendHistoryLocked(msg)
@@ -281,6 +294,7 @@ func (db *DownloadDashboard) defaultHistoryMessage(task *downloadTask, message s
 	}
 }
 
+// render 渲染面板
 func (db *DownloadDashboard) render() {
 	if db == nil {
 		return
@@ -292,13 +306,17 @@ func (db *DownloadDashboard) render() {
 	innerWidth := width - 2
 	snapshot := db.snapshot()
 
+	// 统计总览
 	headerLines := db.headerLines(snapshot, innerWidth)
-	activeLines := db.activeLines(snapshot, innerWidth)
-	activeTitle := db.activeTitle(snapshot)
 
+	// 下载任务队列详情
+	//activeTitle := db.activeTitle(snapshot)
+	activeLines := db.activeLines(snapshot, innerWidth)
+
+	// 下载日志
 	headerHeight := len(headerLines) + 2
-	activeHeight := len(activeLines) + 4
-	historyBase := 4
+	activeHeight := len(activeLines) + 1
+	historyBase := 3
 	minHistory := 1
 	minHeight := headerHeight + activeHeight + historyBase + minHistory
 	if height < minHeight {
@@ -310,12 +328,11 @@ func (db *DownloadDashboard) render() {
 	}
 	historyBody := db.historyLines(snapshot, innerWidth, historyLines)
 
+	// 拼接并格式化输出
 	builder := &strings.Builder{}
-	builder.WriteString("\x1b[H\x1b[2J")
+	builder.WriteString("\x1b[H\x1b[2J") // 清屏操作
 	builder.WriteString(renderBox(headerLines, width))
-	builder.WriteString("\n")
-	builder.WriteString(renderTitledBox(activeTitle, activeLines, width))
-	builder.WriteString("\n")
+	builder.WriteString(renderTitledBox("ActiveDownloads", activeLines, width))
 	builder.WriteString(renderTitledBox("History", historyBody, width))
 
 	fmt.Fprint(db.out, builder.String())
@@ -351,14 +368,16 @@ func renderBox(lines []string, width int) string {
 	builder.WriteString("\u2510")
 	for _, line := range lines {
 		builder.WriteString("\n")
-		builder.WriteString("\u2502")
+		builder.WriteString("\u2502") // 左边框
 		builder.WriteString(fitLine(line, innerWidth))
-		builder.WriteString("\u2502")
+		builder.WriteString("\u2502") // 右边框
 	}
 	builder.WriteString("\n")
-	builder.WriteString("\u2514")
+	builder.WriteString("\u2502") // 左边框
+	//builder.WriteString("\u2514") // 左下角
 	builder.WriteString(strings.Repeat("\u2500", innerWidth))
-	builder.WriteString("\u2518")
+	builder.WriteString("\u2502") // 右边框
+	//builder.WriteString("\u2518") // 右下角
 	return builder.String()
 }
 
@@ -368,25 +387,26 @@ func renderTitledBox(title string, body []string, width int) string {
 	}
 	innerWidth := width - 2
 	builder := &strings.Builder{}
-	builder.WriteString("\u250c")
-	builder.WriteString(strings.Repeat("\u2500", innerWidth))
-	builder.WriteString("\u2510\n")
-	builder.WriteString("\u2502")
-	builder.WriteString(fitLine(title, innerWidth))
-	builder.WriteString("\u2502\n")
-	builder.WriteString("\u251c")
-	builder.WriteString(strings.Repeat("\u2500", innerWidth))
-	builder.WriteString("\u2524")
+
 	for _, line := range body {
 		builder.WriteString("\n")
-		builder.WriteString("\u2502")
-		builder.WriteString(fitLine(line, innerWidth))
-		builder.WriteString("\u2502")
+		builder.WriteString("\u2502")                  // 左边框
+		builder.WriteString(fitLine(line, innerWidth)) // 内容，使用空格补足宽度
+		builder.WriteString("\u2502")                  // 右边框
 	}
+
 	builder.WriteString("\n")
-	builder.WriteString("\u2514")
-	builder.WriteString(strings.Repeat("\u2500", innerWidth))
-	builder.WriteString("\u2518")
+	if strings.HasPrefix(title, "History") {
+		builder.WriteString("\u2514") // 左下角
+	} else {
+		builder.WriteString("\u2502") // 左边框
+	}
+	builder.WriteString(strings.Repeat("\u2500", innerWidth)) // 表格横线
+	if strings.HasPrefix(title, "History") {
+		builder.WriteString("\u2518") // 右下角
+	} else {
+		builder.WriteString("\u2502") // 右边框
+	}
 	return builder.String()
 }
 
@@ -400,46 +420,43 @@ func (db *DownloadDashboard) headerLines(snapshot dashboardSnapshot, innerWidth 
 		left = formatDurationShort(time.Duration((total-downloaded)/speed) * time.Second)
 	}
 
-	status := "Running"
+	status := "下载中"
 	if totalFiles > 0 && doneFiles >= totalFiles {
 		if failedFiles > 0 {
-			status = "Completed (errors)"
+			status = "已完成 (有错误)"
 		} else {
-			status = "Completed"
+			status = "已完成"
 		}
 	}
 
-	headerLine := fmt.Sprintf("%s [%s]", db.title, status)
-	line1 := fitLine(headerLine, innerWidth)
-
 	speedStr := converter.ConvertFileSize(speed, 2) + "/s"
-	line2 := fmt.Sprintf("Total Speed: %s | Files: %d/%d | Failed: %d | Elapsed: %s | Left: %s",
-		speedStr, doneFiles, totalFiles, failedFiles, formatDurationShort(elapsed), left)
-	line2 = fitLine(line2, innerWidth)
+	line1 := fmt.Sprintf("总速度: %s | 文件: %d/%d | 失败: %d | 已用时间: %s | 剩余时间: %s | 状态: %s",
+		speedStr, doneFiles, totalFiles, failedFiles, formatDurationShort(elapsed), left, status)
+	line1 = fitLine(line1, innerWidth)
 
 	progressPct := 0.0
 	if total > 0 {
 		progressPct = float64(downloaded) / float64(total)
 	}
 	progress := fmt.Sprintf("%s/%s", converter.ConvertFileSize(downloaded, 2), converter.ConvertFileSize(total, 2))
-	label := "Total Progress: "
+	label := "总进度: "
 	suffix := fmt.Sprintf(" %5.1f%% (%s)", progressPct*100, progress)
 	barWidth := innerWidth - displayWidth(label) - displayWidth(suffix) - 2
 	if barWidth < 10 {
 		barWidth = 10
 	}
 	bar := renderBar(progressPct, barWidth)
-	line3 := fmt.Sprintf("%s[%s]%s", label, bar, suffix)
-	line3 = fitLine(line3, innerWidth)
+	line2 := fmt.Sprintf("%s[%s]%s", label, bar, suffix)
+	line2 = fitLine(line2, innerWidth)
 
-	return []string{line1, line2, line3}
+	return []string{line1, line2}
 }
 
 func (db *DownloadDashboard) activeTitle(snapshot dashboardSnapshot) string {
 	running := 0
 	queued := 0
 	for _, task := range snapshot.tasks {
-		if task.hasType && !task.isFile {
+		if !task.isFile {
 			continue
 		}
 		switch task.state {
@@ -460,7 +477,7 @@ func (db *DownloadDashboard) activeLines(snapshot dashboardSnapshot, innerWidth 
 			lines = append(lines, renderTaskLine(active[i], i, innerWidth))
 			continue
 		}
-		placeholder := &downloadTask{name: "waiting...", state: TaskQueued}
+		placeholder := &downloadTask{name: "[空闲...]", state: TaskQueued}
 		lines = append(lines, renderTaskLine(placeholder, i, innerWidth))
 	}
 	return lines
@@ -488,6 +505,15 @@ func (db *DownloadDashboard) historyLines(snapshot dashboardSnapshot, innerWidth
 	if len(result) == 0 {
 		result = append(result, truncateText("No recent events.", innerWidth))
 	}
+
+	// 倒序数组
+	reversedResult := make([]string, 0, len(result))
+	for i := len(result) - 1; i >= 0; i-- {
+		reversedResult = append(reversedResult, result[i])
+	}
+	result = reversedResult
+
+	// 补全空行
 	for len(result) < lines {
 		result = append(result, "")
 	}
@@ -496,7 +522,7 @@ func (db *DownloadDashboard) historyLines(snapshot dashboardSnapshot, innerWidth
 
 func (db *DownloadDashboard) fileCounts(tasks []*downloadTask) (total int, done int, failed int) {
 	for _, task := range tasks {
-		if task.hasType && !task.isFile {
+		if !task.isFile {
 			continue
 		}
 		total++
@@ -513,7 +539,7 @@ func (db *DownloadDashboard) fileCounts(tasks []*downloadTask) (total int, done 
 
 func (db *DownloadDashboard) totalProgress(tasks []*downloadTask) (downloaded int64, total int64) {
 	for _, task := range tasks {
-		if task.hasType && !task.isFile {
+		if !task.isFile {
 			continue
 		}
 		if task.total > 0 {
@@ -547,7 +573,7 @@ func (db *DownloadDashboard) pickActiveTasks(tasks []*downloadTask) []*downloadT
 	active := make([]*downloadTask, 0, slotCap)
 	queued := make([]*downloadTask, 0, slotCap)
 	for _, task := range tasks {
-		if task.hasType && !task.isFile {
+		if !task.isFile {
 			continue
 		}
 		switch task.state {
@@ -574,6 +600,7 @@ func renderTaskLine(task *downloadTask, index int, width int) string {
 		name = baseName(task.path)
 	}
 
+	// 百分比
 	progressPct := 0.0
 	percent := "--.-%"
 	if task.total > 0 {
@@ -581,11 +608,13 @@ func renderTaskLine(task *downloadTask, index int, width int) string {
 		percent = fmt.Sprintf("%5.1f%%", math.Min(100, progressPct*100))
 	}
 
+	// 速度
 	rate := "-"
+	// 剩余时间
 	eta := "-"
 	switch task.state {
 	case TaskQueued:
-		rate = "waiting"
+		rate = "等待中"
 	case TaskRunning:
 		if task.speed > 0 {
 			rate = converter.ConvertFileSize(task.speed, 2) + "/s"
@@ -643,6 +672,7 @@ func renderTaskLine(task *downloadTask, index int, width int) string {
 	return fitLine(line, width)
 }
 
+// renderBar 绘制进度条
 func renderBar(pct float64, width int) string {
 	if width < 5 {
 		width = 5
@@ -654,7 +684,11 @@ func renderBar(pct float64, width int) string {
 		pct = 1
 	}
 	filled := int(math.Floor(pct * float64(width)))
-	return strings.Repeat("\u2588", filled) + strings.Repeat("\u2591", width-filled)
+	// 已经下载的部分使用 => 表示，没有下载的部分使用 空格 表示
+	if filled >= 1 {
+		return strings.Repeat("=", filled-1) + ">" + strings.Repeat(" ", width-filled)
+	}
+	return strings.Repeat(" ", width-filled)
 }
 
 func formatDurationShort(d time.Duration) string {

@@ -1,4 +1,4 @@
-// Copyright (c) 2026.
+// Copyright (c) 2020 tickstep.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@ package ui
 
 import "os"
 
+// IsTerminal 判断输出环境，是否是输出到终端界面，如果重定向到文件则不用进行下载统计打印输出了
 func IsTerminal(file *os.File) bool {
 	if file == nil {
 		return false
