@@ -132,6 +132,7 @@ func CmdAlbum() cli.Command {
 						IsOverwrite:          c.Bool("ow"),
 						SaveTo:               saveTo,
 						Parallel:             0,
+						SliceParallel:        0,
 						Load:                 0,
 						MaxRetry:             pandownload.DefaultDownloadMaxRetry,
 						NoCheck:              false,
@@ -258,8 +259,14 @@ func RunShareAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 		options.Parallel = config.MaxFileDownloadParallelNum
 	}
 	// 设置单个文件下载分片线程数
-	if options.SliceParallel < 1 {
-		options.SliceParallel = 1
+	if options.SliceParallel < 1 { // 用户没有主动设置，则使用下面自动配置的策略
+		if options.Parallel > 1 {
+			// 如果是多文件下载，则一个文件只能同时使用1个线程
+			options.SliceParallel = 1
+		} else {
+			// 如果是单文件下载，则可以使用3个最大线程
+			options.SliceParallel = 3
+		}
 	}
 
 	// 保存文件的本地根文件夹

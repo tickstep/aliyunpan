@@ -46,8 +46,8 @@ type (
 		IsExecutedPermission bool
 		IsOverwrite          bool
 		SaveTo               string
-		Parallel             int // 文件下载最大线程数
-		SliceParallel        int // 单个文件分片下载最大线程数
+		Parallel             int // 文件下载最大线程数，即同时进行下载文件的数量，阿里云盘限制最大为3
+		SliceParallel        int // 单个文件分片下载最大线程数，阿里云盘限制最大为3
 		Load                 int
 		MaxRetry             int
 		NoCheck              bool
@@ -142,7 +142,7 @@ func CmdDownload() cli.Command {
 				IsOverwrite:          c.Bool("ow"),
 				SaveTo:               saveTo,
 				Parallel:             c.Int("p"),
-				SliceParallel:        3,
+				SliceParallel:        c.Int("sp"),
 				Load:                 0,
 				MaxRetry:             c.Int("retry"),
 				NoCheck:              c.Bool("nocheck"),
@@ -182,11 +182,11 @@ func CmdDownload() cli.Command {
 				Usage: "parallel,指定同时进行下载文件的数量（取值范围:1 ~ 3）",
 				Value: 1,
 			},
-			//cli.IntFlag{
-			//	Name:  "sp",
-			//	Usage: "slice parallel,指定单个文件下载的最大线程(分片)数（取值范围:1 ~ 3）",
-			//	Value: 1,
-			//},
+			cli.IntFlag{
+				Name:  "sp",
+				Usage: "slice parallel,指定单个文件下载的最大线程(分片)数（取值范围:1 ~ 3）",
+				Value: 0,
+			},
 			cli.IntFlag{
 				Name:  "retry",
 				Usage: "下载失败最大重试次数",
@@ -283,8 +283,14 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	}
 
 	// 设置单个文件下载分片线程数
-	if options.SliceParallel < 1 {
-		options.SliceParallel = 1
+	if options.SliceParallel < 1 { // 用户没有主动设置，则使用下面自动配置的策略
+		if options.Parallel > 1 {
+			// 如果是多文件下载，则一个文件只能同时使用1个线程
+			options.SliceParallel = 1
+		} else {
+			// 如果是单文件下载，则可以使用3个最大线程
+			options.SliceParallel = 3
+		}
 	}
 
 	// 保存文件的本地根文件夹
@@ -390,6 +396,11 @@ func RunDownload(paths []string, options *DownloadOptions) {
 
 	// 输出当前下载配置信息
 	logf("\n[0] 当前文件下载最大并发量为: %d, 单文件下载分片线程数为: %d, 下载缓存为: %s\n", options.Parallel, options.SliceParallel, converter.ConvertFileSize(int64(cfg.CacheSize), 2))
+
+	// 阿里云盘下载并发超额警告，阿里云盘下载最大并发数为3
+	if options.Parallel*options.SliceParallel > 3 {
+		logf("[0] 警告：当前下载并发配置数已超过阿里云盘限制的最大并发数，下载任务会被风控容易导致下载失败\n")
+	}
 
 	// 处理队列
 	for k := range paths {

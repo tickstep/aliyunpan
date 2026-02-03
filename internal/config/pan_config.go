@@ -54,7 +54,7 @@ const (
 	DefaultFileDownloadParallelNum = 5
 
 	// MaxFileDownloadParallelNum 最大文件下载并发数量。过大会被阿里云盘风控，导致无法下载
-	MaxFileDownloadParallelNum = 20
+	MaxFileDownloadParallelNum = 3
 
 	// DefaultTokenServiceWebHost 默认的token服务
 	DefaultTokenServiceWebHost = "https://api.tickstep.com"
