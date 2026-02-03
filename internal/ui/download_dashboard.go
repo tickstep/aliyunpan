@@ -545,10 +545,15 @@ func (db *DownloadDashboard) totalProgress(tasks []*downloadTask) (downloaded in
 		}
 		if task.total > 0 {
 			total += task.total
-			if task.downloaded > task.total {
+			if task.state == TaskSuccess || task.state == TaskSkipped {
+				// 成功、跳过的文件，统计上当做已经下载完成
 				downloaded += task.total
 			} else {
-				downloaded += task.downloaded
+				if task.downloaded >= task.total {
+					downloaded += task.total
+				} else {
+					downloaded += task.downloaded
+				}
 			}
 		}
 	}
