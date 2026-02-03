@@ -59,7 +59,6 @@ type (
 
 		// 可选项
 		VerbosePrinter       *logger.CmdVerbose
-		PrintFormat          string
 		IsPrintStatus        bool // 是否输出各个下载线程的详细信息
 		IsExecutedPermission bool // 下载成功后是否加上执行权限
 		IsOverwrite          bool // 是否覆盖已存在的文件
@@ -203,11 +202,6 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 		// 解析错误
 		return apierror.NewFailedApiError("")
 	})
-
-	// 检查输出格式
-	if dtu.PrintFormat == "" {
-		dtu.PrintFormat = DefaultPrintFormat
-	}
 
 	// 这里用共享变量的方式
 	isComplete := false

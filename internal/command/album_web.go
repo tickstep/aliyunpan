@@ -735,7 +735,6 @@ func RunAlbumDownloadFile(albumNames []string, options *DownloadOptions) {
 				Cfg:                  &newCfg, // 复制一份新的cfg
 				PanClient:            panClient,
 				VerbosePrinter:       panCommandVerbose,
-				PrintFormat:          downloadPrintFormat(options.Load),
 				ParentTaskExecutor:   &executor,
 				DownloadStatistic:    statistic,
 				IsPrintStatus:        options.IsPrintStatus,
