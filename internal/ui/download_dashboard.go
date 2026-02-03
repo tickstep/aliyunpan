@@ -330,12 +330,13 @@ func (db *DownloadDashboard) render() {
 
 	// 拼接并格式化输出
 	builder := &strings.Builder{}
-	builder.WriteString("\x1b[H\x1b[2J") // 清屏操作
 	builder.WriteString(renderBox(headerLines, width))
 	builder.WriteString(renderTitledBox("ActiveDownloads", activeLines, width))
 	builder.WriteString(renderTitledBox("History", historyBody, width))
 
-	fmt.Fprint(db.out, builder.String())
+	content := builder.String()
+	fmt.Fprint(db.out, "\x1b[H\x1b[2J") // 清屏操作
+	fmt.Fprint(db.out, content)
 }
 
 type dashboardSnapshot struct {
