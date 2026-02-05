@@ -431,8 +431,8 @@ func (db *DownloadDashboard) headerLines(snapshot dashboardSnapshot, innerWidth 
 		}
 	}
 
-	line1 := fmt.Sprintf("总速度: %s | 文件: %d/%d | 失败: %d | 已用时间: %s | 剩余时间: %s | 状态: %s",
-		utils.FormatSpeedFixedWidth(speed, 11), doneFiles, totalFiles, failedFiles, formatDurationShort(elapsed), left, status)
+	line1 := fmt.Sprintf("总速度: %s | 文件: %d/%d | 失败: %d | 状态: %s | 已用时间: %s | 剩余时间: %s",
+		utils.FormatSpeedFixedWidth(speed, 11), doneFiles, totalFiles, failedFiles, status, formatDurationShort(elapsed), left)
 	line1 = fitLine(line1, innerWidth)
 
 	progressPct := 0.0
