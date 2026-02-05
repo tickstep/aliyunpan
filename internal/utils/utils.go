@@ -301,3 +301,49 @@ func UnixTime2LocalFormatStr(unixTime int64) string {
 	cz := time.FixedZone("CST", 8*3600) // 东8区
 	return t.In(cz).Format("2006-01-02T15:04:05.000Z")
 }
+
+// FormatSpeedFixedWidth 格式化速度显示
+// speed: 速度值，单位 Byte/s
+// 返回格式: "  xxx.xx MB/s" (固定长度，左侧用空格补齐)
+func FormatSpeedFixedWidth(speed int64, totalWidth int) string {
+	const (
+		kb = 1024.0
+		mb = kb * 1024
+		gb = mb * 1024
+		tb = gb * 1024
+	)
+
+	var value float64
+	var unit string
+
+	speedFloat := float64(speed)
+
+	switch {
+	case speedFloat >= tb:
+		value = speedFloat / tb
+		unit = "TB/s"
+	case speedFloat >= gb:
+		value = speedFloat / gb
+		unit = "GB/s"
+	case speedFloat >= mb:
+		value = speedFloat / mb
+		unit = "MB/s"
+	case speedFloat >= kb:
+		value = speedFloat / kb
+		unit = "KB/s"
+	default:
+		value = speedFloat
+		unit = "B/s"
+	}
+
+	// 格式化为两位小数
+	formatted := fmt.Sprintf("%.2f %s", value, unit)
+
+	// 如果不足指定宽度，左侧用空格补齐
+	if len(formatted) < totalWidth {
+		spaces := strings.Repeat(" ", totalWidth-len(formatted))
+		return spaces + formatted
+	}
+
+	return formatted
+}

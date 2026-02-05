@@ -15,6 +15,7 @@ package ui
 
 import (
 	"fmt"
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"io"
 	"math"
 	"os"
@@ -430,9 +431,8 @@ func (db *DownloadDashboard) headerLines(snapshot dashboardSnapshot, innerWidth 
 		}
 	}
 
-	speedStr := converter.ConvertFileSize(speed, 2) + "/s"
 	line1 := fmt.Sprintf("总速度: %s | 文件: %d/%d | 失败: %d | 已用时间: %s | 剩余时间: %s | 状态: %s",
-		speedStr, doneFiles, totalFiles, failedFiles, formatDurationShort(elapsed), left, status)
+		utils.FormatSpeedFixedWidth(speed, 11), doneFiles, totalFiles, failedFiles, formatDurationShort(elapsed), left, status)
 	line1 = fitLine(line1, innerWidth)
 
 	progressPct := 0.0
@@ -611,7 +611,10 @@ func renderTaskLine(task *downloadTask, index int, width int) string {
 	percent := "--.-%"
 	if task.total > 0 {
 		progressPct = float64(task.downloaded) / float64(task.total)
-		percent = fmt.Sprintf("%5.1f%%", math.Min(100, progressPct*100))
+		percent = fmt.Sprintf("%5.1f%%", math.Min(100, progressPct*100)) // 将浮点数格式化为：总宽度 5 个字符，包含 1 位小数，后面加百分号
+	} else {
+		// 空闲队列左边多一个空格，对齐活跃队列
+		percent = " --.-%"
 	}
 
 	// 速度
@@ -644,7 +647,7 @@ func renderTaskLine(task *downloadTask, index int, width int) string {
 	rateWidth := 12
 	etaWidth := 8
 	percentWidth := displayWidth(percent)
-	fixed := displayWidth(prefix) + 1 + 2 + barWidth + 1 + percentWidth + 1 + rateWidth + 1 + etaWidth
+	fixed := displayWidth(prefix) + 1 + 2 /*进度条左右[]括号*/ + barWidth + 1 + percentWidth + 1 + rateWidth + 1 + etaWidth
 	nameWidth := width - fixed
 	if nameWidth < 8 {
 		reduce := 8 - nameWidth
@@ -663,7 +666,7 @@ func renderTaskLine(task *downloadTask, index int, width int) string {
 			etaWidth -= cut
 			reduce -= cut
 		}
-		fixed = displayWidth(prefix) + 1 + 2 + barWidth + 1 + percentWidth + 1 + rateWidth + 1 + etaWidth
+		fixed = displayWidth(prefix) + 1 /*1个空格分隔*/ + 2 /*进度条左右[]括号*/ + barWidth /*进度条长度*/ + 1 /*1个空格分隔*/ + percentWidth + 1 /*1个空格分隔*/ + rateWidth + 1 /*1个空格分隔*/ + etaWidth
 		nameWidth = width - fixed
 		if nameWidth < 4 {
 			nameWidth = 4
