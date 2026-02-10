@@ -4,17 +4,17 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/tickstep/aliyunpan/internal/global"
-	"github.com/tickstep/aliyunpan/internal/utils"
-	"github.com/tickstep/library-go/crypto"
-	"github.com/tickstep/library-go/getip"
-	"github.com/tickstep/library-go/logger"
-	"github.com/tickstep/library-go/requester"
 	"net/url"
 	"regexp"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/tickstep/aliyunpan/internal/global"
+	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/library-go/crypto"
+	"github.com/tickstep/library-go/logger"
+	"github.com/tickstep/library-go/requester"
 )
 
 type LoginHelper struct {
@@ -87,7 +87,7 @@ func (h *LoginHelper) GetQRCodeLoginUrl(keyStr string) (*QRCodeUrlResult, error)
 		keyStr = utils.GetUniqueKeyStr()
 	}
 	fullUrl := strings.Builder{}
-	ipAddr, err := getip.IPInfoFromTechainBaidu()
+	ipAddr, err := utils.GetPublicIP()
 	if err != nil {
 		ipAddr = "127.0.0.1"
 	}
