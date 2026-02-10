@@ -16,15 +16,13 @@ package utils
 import (
 	"compress/gzip"
 	"crypto/md5"
+	"encoding/json"
 	"flag"
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
-	uuid "github.com/satori/go.uuid"
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
-	"github.com/tickstep/library-go/ids"
 	"io"
 	"io/ioutil"
 	"math"
+	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"os"
@@ -34,6 +32,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
+	uuid "github.com/satori/go.uuid"
+	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/library-go/ids"
 )
 
 // TrimPathPrefix 去除目录的前缀
@@ -346,4 +349,37 @@ func FormatSpeedFixedWidth(speed int64, totalWidth int) string {
 	}
 
 	return formatted
+}
+
+func GetPublicIP() (string, error) {
+	type IPResponse struct {
+		Origin string `json:"origin"`
+	}
+	resp, err := http.Get("https://httpbin.org/ip")
+	if err != nil {
+		return "", fmt.Errorf("请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("HTTP 状态码异常: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("读取响应体失败: %w", err)
+	}
+
+	var ipResp IPResponse
+	if err := json.Unmarshal(body, &ipResp); err != nil {
+		return "", fmt.Errorf("解析 JSON 失败: %w", err)
+	}
+
+	if ipResp.Origin == "" {
+		return "", fmt.Errorf("响应中无 IP 信息")
+	}
+
+	// 取第一个 IP（处理代理/X-Forwarded-For 情况）
+	ip := strings.TrimSpace(strings.Split(ipResp.Origin, ",")[0])
+	return ip, nil
 }
