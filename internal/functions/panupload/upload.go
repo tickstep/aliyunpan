@@ -17,9 +17,6 @@ import (
 	"context"
 	"encoding/xml"
 	"errors"
-	"github.com/tickstep/aliyunpan/internal/config"
-	"github.com/tickstep/library-go/logger"
-	"github.com/tickstep/library-go/requester"
 	"io"
 	"net/http"
 	"net/url"
@@ -27,6 +24,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/library-go/logger"
+	"github.com/tickstep/library-go/requester"
 
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
@@ -77,6 +78,7 @@ func (pu *PanUpload) Precreate() (err error) {
 
 func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int64, partEnd int64, r rio.ReaderLen64, uploadClient *requester.HTTPClient) (uploadDone bool, uperr error) {
 	if len(pu.uploadOpEntity.PartInfoList) == 0 {
+		logger.Verbosef("网盘上传参数错误，分片%d => uploadOpEntity.PartInfoList为空\n", partseq+1)
 		return true, nil
 	}
 
