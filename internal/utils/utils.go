@@ -16,15 +16,13 @@ package utils
 import (
 	"compress/gzip"
 	"crypto/md5"
+	"encoding/json"
 	"flag"
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
-	uuid "github.com/satori/go.uuid"
-	"github.com/tickstep/aliyunpan-api/aliyunpan"
-	"github.com/tickstep/library-go/ids"
 	"io"
 	"io/ioutil"
 	"math"
+	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"os"
@@ -34,6 +32,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
+	uuid "github.com/satori/go.uuid"
+	"github.com/tickstep/aliyunpan-api/aliyunpan"
+	"github.com/tickstep/library-go/ids"
 )
 
 // TrimPathPrefix 去除目录的前缀
@@ -300,4 +303,83 @@ func UnixTime2LocalFormatStr(unixTime int64) string {
 	t := time.Unix(unixTime, 0)
 	cz := time.FixedZone("CST", 8*3600) // 东8区
 	return t.In(cz).Format("2006-01-02T15:04:05.000Z")
+}
+
+// FormatSpeedFixedWidth 格式化速度显示
+// speed: 速度值，单位 Byte/s
+// 返回格式: "  xxx.xx MB/s" (固定长度，左侧用空格补齐)
+func FormatSpeedFixedWidth(speed int64, totalWidth int) string {
+	const (
+		kb = 1024.0
+		mb = kb * 1024
+		gb = mb * 1024
+		tb = gb * 1024
+	)
+
+	var value float64
+	var unit string
+
+	speedFloat := float64(speed)
+
+	switch {
+	case speedFloat >= tb:
+		value = speedFloat / tb
+		unit = "TB/s"
+	case speedFloat >= gb:
+		value = speedFloat / gb
+		unit = "GB/s"
+	case speedFloat >= mb:
+		value = speedFloat / mb
+		unit = "MB/s"
+	case speedFloat >= kb:
+		value = speedFloat / kb
+		unit = "KB/s"
+	default:
+		value = speedFloat
+		unit = "B/s"
+	}
+
+	// 格式化为两位小数
+	formatted := fmt.Sprintf("%.2f %s", value, unit)
+
+	// 如果不足指定宽度，左侧用空格补齐
+	if len(formatted) < totalWidth {
+		spaces := strings.Repeat(" ", totalWidth-len(formatted))
+		return spaces + formatted
+	}
+
+	return formatted
+}
+
+func GetPublicIP() (string, error) {
+	type IPResponse struct {
+		Origin string `json:"origin"`
+	}
+	resp, err := http.Get("https://httpbin.org/ip")
+	if err != nil {
+		return "", fmt.Errorf("请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("HTTP 状态码异常: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("读取响应体失败: %w", err)
+	}
+
+	var ipResp IPResponse
+	if err := json.Unmarshal(body, &ipResp); err != nil {
+		return "", fmt.Errorf("解析 JSON 失败: %w", err)
+	}
+
+	if ipResp.Origin == "" {
+		return "", fmt.Errorf("响应中无 IP 信息")
+	}
+
+	// 取第一个 IP（处理代理/X-Forwarded-For 情况）
+	ip := strings.TrimSpace(strings.Split(ipResp.Origin, ",")[0])
+	return ip, nil
 }

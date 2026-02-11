@@ -74,6 +74,21 @@ func CmdRm() cli.Command {
 	}
 }
 
+func queryFileListByPath(activeUser *config.PanUser, driveId, filePathPattern string) (files []*aliyunpan.FileEntity, e error) {
+	if !strings.ContainsAny(filePathPattern, aliyunpan.ShellPatternCharacters) {
+		// 没有通配符，直接查询
+		fi, err := activeUser.PanClient().OpenapiPanClient().FileInfoByPath(driveId, filePathPattern)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, fi)
+	} else {
+		// 包含通配符，使用通配符查询
+		files, e = matchPathByShellPattern(driveId, filePathPattern)
+	}
+	return files, e
+}
+
 // RunRemove 执行 批量删除文件/目录
 func RunRemove(driveId string, paths ...string) {
 	activeUser := GetActiveUser()
@@ -86,7 +101,9 @@ func RunRemove(driveId string, paths ...string) {
 
 	for _, p := range paths {
 		absolutePath := path.Clean(activeUser.PathJoin(driveId, p))
-		fileList, err1 := matchPathByShellPattern(driveId, absolutePath)
+
+		// 查询路径对应的文件信息
+		fileList, err1 := queryFileListByPath(activeUser, driveId, absolutePath)
 		if err1 != nil {
 			failedRmPaths = append(failedRmPaths, absolutePath)
 			continue

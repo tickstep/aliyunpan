@@ -17,6 +17,16 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	jsoniter "github.com/json-iterator/go"
 	"github.com/tickstep/aliyunpan/cmder/cmdliner"
 	"github.com/tickstep/aliyunpan/cmder/cmdutil"
@@ -27,19 +37,9 @@ import (
 	"github.com/tickstep/library-go/cachepool"
 	"github.com/tickstep/library-go/checkaccess"
 	"github.com/tickstep/library-go/converter"
-	"github.com/tickstep/library-go/getip"
 	"github.com/tickstep/library-go/jsonhelper"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
-	"io/ioutil"
-	"net/http"
-	"path/filepath"
-	"regexp"
-	"runtime"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 const (
@@ -58,16 +58,16 @@ type tsResp struct {
 	Msg  string      `json:"msg"`
 }
 
-func getReleaseFromTicstep(client *requester.HTTPClient, showPrompt bool) *ReleaseInfo {
+func getReleaseFromTickstep(client *requester.HTTPClient, showPrompt bool) *ReleaseInfo {
 	tsReleaseInfo := &ReleaseInfo{}
 	tsRespObj := &tsResp{Data: tsReleaseInfo}
 	fullUrl := strings.Builder{}
-	ipAddr, err := getip.IPInfoFromTechainBaidu()
+	ipAddr, err := utils.GetPublicIP()
 	if err != nil {
 		ipAddr = "127.0.0.1"
 	}
-	fmt.Fprintf(&fullUrl, "http://api.tickstep.com/update/tickstep/aliyunpan/releases/latest?ip=%s&os=%s&arch=%s&version=%s",
-		ipAddr, runtime.GOOS, runtime.GOARCH, global.AppVersion)
+	fmt.Fprintf(&fullUrl, "http://api.tickstep.com/update/tickstep/aliyunpan/releases/latest?ip=%s&os=%s&arch=%s&version=%s", ipAddr, runtime.GOOS, runtime.GOARCH, global.AppVersion)
+	//fmt.Fprintf(&fullUrl, "http://localhost:8997/update/tickstep/aliyunpan/releases/latest?ip=%s&os=%s&arch=%s&version=%s", ipAddr, runtime.GOOS, runtime.GOARCH, global.AppVersion)
 	resp, err := client.Req(http.MethodGet, fullUrl.String(), nil, nil)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -136,10 +136,10 @@ func GetLatestReleaseInfo(showPrompt bool) *ReleaseInfo {
 	client.SetTimeout(time.Duration(0) * time.Second)
 	client.SetKeepAlive(true)
 
-	// check tickstep srv
-	var tsReleaseInfo *ReleaseInfo = getReleaseFromTicstep(client, showPrompt)
+	// tickstep server
+	var tsReleaseInfo = getReleaseFromTickstep(client, showPrompt)
 
-	// github
+	// github server
 	var ghReleaseInfo *ReleaseInfo = nil
 	for idx := 0; idx < 2; idx++ {
 		ghReleaseInfo = getReleaseFromGithub(client, showPrompt)
@@ -151,10 +151,11 @@ func GetLatestReleaseInfo(showPrompt bool) *ReleaseInfo {
 
 	var releaseInfo *ReleaseInfo = nil
 	if config.Config.UpdateCheckInfo.PreferUpdateSrv == "tickstep" {
-		// theoretically, tickstep server will be faster at mainland
+		// theoretically, tickstep server will be faster in China mainland
 		releaseInfo = tsReleaseInfo
 	} else {
 		releaseInfo = ghReleaseInfo
+		// 如果github的版本信息获取不到（例如网络不稳定），可以尝试使用tickstep服务进行升级
 		if ghReleaseInfo == nil || ghReleaseInfo.TagName == "" {
 			releaseInfo = tsReleaseInfo
 		}

@@ -205,6 +205,7 @@ func (wer *Worker) Cancel() error {
 
 // Reset 重设连接
 func (wer *Worker) Reset() {
+	logger.Verbosef("Reset worker: %d\n", wer.ID())
 	if wer.resetFunc == nil {
 		logger.Verbosef("DEBUG: worker: resetFunc not set")
 		return
@@ -220,13 +221,15 @@ func (wer *Worker) Reset() {
 // RefreshDownloadUrl 重新刷新下载链接
 func (wer *Worker) RefreshDownloadUrl() {
 	var apierr *apierror.ApiError
-
+	logger.Verbosef("get new download url for worker: %d\n", wer.ID())
 	durl, apierr := wer.panClient.OpenapiPanClient().GetFileDownloadUrl(&aliyunpan.GetFileDownloadUrlParam{DriveId: wer.driveId, FileId: wer.fileId})
 	if apierr != nil {
+		logger.Verbosef("get new download url for worker: %d, error: %+v\n", wer.ID(), apierr)
 		wer.status.statusCode = StatusCodeTooManyConnections
 		return
 	}
 	wer.url = durl.Url
+	logger.Verbosef("get new download url for worker: %d, new url: %s\n", wer.ID(), wer.url)
 }
 
 // Canceled 是否已经取消
@@ -266,6 +269,7 @@ func (wer *Worker) Err() error {
 
 // Execute 执行任务
 func (wer *Worker) Execute() {
+	logger.Verbosef("Execute worker: %d\n", wer.ID())
 	wer.lazyInit()
 
 	wer.execMu.Lock()

@@ -16,12 +16,16 @@ package panupload
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"github.com/tickstep/aliyunpan/internal/config"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
@@ -106,6 +110,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 	}
 
 	var respErr *uploader.MultiError
+	// 分片上传回调函数，供阿里云盘API接口使用
 	uploadFunc := func(httpMethod, fullUrl string, headers map[string]string) (*http.Response, error) {
 		var resp *http.Response
 		var respError error = nil
@@ -128,10 +133,10 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 				if blen > 0 {
 					buf := make([]byte, blen)
 					resp.Body.Read(buf)
-					logger.Verbosef("分片上传出错: 分片%d => %s\n", partseq+1, string(buf))
+					logger.Verbosef("分片上传出错: 分片%d, 错误信息: %s\n", partseq+1, string(buf))
 
 					errResp := &apierror.ErrorXmlResp{}
-					if err := xml.Unmarshal(buf, errResp); err == nil {
+					if errXml := xml.Unmarshal(buf, errResp); errXml == nil {
 						if errResp.Code != "" {
 							if "PartNotSequential" == errResp.Code {
 								respError = uploader.UploadPartNotSeq
@@ -188,9 +193,30 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 				}
 			}
 		} else {
+			// 默认错误
 			respError = uploader.UploadTerminate
 			respErr = &uploader.MultiError{
 				Terminated: true,
+			}
+
+			// 解析HTTP请求出现的错误信息
+			if err != nil {
+				var netErr *url.Error
+				if errors.As(err, &netErr) {
+					var pathErr *os.PathError
+					if errors.As(netErr.Err, &pathErr) { // 本地文件读取异常
+						if strings.Contains(pathErr.Err.Error(), "file already closed") {
+							// 本地文件流触发"file already closed"错误
+							// 一般是文件上传过程中，文件被删除了，或者文件所在的硬盘异常导致文件流被系统关闭
+							respError = uploader.UploadLocalFileAlreadyClosedError
+							respErr = &uploader.MultiError{
+								Terminated:    true,
+								NeedStartOver: false,
+								Err:           uploader.UploadLocalFileAlreadyClosedError,
+							}
+						}
+					}
+				}
 			}
 		}
 		return resp, respError
@@ -201,7 +227,7 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 	apiError := pu.panClient.OpenapiPanClient().UploadFileData(uploadUrl, uploadFunc)
 
 	if respErr != nil {
-		if respErr.Err == uploader.UploadUrlExpired {
+		if errors.Is(respErr.Err, uploader.UploadUrlExpired) {
 			// URL过期，获取新的URL
 			guur, er := pu.panClient.OpenapiPanClient().GetUploadUrl(&aliyunpan.GetUploadUrlParam{
 				DriveId:      pu.driveId,
@@ -217,15 +243,18 @@ func (pu *PanUpload) UploadFile(ctx context.Context, partseq int, partOffset int
 
 			// 获取新的上传URL重试一次
 			pu.uploadOpEntity.PartInfoList[partseq] = guur.PartInfoList[0]
-			uploadUrl := pu.uploadOpEntity.PartInfoList[partseq].UploadURL
+			uploadUrl = pu.uploadOpEntity.PartInfoList[partseq].UploadURL
 			apiError = pu.panClient.OpenapiPanClient().UploadFileData(uploadUrl, uploadFunc)
-		} else if respErr.Err == uploader.UploadPartAlreadyExist {
+		} else if errors.Is(respErr.Err, uploader.UploadPartAlreadyExist) {
 			// already upload
 			// success
 			return true, nil
-		} else if respErr.Err == uploader.UploadPartNotSeq {
+		} else if errors.Is(respErr.Err, uploader.UploadPartNotSeq) {
 			// 上传分片乱序了
 			// 返回错误，然后重传
+			return false, respErr
+		} else if errors.Is(respErr.Err, uploader.UploadLocalFileAlreadyClosedError) {
+			// 本地文件读取错误
 			return false, respErr
 		} else {
 			return false, respErr

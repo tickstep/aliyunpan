@@ -346,6 +346,7 @@ func (mt *Monitor) ResetWorker(worker *Worker) {
 		// 忽略, 返回
 		return
 	case StatusCodeDownloadUrlExpired: // 下载链接已经过期
+		logger.Verbosef("download url expired, reset worker: %d\n", worker.ID())
 		worker.RefreshDownloadUrl()
 		break
 	case StatusCodeDownloadUrlExceedMaxConcurrency: // 下载遇到限流报错

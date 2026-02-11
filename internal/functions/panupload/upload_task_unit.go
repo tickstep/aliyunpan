@@ -170,6 +170,13 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 			MaxRate:   config.Config.MaxUploadRate,
 		}, utu.LocalFileChecksum.UploadOpEntity, utu.PanClient, utu.GlobalSpeedsStat)
 
+	// 模拟 file already closed 错误
+	//go func(f *os.File) {
+	//	time.Sleep(10 * time.Second)
+	//	f.Close()
+	//	fmt.Printf("关闭文件流: %s\n", f.Name())
+	//}(utu.LocalFileChecksum.GetFile())
+
 	// 设置断点续传
 	if utu.state != nil {
 		muer.SetInstanceState(utu.state)
@@ -192,7 +199,10 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 			} else {
 				leftStr = left.String()
 			}
-			uploadedPercentage := fmt.Sprintf("%.2f%%", float64(status.Uploaded())/float64(status.TotalSize())*100)
+			uploadedPercentage := "0.00%"
+			if status.TotalSize() > 0 {
+				uploadedPercentage = fmt.Sprintf("%.2f%%", float64(status.Uploaded())/float64(status.TotalSize())*100)
+			}
 			fmt.Printf("\r[%s] ↑ %s/%s(%s) %s/s(%s/s) in %s, left %s ............", utu.taskInfo.Id(),
 				converter.ConvertFileSize(status.Uploaded(), 2),
 				converter.ConvertFileSize(status.TotalSize(), 2),
@@ -595,6 +605,22 @@ stepUploadUpload:
 			utu.state = nil
 			goto StepUploadPrepareUpload
 		}
+		if errors.Is(uploadResult.Err, uploader.UploadLocalFileAlreadyClosedError) {
+			// 本地文件读取错误
+			fmt.Printf("[%s] %s 本地文件读取错误，建议检查文件是否存在，是否有文件读取权限，或者硬盘是否有异常\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+			uploadResult = &taskframework.TaskUnitRunResult{
+				Succeed:       false,
+				NeedRetry:     false,
+				Cancel:        false,
+				Err:           uploadResult.Err,
+				ResultCode:    0,
+				ResultMessage: "",
+				Extra:         nil,
+			}
+			return uploadResult
+		}
+
+		// 处理阿里云盘API接口错误
 		var apier *apierror.ApiError
 		if errors.As(uploadResult.Err, &apier) {
 			// 上传任务过期

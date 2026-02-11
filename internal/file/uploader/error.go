@@ -16,12 +16,13 @@ package uploader
 import "fmt"
 
 var (
-	UploadUrlExpired       = fmt.Errorf("UrlExpired")
-	UploadPartNotSeq       = fmt.Errorf("PartNotSequential")
-	UploadNoSuchUpload     = fmt.Errorf("NoSuchUpload")
-	UploadTerminate        = fmt.Errorf("UploadErrorTerminate")
-	UploadPartAlreadyExist = fmt.Errorf("PartAlreadyExist")
-	UploadHttpError        = fmt.Errorf("HttpError")
+	UploadUrlExpired                  = fmt.Errorf("UrlExpired")
+	UploadPartNotSeq                  = fmt.Errorf("PartNotSequential")
+	UploadNoSuchUpload                = fmt.Errorf("NoSuchUpload")
+	UploadTerminate                   = fmt.Errorf("UploadErrorTerminate")
+	UploadPartAlreadyExist            = fmt.Errorf("PartAlreadyExist")
+	UploadHttpError                   = fmt.Errorf("HttpError")
+	UploadLocalFileAlreadyClosedError = fmt.Errorf("LocalFileAlreadyClosedError")
 )
 
 type (

@@ -647,6 +647,8 @@ func (dtu *DownloadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	}
 
 	dtu.logf("[%s] 将会下载到路径: %s\n", dtu.taskInfo.Id(), dtu.SavePath)
+	// 更新UI面板任务状态
+	dtu.updateUITaskState(ui.TaskRunning, "")
 
 	var ok bool
 	er := dtu.download()
