@@ -18,7 +18,7 @@ require (
 	github.com/tickstep/bolt v1.3.4
 	github.com/tickstep/library-go v0.1.3
 	github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f
-	golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359
+	golang.org/x/sys v0.15.0
 )
 
 require (
