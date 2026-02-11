@@ -53,7 +53,7 @@ const (
 
 var (
 	// Version 版本号
-	Version = "v0.3.7"
+	Version = "v0.3.8"
 
 	// 命令历史文件
 	historyFilePath = filepath.Join(config.GetConfigDir(), "aliyunpan_command_history.txt")
@@ -109,7 +109,7 @@ func main() {
 	app.Name = "aliyunpan"
 	app.Version = Version
 	app.Author = "tickstep/aliyunpan: https://github.com/tickstep/aliyunpan"
-	app.Copyright = "(c) 2021-2025 tickstep."
+	app.Copyright = "(c) 2021-2026 tickstep."
 	app.Usage = "阿里云盘客户端 for " + runtime.GOOS + "/" + runtime.GOARCH
 	app.Description = `aliyunpan 是一款阿里云盘命令行客户端工具, 为操作阿里云盘, 提供实用功能。
 	支持同步备份功能，支持备份本地文件到云盘，备份云盘文件到本地。
