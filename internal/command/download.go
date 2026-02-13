@@ -15,6 +15,12 @@ package command
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"sort"
+
 	"github.com/tickstep/aliyunpan/cmder"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
 	"github.com/tickstep/aliyunpan/internal/config"
@@ -30,11 +36,6 @@ import (
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 	"github.com/urfave/cli"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
-	"sort"
 )
 
 type (
@@ -375,9 +376,9 @@ func RunDownload(paths []string, options *DownloadOptions) {
 	globalSpeedsStat := &speeds.Speeds{}
 
 	// 下载统计UI面板
-	var dashboard *ui.DownloadDashboard = nil
+	var dashboard *ui.DashboardPanel = nil
 	if options.IsUseUIDashboard && options.ShowProgress && !options.IsPrintStatus && ui.IsTerminal(os.Stdout) {
-		dashboard = ui.NewDownloadDashboard(cfg.MaxParallel, globalSpeedsStat, &ui.DownloadDashboardOptions{
+		dashboard = ui.NewDashboardPanel(ui.DashboardPanelDownload, cfg.MaxParallel, globalSpeedsStat, &ui.DashboardOptions{
 			Title:       "下载统计UI面板",
 			ActiveSlots: 3,  // 下载文件进度展示，最大同时展示3个
 			MaxHistory:  50, // 下载日志显示，最多同时显示50条，这个会按照窗口大小进行自适应显示

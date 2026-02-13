@@ -15,7 +15,6 @@ package ui
 
 import (
 	"fmt"
-	"github.com/tickstep/aliyunpan/internal/utils"
 	"io"
 	"math"
 	"os"
@@ -23,11 +22,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tickstep/aliyunpan/internal/utils"
+
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/requester/rio/speeds"
 )
 
 type TaskState int
+type DashboardType int
 
 const (
 	TaskQueued TaskState = iota
@@ -36,36 +38,42 @@ const (
 	TaskFailed
 	TaskSkipped
 	TaskCanceled
+
+	// DashboardPanelDownload 下载面板类型
+	DashboardPanelDownload DashboardType = 1
+	// DashboardPanelUpload 上传面板类型
+	DashboardPanelUpload DashboardType = 2
 )
 
-type DownloadDashboardOptions struct {
+type DashboardOptions struct {
 	Title       string
 	MaxHistory  int
 	ActiveSlots int
 	Output      io.Writer
 }
 
-// DownloadDashboard 下载任务统计面板使用了很多ANSI转义序列。并不是所有的终端都支持ANSI转义序列，所以需要做兼容性处理。
-type DownloadDashboard struct {
-	mu           sync.Mutex
-	tasks        map[string]*downloadTask
-	order        []string
-	history      []string
-	maxHistory   int
-	parallel     int
-	activeSlots  int
-	globalSpeeds *speeds.Speeds
-	title        string
-	startTime    time.Time
-	renderEvery  time.Duration
-	stopCh       chan struct{}
-	doneCh       chan struct{}
-	startOnce    sync.Once
-	closeOnce    sync.Once
-	out          io.Writer
+// DashboardPanel 统计面板使用了很多ANSI转义序列。并不是所有的终端都支持ANSI转义序列，所以需要做兼容性处理。
+type DashboardPanel struct {
+	dashboardType DashboardType
+	mu            sync.Mutex
+	tasks         map[string]*dashboardTask
+	order         []string
+	history       []string
+	maxHistory    int
+	parallel      int
+	activeSlots   int
+	globalSpeeds  *speeds.Speeds
+	title         string
+	startTime     time.Time
+	renderEvery   time.Duration
+	stopCh        chan struct{}
+	doneCh        chan struct{}
+	startOnce     sync.Once
+	closeOnce     sync.Once
+	out           io.Writer
 }
 
-type downloadTask struct {
+type dashboardTask struct {
 	id         string
 	path       string
 	name       string
@@ -78,24 +86,25 @@ type downloadTask struct {
 	isFile     bool
 }
 
-// NewDownloadDashboard 创建下载任务统计面板
-func NewDownloadDashboard(parallel int, globalSpeeds *speeds.Speeds, opts *DownloadDashboardOptions) *DownloadDashboard {
+// NewDashboardPanel 创建下载任务统计面板
+func NewDashboardPanel(dashboardType DashboardType, parallel int, globalSpeeds *speeds.Speeds, opts *DashboardOptions) *DashboardPanel {
 	if parallel < 1 {
 		parallel = 1
 	}
-	db := &DownloadDashboard{
-		tasks:        make(map[string]*downloadTask),
-		order:        make([]string, 0, 128),
-		history:      make([]string, 0, 64),
-		maxHistory:   8,
-		parallel:     parallel,
-		activeSlots:  5,
-		globalSpeeds: globalSpeeds,
-		title:        "aliyunpan下载统计",
-		renderEvery:  500 * time.Millisecond,
-		stopCh:       make(chan struct{}),
-		doneCh:       make(chan struct{}),
-		out:          os.Stdout,
+	db := &DashboardPanel{
+		dashboardType: dashboardType,
+		tasks:         make(map[string]*dashboardTask),
+		order:         make([]string, 0, 128),
+		history:       make([]string, 0, 64),
+		maxHistory:    8,
+		parallel:      parallel,
+		activeSlots:   5,
+		globalSpeeds:  globalSpeeds,
+		title:         "aliyunpan统计面板",
+		renderEvery:   500 * time.Millisecond,
+		stopCh:        make(chan struct{}),
+		doneCh:        make(chan struct{}),
+		out:           os.Stdout,
 	}
 	if opts != nil {
 		if opts.Title != "" {
@@ -118,7 +127,7 @@ func NewDownloadDashboard(parallel int, globalSpeeds *speeds.Speeds, opts *Downl
 }
 
 // Start 启动面板
-func (db *DownloadDashboard) Start() {
+func (db *DashboardPanel) Start() {
 	if db == nil {
 		return
 	}
@@ -148,7 +157,7 @@ func (db *DownloadDashboard) Start() {
 }
 
 // Close 关闭面板
-func (db *DownloadDashboard) Close() {
+func (db *DashboardPanel) Close() {
 	if db == nil {
 		return
 	}
@@ -160,7 +169,7 @@ func (db *DownloadDashboard) Close() {
 }
 
 // RegisterTask 注册任务信息
-func (db *DownloadDashboard) RegisterTask(id, path string, total int64, isFile bool) {
+func (db *DashboardPanel) RegisterTask(id, path string, total int64, isFile bool) {
 	if db == nil || id == "" {
 		return
 	}
@@ -180,7 +189,7 @@ func (db *DownloadDashboard) RegisterTask(id, path string, total int64, isFile b
 }
 
 // UpdateTaskInfo 更新任务信息
-func (db *DownloadDashboard) UpdateTaskInfo(id, name string, total int64, isFile bool) {
+func (db *DashboardPanel) UpdateTaskInfo(id, name string, total int64, isFile bool) {
 	if db == nil || id == "" {
 		return
 	}
@@ -197,7 +206,7 @@ func (db *DownloadDashboard) UpdateTaskInfo(id, name string, total int64, isFile
 }
 
 // UpdateTaskProgress 更新任务进度
-func (db *DownloadDashboard) UpdateTaskProgress(id string, downloaded, total, speed int64, eta time.Duration) {
+func (db *DashboardPanel) UpdateTaskProgress(id string, downloaded, total, speed int64, eta time.Duration) {
 	if db == nil || id == "" {
 		return
 	}
@@ -213,7 +222,7 @@ func (db *DownloadDashboard) UpdateTaskProgress(id string, downloaded, total, sp
 }
 
 // MarkTaskState 标记任务状态
-func (db *DownloadDashboard) MarkTaskState(id string, state TaskState, message string) {
+func (db *DashboardPanel) MarkTaskState(id string, state TaskState, message string) {
 	if db == nil || id == "" {
 		return
 	}
@@ -231,7 +240,7 @@ func (db *DownloadDashboard) MarkTaskState(id string, state TaskState, message s
 }
 
 // Logf 增加日志
-func (db *DownloadDashboard) Logf(format string, a ...interface{}) {
+func (db *DashboardPanel) Logf(format string, a ...interface{}) {
 	if db == nil {
 		return
 	}
@@ -249,11 +258,11 @@ func (db *DownloadDashboard) Logf(format string, a ...interface{}) {
 	db.appendHistoryLocked(msg)
 }
 
-func (db *DownloadDashboard) getOrCreateTaskLocked(id string) *downloadTask {
+func (db *DashboardPanel) getOrCreateTaskLocked(id string) *dashboardTask {
 	if task, ok := db.tasks[id]; ok {
 		return task
 	}
-	task := &downloadTask{
+	task := &dashboardTask{
 		id:    id,
 		state: TaskQueued,
 	}
@@ -262,7 +271,7 @@ func (db *DownloadDashboard) getOrCreateTaskLocked(id string) *downloadTask {
 	return task
 }
 
-func (db *DownloadDashboard) appendHistoryLocked(message string) {
+func (db *DashboardPanel) appendHistoryLocked(message string) {
 	if message == "" {
 		return
 	}
@@ -273,7 +282,7 @@ func (db *DownloadDashboard) appendHistoryLocked(message string) {
 	}
 }
 
-func (db *DownloadDashboard) defaultHistoryMessage(task *downloadTask, message string) string {
+func (db *DashboardPanel) defaultHistoryMessage(task *dashboardTask, message string) string {
 	if message != "" {
 		return message
 	}
@@ -296,7 +305,7 @@ func (db *DownloadDashboard) defaultHistoryMessage(task *downloadTask, message s
 }
 
 // render 渲染面板
-func (db *DownloadDashboard) render() {
+func (db *DashboardPanel) render() {
 	if db == nil {
 		return
 	}
@@ -341,14 +350,14 @@ func (db *DownloadDashboard) render() {
 }
 
 type dashboardSnapshot struct {
-	tasks   []*downloadTask
+	tasks   []*dashboardTask
 	history []string
 }
 
-func (db *DownloadDashboard) snapshot() dashboardSnapshot {
+func (db *DashboardPanel) snapshot() dashboardSnapshot {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	tasks := make([]*downloadTask, 0, len(db.order))
+	tasks := make([]*dashboardTask, 0, len(db.order))
 	for _, id := range db.order {
 		if task, ok := db.tasks[id]; ok {
 			copied := *task
@@ -412,7 +421,7 @@ func renderTitledBox(title string, body []string, width int) string {
 	return builder.String()
 }
 
-func (db *DownloadDashboard) headerLines(snapshot dashboardSnapshot, innerWidth int) []string {
+func (db *DashboardPanel) headerLines(snapshot dashboardSnapshot, innerWidth int) []string {
 	totalFiles, doneFiles, failedFiles := db.fileCounts(snapshot.tasks)
 	downloaded, total := db.totalProgress(snapshot.tasks)
 	speed := db.totalSpeed(snapshot.tasks)
@@ -422,7 +431,12 @@ func (db *DownloadDashboard) headerLines(snapshot dashboardSnapshot, innerWidth 
 		left = formatDurationShort(time.Duration((total-downloaded)/speed) * time.Second)
 	}
 
-	status := "下载中"
+	status := "进行中"
+	if db.dashboardType == DashboardPanelDownload {
+		status = "下载中"
+	} else if db.dashboardType == DashboardPanelUpload {
+		status = "上传中"
+	}
 	if totalFiles > 0 && doneFiles >= totalFiles {
 		if failedFiles > 0 {
 			status = "已完成 (有错误)"
@@ -453,7 +467,7 @@ func (db *DownloadDashboard) headerLines(snapshot dashboardSnapshot, innerWidth 
 	return []string{line1, line2}
 }
 
-func (db *DownloadDashboard) activeTitle(snapshot dashboardSnapshot) string {
+func (db *DashboardPanel) activeTitle(snapshot dashboardSnapshot) string {
 	running := 0
 	queued := 0
 	for _, task := range snapshot.tasks {
@@ -470,7 +484,7 @@ func (db *DownloadDashboard) activeTitle(snapshot dashboardSnapshot) string {
 	return fmt.Sprintf("Active Downloads (slots %d, running %d, queued %d)", db.activeSlots, running, queued)
 }
 
-func (db *DownloadDashboard) activeLines(snapshot dashboardSnapshot, innerWidth int) []string {
+func (db *DashboardPanel) activeLines(snapshot dashboardSnapshot, innerWidth int) []string {
 	active := db.pickActiveTasks(snapshot.tasks)
 	lines := make([]string, 0, db.activeSlots)
 	for i := 0; i < db.activeSlots; i++ {
@@ -478,13 +492,13 @@ func (db *DownloadDashboard) activeLines(snapshot dashboardSnapshot, innerWidth 
 			lines = append(lines, renderTaskLine(active[i], i, innerWidth))
 			continue
 		}
-		placeholder := &downloadTask{name: "[空闲...]", state: TaskQueued}
+		placeholder := &dashboardTask{name: "[空闲...]", state: TaskQueued}
 		lines = append(lines, renderTaskLine(placeholder, i, innerWidth))
 	}
 	return lines
 }
 
-func (db *DownloadDashboard) historyLines(snapshot dashboardSnapshot, innerWidth int, lines int) []string {
+func (db *DashboardPanel) historyLines(snapshot dashboardSnapshot, innerWidth int, lines int) []string {
 	if lines < 1 {
 		lines = 1
 	}
@@ -521,7 +535,7 @@ func (db *DownloadDashboard) historyLines(snapshot dashboardSnapshot, innerWidth
 	return result[:lines]
 }
 
-func (db *DownloadDashboard) fileCounts(tasks []*downloadTask) (total int, done int, failed int) {
+func (db *DashboardPanel) fileCounts(tasks []*dashboardTask) (total int, done int, failed int) {
 	for _, task := range tasks {
 		if !task.isFile {
 			continue
@@ -538,7 +552,7 @@ func (db *DownloadDashboard) fileCounts(tasks []*downloadTask) (total int, done 
 	return
 }
 
-func (db *DownloadDashboard) totalProgress(tasks []*downloadTask) (downloaded int64, total int64) {
+func (db *DashboardPanel) totalProgress(tasks []*dashboardTask) (downloaded int64, total int64) {
 	for _, task := range tasks {
 		if !task.isFile {
 			continue
@@ -560,7 +574,7 @@ func (db *DownloadDashboard) totalProgress(tasks []*downloadTask) (downloaded in
 	return
 }
 
-func (db *DownloadDashboard) totalSpeed(tasks []*downloadTask) int64 {
+func (db *DashboardPanel) totalSpeed(tasks []*dashboardTask) int64 {
 	if db.globalSpeeds != nil {
 		return db.globalSpeeds.GetSpeeds()
 	}
@@ -571,13 +585,13 @@ func (db *DownloadDashboard) totalSpeed(tasks []*downloadTask) int64 {
 	return sum
 }
 
-func (db *DownloadDashboard) pickActiveTasks(tasks []*downloadTask) []*downloadTask {
+func (db *DashboardPanel) pickActiveTasks(tasks []*dashboardTask) []*dashboardTask {
 	slotCap := db.activeSlots
 	if slotCap < 1 {
 		slotCap = 1
 	}
-	active := make([]*downloadTask, 0, slotCap)
-	queued := make([]*downloadTask, 0, slotCap)
+	active := make([]*dashboardTask, 0, slotCap)
+	queued := make([]*dashboardTask, 0, slotCap)
 	for _, task := range tasks {
 		if !task.isFile {
 			continue
@@ -596,7 +610,7 @@ func (db *DownloadDashboard) pickActiveTasks(tasks []*downloadTask) []*downloadT
 	return active
 }
 
-func renderTaskLine(task *downloadTask, index int, width int) string {
+func renderTaskLine(task *dashboardTask, index int, width int) string {
 	if width < 20 {
 		width = 20
 	}

@@ -15,6 +15,15 @@ package pandownload
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/tickstep/aliyunpan-api/aliyunpan"
 	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
 	"github.com/tickstep/aliyunpan/cmder/cmdtable"
@@ -32,14 +41,6 @@ import (
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester/rio/speeds"
-	"io"
-	"os"
-	"path"
-	"path/filepath"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type (
@@ -75,7 +76,7 @@ type (
 		// 下载文件记录器
 		FileRecorder *log.FileRecorder
 
-		UI *ui.DownloadDashboard // 下载统计面板UI
+		UI *ui.DashboardPanel // 下载统计面板UI
 	}
 )
 
