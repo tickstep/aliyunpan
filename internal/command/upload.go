@@ -15,18 +15,20 @@ package command
 
 import (
 	"fmt"
-	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
-	"github.com/tickstep/aliyunpan/cmder"
-	"github.com/tickstep/aliyunpan/internal/log"
-	"github.com/tickstep/aliyunpan/internal/plugins"
-	"github.com/tickstep/aliyunpan/internal/utils"
-	"github.com/tickstep/library-go/requester/rio/speeds"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tickstep/aliyunpan-api/aliyunpan/apierror"
+	"github.com/tickstep/aliyunpan/cmder"
+	"github.com/tickstep/aliyunpan/internal/log"
+	"github.com/tickstep/aliyunpan/internal/plugins"
+	"github.com/tickstep/aliyunpan/internal/ui"
+	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/library-go/requester/rio/speeds"
 
 	"github.com/tickstep/library-go/logger"
 
@@ -54,17 +56,18 @@ const (
 type (
 	// UploadOptions 上传可选项
 	UploadOptions struct {
-		AllParallel    int // 所有文件并发上传数量，即可以同时并发上传多少个文件
-		Parallel       int // 单个文件并发上传数量
-		MaxRetry       int
-		MaxTimeoutSec  int // http请求超时时间，单位秒
-		NoRapidUpload  bool
-		ShowProgress   bool
-		IsOverwrite    bool // 覆盖已存在的文件，如果同名文件已存在则移到回收站里
-		IsSkipSameName bool // 跳过已存在的文件，即使文件内容不一致(不检查SHA1)
-		DriveId        string
-		ExcludeNames   []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行上传，支持正则表达式
-		BlockSize      int64    // 分片大小
+		AllParallel      int // 所有文件并发上传数量，即可以同时并发上传多少个文件
+		Parallel         int // 单个文件并发上传数量
+		MaxRetry         int
+		MaxTimeoutSec    int // http请求超时时间，单位秒
+		NoRapidUpload    bool
+		ShowProgress     bool
+		IsOverwrite      bool // 覆盖已存在的文件，如果同名文件已存在则移到回收站里
+		IsSkipSameName   bool // 跳过已存在的文件，即使文件内容不一致(不检查SHA1)
+		DriveId          string
+		ExcludeNames     []string // 排除的文件名，包括文件夹和文件。即这些文件/文件夹不进行上传，支持正则表达式
+		BlockSize        int64    // 分片大小
+		IsUseUIDashboard bool     // 是否使用UI面板显示上传进度
 	}
 )
 
@@ -113,6 +116,10 @@ var UploadFlags = []cli.Flag{
 		Name:  "bs",
 		Usage: "block size，上传分片大小，单位KB。推荐值：1024 ~ 10240。当上传极大单文件时候请适当调高该值",
 		Value: 10240,
+	},
+	cli.BoolFlag{
+		Name:  "ui",
+		Usage: "(BETA) 使用UI面板显示上传详情和进度，更加直观和友好",
 	},
 }
 
@@ -192,17 +199,18 @@ func CmdUpload() cli.Command {
 			//}
 
 			RunUpload(subArgs[:c.NArg()-1], subArgs[c.NArg()-1], &UploadOptions{
-				AllParallel:    c.Int("p"), // 多文件上传的时候，允许同时并行上传的文件数量
-				Parallel:       1,          // 一个文件同时多少个线程并发上传的数量。阿里云盘只支持单线程按顺序进行文件part数据上传，所以只能是1
-				MaxRetry:       c.Int("retry"),
-				MaxTimeoutSec:  timeout,
-				NoRapidUpload:  c.Bool("norapid"),
-				ShowProgress:   !c.Bool("np"),
-				IsOverwrite:    c.Bool("ow"),
-				IsSkipSameName: c.Bool("skip"),
-				DriveId:        parseDriveId(c),
-				ExcludeNames:   c.StringSlice("exn"),
-				BlockSize:      int64(c.Int("bs") * 1024),
+				AllParallel:      c.Int("p"), // 多文件上传的时候，允许同时并行上传的文件数量
+				Parallel:         1,          // 一个文件同时多少个线程并发上传的数量。阿里云盘只支持单线程按顺序进行文件part数据上传，所以只能是1
+				MaxRetry:         c.Int("retry"),
+				MaxTimeoutSec:    timeout,
+				NoRapidUpload:    c.Bool("norapid"),
+				ShowProgress:     !c.Bool("np"),
+				IsOverwrite:      c.Bool("ow"),
+				IsSkipSameName:   c.Bool("skip"),
+				DriveId:          parseDriveId(c),
+				ExcludeNames:     c.StringSlice("exn"),
+				BlockSize:        int64(c.Int("bs") * 1024),
+				IsUseUIDashboard: c.Bool("ui"),
 			})
 
 			// 释放文件锁
@@ -290,6 +298,23 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 	// 全局速度统计
 	globalSpeedsStat := &speeds.Speeds{}
 
+	// 上传统计UI面板
+	var dashboard *ui.DashboardPanel = nil
+	if opt.IsUseUIDashboard && opt.ShowProgress && ui.IsTerminal(os.Stdout) {
+		dashboard = ui.NewDashboardPanel(ui.DashboardPanelUpload, opt.AllParallel, globalSpeedsStat, &ui.DashboardOptions{
+			Title:       "上传统计UI面板",
+			ActiveSlots: 3,  // 下载文件进度展示，最大同时展示3个
+			MaxHistory:  50, // 下载日志显示，最多同时显示50条，这个会按照窗口大小进行自适应显示
+		})
+	}
+	logf := func(format string, a ...interface{}) {
+		if dashboard != nil {
+			dashboard.Logf(format, a...)
+			return
+		}
+		fmt.Printf(format, a...)
+	}
+
 	// 获取当前插件
 	plugin, _ := pluginManger.GetPlugin()
 
@@ -304,7 +329,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 
 		// 是否排除上传
 		if utils.IsExcludeFile(curPath, &opt.ExcludeNames) {
-			fmt.Printf("排除文件: %s\n", curPath)
+			logf("排除文件: %s\n", curPath)
 			continue
 		}
 
@@ -326,7 +351,7 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 
 			// 是否排除上传
 			if utils.IsExcludeFile(file.LogicPath, &opt.ExcludeNames) {
-				fmt.Printf("排除文件: %s\n", file.LogicPath)
+				logf("排除文件: %s\n", file.LogicPath)
 				return filepath.SkipDir
 			}
 
@@ -355,13 +380,13 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 			if uploadFilePrepareResult, er := plugin.UploadFilePrepareCallback(plugins.GetContext(activeUser), pluginParam); er == nil && uploadFilePrepareResult != nil {
 				if strings.Compare("yes", uploadFilePrepareResult.UploadApproved) != 0 {
 					// skip upload this file
-					fmt.Printf("插件禁止该文件上传: %s\n", file.LogicPath)
+					logf("插件禁止该文件上传: %s\n", file.LogicPath)
 					return filepath.SkipDir
 				}
 				if uploadFilePrepareResult.DriveFilePath != "" {
 					targetSavePanRelativePath := strings.TrimPrefix(uploadFilePrepareResult.DriveFilePath, "/")
 					subSavePath = path.Clean(savePath + aliyunpan.PathSeparator + targetSavePanRelativePath)
-					fmt.Printf("插件修改文件网盘保存路径为: %s\n", subSavePath)
+					logf("插件修改文件网盘保存路径为: %s\n", subSavePath)
 				}
 			}
 
@@ -384,22 +409,26 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 					IsSkipSameName:    opt.IsSkipSameName,
 					GlobalSpeedsStat:  globalSpeedsStat,
 					FileRecorder:      fileRecorder,
+					UI:                dashboard,
 				}, opt.MaxRetry)
-				fmt.Printf("[%s] 加入上传队列: %s\n", taskinfo.Id(), file.LogicPath)
+				logf("[%s] 加入上传队列: %s\n", taskinfo.Id(), file.LogicPath)
+				if dashboard != nil {
+					dashboard.RegisterTask(taskinfo.Id(), file.LogicPath, fi.Size(), !fi.IsDir())
+				}
 			} else {
 				// 创建文件夹
 				// 这样空文件夹也可以正确上传
 				saveFilePath := subSavePath
 				if saveFilePath != "/" {
 					folderCreateMutex.Lock()
-					fmt.Printf("正在检测和创建云盘文件夹: %s\n", saveFilePath)
+					logf("正在检测和创建云盘文件夹: %s\n", saveFilePath)
 					_, apierr1 := activeUser.PanClient().OpenapiPanClient().FileInfoByPath(opt.DriveId, saveFilePath)
 					time.Sleep(1 * time.Second)
 					if apierr1 != nil && apierr1.Code == apierror.ApiCodeFileNotFoundCode {
 						logger.Verbosef("%s 创建云盘文件夹: %s\n", utils.NowTimeStr(), saveFilePath)
 						rs, apierr := activeUser.PanClient().OpenapiPanClient().MkdirByFullPath(opt.DriveId, saveFilePath)
 						if apierr != nil || rs.FileId == "" {
-							fmt.Printf("创建云盘文件夹失败: %s\n", saveFilePath)
+							logf("创建云盘文件夹失败: %s\n", saveFilePath)
 						}
 					}
 					folderCreateMutex.Unlock()
@@ -411,17 +440,28 @@ func RunUpload(localPaths []string, savePath string, opt *UploadOptions) {
 		file := localfile.NewSymlinkFile(curPath)
 		if err = localfile.WalkAllFile(file, walkFunc); err != nil {
 			if err != filepath.SkipDir {
-				fmt.Printf("警告: 遍历错误: %s\n", err)
+				logf("警告: 遍历错误: %s\n", err)
 			}
 		}
 	}
 
 	// 执行上传任务
 	var failedList []*lane.Deque
+
+	// 启动UI面板显示
+	if dashboard != nil {
+		dashboard.Start()
+	}
+
 	executor.Execute()
 	failed := executor.FailedDeque()
 	if failed.Size() > 0 {
 		failedList = append(failedList, failed)
+	}
+
+	// 关闭UI面板
+	if dashboard != nil {
+		dashboard.Close()
 	}
 
 	fmt.Printf("\n")

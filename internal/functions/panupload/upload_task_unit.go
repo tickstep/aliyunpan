@@ -16,15 +16,17 @@ package panupload
 import (
 	"errors"
 	"fmt"
-	"github.com/tickstep/aliyunpan/internal/log"
-	"github.com/tickstep/aliyunpan/internal/plugins"
-	"github.com/tickstep/library-go/logger"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tickstep/aliyunpan/internal/log"
+	"github.com/tickstep/aliyunpan/internal/plugins"
+	"github.com/tickstep/aliyunpan/internal/ui"
+	"github.com/tickstep/library-go/logger"
 
 	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/requester/rio/speeds"
@@ -79,6 +81,8 @@ type (
 
 		// 上传文件记录器
 		FileRecorder *log.FileRecorder
+
+		UI *ui.DashboardPanel // 上传统计面板UI
 	}
 )
 
@@ -96,6 +100,26 @@ const (
 const (
 	StrUploadFailed = "上传文件失败"
 )
+
+// logf 打印文本日志
+func (utu *UploadTaskUnit) logf(format string, a ...interface{}) {
+	if utu.UI != nil {
+		// 使用UI面板显示日志
+		utu.UI.Logf(format, a...)
+		return
+	}
+
+	// 使用传统单行文本显示下载日志，直接输出到控制台
+	fmt.Printf(format, a...)
+}
+
+// updateUITaskState 更新UI面板的任务状态
+func (utu *UploadTaskUnit) updateUITaskState(state ui.TaskState, message string) {
+	if utu.UI == nil {
+		return
+	}
+	utu.UI.MarkTaskState(utu.taskInfo.Id(), state, message)
+}
 
 func (utu *UploadTaskUnit) SetTaskInfo(taskInfo *taskframework.TaskInfo) {
 	utu.taskInfo = taskInfo
@@ -127,7 +151,7 @@ func (utu *UploadTaskUnit) prepareFile() {
 	}
 
 	//if utu.LocalFileChecksum.Length > MaxRapidUploadSize {
-	//	fmt.Printf("[%s] 文件超过20GB, 无法使用秒传功能, 跳过秒传...\n", utu.taskInfo.Id())
+	//	utu.logf("[%s] 文件超过20GB, 无法使用秒传功能, 跳过秒传...\n", utu.taskInfo.Id())
 	//	utu.Step = StepUploadUpload
 	//	return
 	//}
@@ -142,13 +166,13 @@ func (utu *UploadTaskUnit) rapidUpload() (isContinue bool, result *taskframework
 
 	// 是否可以秒传
 	result = &taskframework.TaskUnitRunResult{}
-	fmt.Printf("[%s] %s 检测秒传中, 请稍候...\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+	utu.logf("[%s] %s 检测秒传中, 请稍候...\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 	if utu.LocalFileChecksum.UploadOpEntity.RapidUpload {
-		fmt.Printf("[%s] %s 秒传成功, 保存到网盘路径: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
+		utu.logf("[%s] %s 秒传成功, 保存到网盘路径: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
 		result.Succeed = true
 		return false, result
 	} else {
-		fmt.Printf("[%s] %s 秒传失败，开始正常上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+		utu.logf("[%s] %s 秒传失败，开始正常上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 		result.Succeed = false
 		result.ResultMessage = "文件未曾上传，无法秒传"
 		return true, result
@@ -174,7 +198,7 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 	//go func(f *os.File) {
 	//	time.Sleep(10 * time.Second)
 	//	f.Close()
-	//	fmt.Printf("关闭文件流: %s\n", f.Name())
+	//	utu.logf("关闭文件流: %s\n", f.Name())
 	//}(utu.LocalFileChecksum.GetFile())
 
 	// 设置断点续传
@@ -190,6 +214,14 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 		default:
 		}
 
+		// 方式1：使用UI统计面板显示进度
+		if utu.UI != nil {
+			// 更新UI面板任务状态
+			utu.UI.UpdateTaskProgress(utu.taskInfo.Id(), status.Uploaded(), status.TotalSize(), status.SpeedsPerSecond(), status.TimeLeft())
+			return
+		}
+
+		// 方式2：使用传统单行显示下载进度
 		if utu.ShowProgress {
 			// 如果上传速度为0, 剩余时间未知, 则用 - 代替
 			var leftStr string
@@ -203,7 +235,7 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 			if status.TotalSize() > 0 {
 				uploadedPercentage = fmt.Sprintf("%.2f%%", float64(status.Uploaded())/float64(status.TotalSize())*100)
 			}
-			fmt.Printf("\r[%s] ↑ %s/%s(%s) %s/s(%s/s) in %s, left %s ............", utu.taskInfo.Id(),
+			utu.logf("\r[%s] ↑ %s/%s(%s) %s/s(%s/s) in %s, left %s ............", utu.taskInfo.Id(),
 				converter.ConvertFileSize(status.Uploaded(), 2),
 				converter.ConvertFileSize(status.TotalSize(), 2),
 				uploadedPercentage,
@@ -218,8 +250,8 @@ func (utu *UploadTaskUnit) upload() (result *taskframework.TaskUnitRunResult) {
 	// result
 	result = &taskframework.TaskUnitRunResult{}
 	muer.OnSuccess(func() {
-		fmt.Printf("\n")
-		fmt.Printf("[%s] %s 上传文件成功, 保存到网盘路径: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
+		utu.logf("\n")
+		utu.logf("[%s] %s 上传文件成功, 保存到网盘路径: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
 		// 统计
 		utu.UploadStatistic.AddTotalSize(utu.LocalFileChecksum.Length)
 		utu.UploadingDatabase.Delete(&utu.LocalFileChecksum.LocalFileMeta) // 删除
@@ -264,15 +296,18 @@ func (utu *UploadTaskUnit) OnRetry(lastRunResult *taskframework.TaskUnitRunResul
 	// 输出错误信息
 	if lastRunResult.Err == nil {
 		// result中不包含Err, 忽略输出
-		fmt.Printf("[%s] %s, 重试 %d/%d\n", utu.taskInfo.Id(), lastRunResult.ResultMessage, utu.taskInfo.Retry(), utu.taskInfo.MaxRetry())
+		utu.logf("[%s] %s, 重试 %d/%d\n", utu.taskInfo.Id(), lastRunResult.ResultMessage, utu.taskInfo.Retry(), utu.taskInfo.MaxRetry())
 		return
 	}
-	fmt.Printf("[%s] %s, %s, 重试 %d/%d\n", utu.taskInfo.Id(), lastRunResult.ResultMessage, lastRunResult.Err, utu.taskInfo.Retry(), utu.taskInfo.MaxRetry())
+	utu.logf("[%s] %s, %s, 重试 %d/%d\n", utu.taskInfo.Id(), lastRunResult.ResultMessage, lastRunResult.Err, utu.taskInfo.Retry(), utu.taskInfo.MaxRetry())
 }
 
 func (utu *UploadTaskUnit) OnSuccess(lastRunResult *taskframework.TaskUnitRunResult) {
 	// 执行插件
 	utu.pluginCallback("success")
+
+	// 更新UI面板状态
+	utu.updateUITaskState(ui.TaskSuccess, "")
 
 	// 上传文件数据记录
 	if config.Config.FileRecordConfig == "1" {
@@ -288,6 +323,7 @@ func (utu *UploadTaskUnit) OnSuccess(lastRunResult *taskframework.TaskUnitRunRes
 func (utu *UploadTaskUnit) OnFailed(lastRunResult *taskframework.TaskUnitRunResult) {
 	// 失败
 	utu.pluginCallback("fail")
+	utu.updateUITaskState(ui.TaskCanceled, "取消: "+utu.LocalFileChecksum.Path.LogicPath)
 }
 
 func (utu *UploadTaskUnit) pluginCallback(result string) {
@@ -319,7 +355,12 @@ func (utu *UploadTaskUnit) OnComplete(lastRunResult *taskframework.TaskUnitRunRe
 	// 任务结束，可能成功也可能失败
 }
 func (utu *UploadTaskUnit) OnCancel(lastRunResult *taskframework.TaskUnitRunResult) {
-
+	// 更新UI面板
+	failedMessage := lastRunResult.ResultMessage
+	if lastRunResult.Err != nil {
+		failedMessage = fmt.Sprintf("%s, %s", lastRunResult.ResultMessage, lastRunResult.Err)
+	}
+	utu.updateUITaskState(ui.TaskCanceled, failedMessage)
 }
 func (utu *UploadTaskUnit) RetryWait() time.Duration {
 	return functions.RetryWait(utu.taskInfo.Retry())
@@ -328,7 +369,7 @@ func (utu *UploadTaskUnit) RetryWait() time.Duration {
 func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	err := utu.LocalFileChecksum.OpenPath()
 	if err != nil {
-		fmt.Printf("[%s] 文件不可读, 错误信息: %s, 跳过...\n", utu.taskInfo.Id(), err)
+		utu.logf("[%s] 文件不可读, 错误信息: %s, 跳过...\n", utu.taskInfo.Id(), err)
 		return
 	}
 	defer utu.LocalFileChecksum.Close() // 关闭文件
@@ -336,7 +377,8 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 	timeStart := time.Now()
 	result = &taskframework.TaskUnitRunResult{}
 
-	fmt.Printf("[%s] %s 准备上传: %s => %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path.LogicPath, utu.SavePath)
+	utu.logf("[%s] %s 准备上传: %s => %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path.LogicPath, utu.SavePath)
+	utu.updateUITaskState(ui.TaskRunning, "")
 
 	defer func() {
 		var msg string
@@ -347,7 +389,7 @@ func (utu *UploadTaskUnit) Run() (result *taskframework.TaskUnitRunResult) {
 		} else {
 			msg = result.ResultMessage
 		}
-		fmt.Printf("[%s] %s 文件上传结果： %s 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), msg, utils.ConvertTime(time.Now().Sub(timeStart)))
+		utu.logf("[%s] %s 文件上传结果： %s 耗时 %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), msg, utils.ConvertTime(time.Now().Sub(timeStart)))
 	}()
 
 	// 准备文件
@@ -383,7 +425,7 @@ StepUploadPrepareUpload:
 	saveFilePath = path.Dir(utu.SavePath)
 	if saveFilePath != "/" {
 		utu.FolderCreateMutex.Lock()
-		fmt.Printf("[%s] %s 正在检测和创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
+		utu.logf("[%s] %s 正在检测和创建云盘文件夹: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), saveFilePath)
 		fe, apierr1 := utu.PanClient.OpenapiPanClient().FileInfoByPath(utu.DriveId, saveFilePath)
 		time.Sleep(1 * time.Second)
 		needToCreateFolder := false
@@ -432,7 +474,8 @@ StepUploadPrepareUpload:
 		if efi != nil && efi.FileId != "" {
 			result.Succeed = true
 			result.Extra = efi
-			fmt.Printf("[%s] %s 检测到同名文件，跳过上传: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
+			utu.logf("[%s] %s 检测到同名文件，跳过上传: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
+			utu.updateUITaskState(ui.TaskSkipped, "")
 			return
 		}
 	}
@@ -457,7 +500,7 @@ StepUploadPrepareUpload:
 
 		if preHashMatch { // preHashMatch为true，代表该文件可能已经被上传过，能够支持秒传，所以需要进一步计算完整SHA1进行检测是否能秒传
 			// 计算完整文件SHA1
-			fmt.Printf("[%s] %s 正在计算文件SHA1: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path.LogicPath)
+			utu.logf("[%s] %s 正在计算文件SHA1: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.LocalFileChecksum.Path.LogicPath)
 			utu.LocalFileChecksum.Sum(localfile.CHECKSUM_SHA1)
 			sha1Str = utu.LocalFileChecksum.SHA1
 			if utu.LocalFileChecksum.Length == 0 {
@@ -477,7 +520,7 @@ StepUploadPrepareUpload:
 			checkNameMode = "auto_rename"
 		}
 	} else {
-		fmt.Printf("[%s] %s 已经禁用秒传检测，直接上传\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+		utu.logf("[%s] %s 已经禁用秒传检测，直接上传\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 		sha1Str = ""
 		contentHashName = ""
 		checkNameMode = "auto_rename"
@@ -490,7 +533,7 @@ StepUploadPrepareUpload:
 			if strings.ToUpper(efi.ContentHash) == strings.ToUpper(sha1Str) {
 				result.Succeed = true
 				result.Extra = efi
-				fmt.Printf("[%s] %s 检测到同名文件，文件内容完全一致，无需重复上传: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
+				utu.logf("[%s] %s 检测到同名文件，文件内容完全一致，无需重复上传: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
 				return
 			}
 			// existed, delete it
@@ -503,7 +546,7 @@ StepUploadPrepareUpload:
 				return
 			}
 			time.Sleep(time.Duration(500) * time.Millisecond)
-			fmt.Printf("[%s] %s 检测到同名文件，文件内容不一致，已将旧文件移动到回收站: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
+			utu.logf("[%s] %s 检测到同名文件，文件内容不一致，已将旧文件移动到回收站: %s\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"), utu.SavePath)
 		}
 	}
 
@@ -554,7 +597,7 @@ StepUploadPrepareUpload:
 			// 重试
 			result.NeedRetry = true
 		} else if apierr.Code == apierror.ApiCodeUploadPayloadTooLarge {
-			fmt.Printf("[%s] %s 上传文件的大小超出限制，你可能需要开通阿里云盘三方权益包以便上传大文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+			utu.logf("[%s] %s 上传文件的大小超出限制，你可能需要开通阿里云盘三方权益包以便上传大文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 		}
 		return
 	}
@@ -582,7 +625,7 @@ stepUploadUpload:
 			if ee := utu.amendFileUploadPartNum(); ee != nil {
 				// 修正分片乱序失败，先令上传任务直接失败
 				logger.Verboseln("WARNING! amend uploaded parts num failed")
-				fmt.Printf("[%s] %s 无法修正上传分片乱序的错误，建议重新上传\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+				utu.logf("[%s] %s 无法修正上传分片乱序的错误，建议重新上传\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 				uploadResult = &taskframework.TaskUnitRunResult{
 					Succeed:       false,
 					NeedRetry:     false,
@@ -598,7 +641,7 @@ stepUploadUpload:
 		}
 		if errors.Is(uploadResult.Err, uploader.UploadNoSuchUpload) {
 			// 上传任务过期
-			fmt.Printf("[%s] %s 网盘上传任务不存在，创建新任务重新上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+			utu.logf("[%s] %s 网盘上传任务不存在，创建新任务重新上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 			// 需要重新从0开始上传
 			uploadResult = nil
 			utu.LocalFileChecksum.UploadOpEntity = nil
@@ -607,7 +650,7 @@ stepUploadUpload:
 		}
 		if errors.Is(uploadResult.Err, uploader.UploadLocalFileAlreadyClosedError) {
 			// 本地文件读取错误
-			fmt.Printf("[%s] %s 本地文件读取错误，建议检查文件是否存在，是否有文件读取权限，或者硬盘是否有异常\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+			utu.logf("[%s] %s 本地文件读取错误，建议检查文件是否存在，是否有文件读取权限，或者硬盘是否有异常\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 			uploadResult = &taskframework.TaskUnitRunResult{
 				Succeed:       false,
 				NeedRetry:     false,
@@ -625,7 +668,7 @@ stepUploadUpload:
 		if errors.As(uploadResult.Err, &apier) {
 			// 上传任务过期
 			if apier.Code == apierror.ApiCodeUploadIdNotFound {
-				fmt.Printf("[%s] %s 网盘上传任务已失效，创建新任务重新上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
+				utu.logf("[%s] %s 网盘上传任务已失效，创建新任务重新上传文件\n", utu.taskInfo.Id(), time.Now().Format("2006-01-02 15:04:06"))
 				uploadResult = nil
 				utu.LocalFileChecksum.UploadOpEntity = nil
 				utu.state = nil
