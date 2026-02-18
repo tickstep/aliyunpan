@@ -343,10 +343,15 @@ func (db *DashboardPanel) render() {
 	builder.WriteString(renderBox(headerLines, width))
 	builder.WriteString(renderTitledBox("ActiveDownloads", activeLines, width))
 	builder.WriteString(renderTitledBox("History", historyBody, width))
-
 	content := builder.String()
-	fmt.Fprint(db.out, "\x1b[H\x1b[2J") // 清屏操作
-	fmt.Fprint(db.out, content)
+
+	// 使用双缓冲技术
+	var buf strings.Builder
+	// 构建完整内容
+	buf.WriteString("\x1b[H\x1b[2J") // 清屏操作
+	buf.WriteString(content)
+	// 一次性输出
+	fmt.Fprint(db.out, buf.String())
 }
 
 type dashboardSnapshot struct {
