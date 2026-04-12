@@ -375,7 +375,8 @@ func CheckUpdate(version string, yes bool) {
 		return
 	}
 
-	execPath := cmdutil.ExecutablePath()
+	//execPath := cmdutil.ExecutablePath()
+	configPath := configurationPath()
 
 	var fileNum, errTimes int
 	for _, zipFile := range reader.File {
@@ -399,9 +400,11 @@ func CheckUpdate(version string, yes bool) {
 
 		name := zipFile.Name[strings.Index(zipFile.Name, "/")+1:]
 		if name == ReleaseName {
+			// 执行文件
 			err = update(cmdutil.Executable(), rc)
 		} else {
-			err = update(filepath.Join(execPath, name), rc)
+			// 配置文件
+			err = update(filepath.Join(configPath, name), rc)
 		}
 
 		if err != nil {
@@ -417,4 +420,9 @@ func CheckUpdate(version string, yes bool) {
 	}
 
 	fmt.Printf("更新完毕, 请重启程序\n")
+}
+
+// ConfigurationPath 获取程序配置所在目录
+func configurationPath() string {
+	return config.GetConfigDir()
 }
