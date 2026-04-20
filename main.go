@@ -15,6 +15,18 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+	"unicode"
+
 	"github.com/olekukonko/tablewriter"
 	"github.com/peterh/liner"
 	"github.com/tickstep/aliyunpan/cmder"
@@ -33,17 +45,6 @@ import (
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/logger"
 	"github.com/urfave/cli"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"runtime"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
-	"unicode"
 )
 
 const (
@@ -53,7 +54,7 @@ const (
 
 var (
 	// Version 版本号
-	Version = "v0.3.8"
+	Version = "v0.3.9"
 
 	// 命令历史文件
 	historyFilePath = filepath.Join(config.GetConfigDir(), "aliyunpan_command_history.txt")
