@@ -16,15 +16,15 @@ package panupload
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	"github.com/tickstep/aliyunpan/internal/config"
-	"github.com/tickstep/library-go/converter"
-	"github.com/tickstep/library-go/logger"
-	"net/url"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tickstep/aliyunpan/internal/config"
+	"github.com/tickstep/aliyunpan/internal/utils"
+	"github.com/tickstep/library-go/converter"
+	"github.com/tickstep/library-go/logger"
 )
 
 const (
@@ -55,16 +55,16 @@ func getBlockSize(fileSize int64) int64 {
 
 // IsUrlExpired 上传链接是否已过期。过期返回True
 func IsUrlExpired(urlStr string) bool {
-	u, err := url.Parse(urlStr)
+	expiredTimeSec, err := utils.GetExpiredTimeSecFromOSSUrl(urlStr)
 	if err != nil {
+		// 解析错误，默认过期
 		return true
 	}
-	expiredTimeSecStr := u.Query().Get("x-oss-expires")
-	expiredTimeSec, _ := strconv.ParseInt(expiredTimeSecStr, 10, 64)
 	if (expiredTimeSec - time.Now().Unix()) <= 300 { // 小于5分钟
 		// expired
 		return true
 	}
+	// 返回未过期
 	return false
 }
 

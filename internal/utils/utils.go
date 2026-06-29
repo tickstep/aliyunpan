@@ -383,3 +383,64 @@ func GetPublicIP() (string, error) {
 	ip := strings.TrimSpace(strings.Split(ipResp.Origin, ",")[0])
 	return ip, nil
 }
+
+// GetExpiredTimeSecFromOSSUrl 从OSS URL中解析出统一的过期时间戳（秒）
+func GetExpiredTimeSecFromOSSUrl(rawURL string) (int64, error) {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse URL: %w", err)
+	}
+
+	query := parsedURL.Query()
+	sigVersion := query.Get("x-oss-signature-version")
+
+	var expires int64 = 0
+
+	// 检测版本标识（不区分大小写）
+	if strings.Contains(sigVersion, "OSS4") {
+		// V4 签名：x-oss-expires 为相对秒数，需要结合 x-oss-date
+		expiresStr := query.Get("x-oss-expires")
+		if expiresStr == "" {
+			return 0, fmt.Errorf("V4 signature: 'x-oss-expires' parameter not found")
+		}
+		relSec, err := strconv.ParseInt(expiresStr, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("V4 signature: invalid 'x-oss-expires' value: %w", err)
+		}
+
+		dateStr := query.Get("x-oss-date")
+		if dateStr == "" {
+			return 0, fmt.Errorf("V4 signature: 'x-oss-date' parameter not found")
+		}
+		// 解析 ISO8601 UTC 时间，例如 "20231220T083018Z"
+		t, err := time.Parse("20060102T150405Z", dateStr)
+		if err != nil {
+			return 0, fmt.Errorf("V4 signature: failed to parse 'x-oss-date': %w", err)
+		}
+		expires = t.Unix() + relSec
+
+	} else if strings.Contains(sigVersion, "OSS3") || strings.Contains(sigVersion, "OSS2") {
+		// V2 / V3：x-oss-expires 为绝对时间戳
+		expiresStr := query.Get("x-oss-expires")
+		if expiresStr == "" {
+			return 0, fmt.Errorf("V2/V3 signature: 'x-oss-expires' parameter not found")
+		}
+		expires, err = strconv.ParseInt(expiresStr, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("V2/V3 signature: invalid 'x-oss-expires' value: %w", err)
+		}
+
+	} else {
+		// 默认为 V1 签名（没有 x-oss-signature-version 或为空）
+		expiresStr := query.Get("Expires")
+		if expiresStr == "" {
+			return 0, fmt.Errorf("V1 signature: 'Expires' parameter not found")
+		}
+		expires, err = strconv.ParseInt(expiresStr, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("V1 signature: invalid 'Expires' value: %w", err)
+		}
+	}
+
+	return expires, nil
+}

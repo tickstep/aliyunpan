@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/tickstep/aliyunpan/internal/utils"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 )
@@ -103,31 +104,15 @@ func fixCacheSize(size *int) {
 
 // IsUrlExpired 下载链接是否已过期。过期返回True
 func IsUrlExpired(urlStr string) bool {
-	u, err := url.Parse(urlStr)
+	expiredTimeSec, err := utils.GetExpiredTimeSecFromOSSUrl(urlStr)
 	if err != nil {
+		// 解析错误，默认过期
 		return true
 	}
-	// OSS V4签名：x-oss-date=20260629T010316Z&x-oss-expires=900
-	expiredDateStr := u.Query().Get("x-oss-date")       // 该请求/签名生成的时间
-	expiredTimeSecStr := u.Query().Get("x-oss-expires") // Presigned URL 的过期时间（单位：秒）
-
-	// 解析 x-oss-date（ISO8601，UTC）
-	expiredDate, err := time.Parse("20060102T150405Z", expiredDateStr)
-	if err != nil {
-		// 非法时间格式
-		return true
-	}
-	// 解析 x-oss-expires（秒）
-	expireSec, err := strconv.ParseInt(expiredTimeSecStr, 10, 64)
-	if err != nil || expireSec <= 0 {
-		// 非法过期时间
-		return true
-	}
-	// 计算过期时间戳（Unix seconds）
-	expiredTimeSec := expiredDate.Unix() + expireSec
 	if (expiredTimeSec - time.Now().Unix()) <= 5 { // 小于5秒钟
 		// expired
 		return true
 	}
+	// 返回未过期
 	return false
 }
