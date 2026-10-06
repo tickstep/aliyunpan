@@ -1,0 +1,266 @@
+// ==========================================================================================
+// aliyunpan JS插件回调处理函数
+// 支持 JavaScript ECMAScript 5.1 语言规范
+//
+// 更多内容请查看官方文档：https://github.com/tickstep/aliyunpan
+// ==========================================================================================
+
+
+// ------------------------------------------------------------------------------------------
+// 函数说明：同步备份-扫描本地文件前的回调函数
+//
+// 参数说明
+// context - 当前调用的上下文信息
+// {
+//  "appName": "aliyunpan",
+//  "version": "v0.1.3",
+//  "userId": "11001d48564f43b3bc5662874f04bb11",
+//  "nickname": "tickstep",
+//  "fileDriveId": "19519111",
+//  "resourceDriveId": "29519122"
+// }
+// appName - 应用名称，当前固定为aliyunpan
+// version - 版本号
+// userId - 当前登录用户的ID
+// nickname - 用户昵称
+// fileDriveId - 用户备份网盘ID
+// resourceDriveId - 用户资源网盘ID
+//
+// params - 扫描本地文件前参数
+// {
+//  "localFilePath": "D:\\Program Files\\aliyunpan\\Downloads\\token.bat",
+//  "localFileName": "token.bat",
+//  "localFileSize": 125330,
+//  "localFileType": "file",
+//  "localFileUpdatedAt": "2022-04-14 07:05:12",
+//  "driveId": "19519221"
+// }
+// localFilePath - 本地文件绝对完整路径
+// localFileName - 本地文件名
+// localFileSize - 本地文件大小，单位B
+// localFileType - 本地文件类型，file-文件，folder-文件夹
+// localFileUpdatedAt - 文件修改时间
+// driveId - 备份的目标网盘ID
+//
+// 返回值说明
+// {
+//  "syncScanLocalApproved": "yes"
+// }
+// syncScanLocalApproved - 该文件是否确认扫描，yes-允许扫描，no-禁止扫描。
+//                禁止扫描的文件不会执行后续的动作，例如上传，下载。
+// ------------------------------------------------------------------------------------------
+function syncScanLocalFilePrepareCallback(context, params) {
+ console.log(params);
+    var result = {
+        "syncScanLocalApproved": "yes"
+    };
+
+    // 禁止.开头文件上传
+    if (params["localFileName"].indexOf(".") == 0) {
+        result["syncScanLocalApproved"] = "no";
+    }
+
+    // 禁止~$开头文件上传（office暂存临时文件）
+    if (params["localFileName"].indexOf("~$") == 0) {
+        result["syncScanLocalApproved"] = "no";
+    }
+
+    // 禁止.txt文件上传（正则表达式方式）
+    if (params["localFileName"].search(/.txt$/i) >= 0) {
+        result["syncScanLocalApproved"] = "no";
+    }
+
+    // 禁止password.key文件上传
+    if (params["localFileName"] == "password.key") {
+        result["syncScanLocalApproved"] = "no";
+    }
+ 
+    // 禁止@eadir文件上传
+    if (params["localFileName"] == "@eadir") {
+        result["syncScanLocalApproved"] = "no";
+    }
+    return result;
+}
+
+
+// ------------------------------------------------------------------------------------------
+// 函数说明：同步备份-扫描云盘文件前的回调函数
+// 
+// 参数说明
+// context - 当前调用的上下文信息
+// {
+//  "appName": "aliyunpan",
+//  "version": "v0.1.3",
+//  "userId": "11001d48564f43b3bc5662874f04bb11",
+//  "nickname": "tickstep",
+//  "fileDriveId": "19519111",
+//  "resourceDriveId": "29519122"
+// }
+// appName - 应用名称，当前固定为aliyunpan
+// version - 版本号
+// userId - 当前登录用户的ID
+// nickname - 用户昵称
+// fileDriveId - 用户备份网盘ID
+// resourceDriveId - 用户资源网盘ID
+//
+// params - 扫描云盘文件前参数
+// {
+//  "driveId": "19519221",
+//  "driveFileName": "token.bat",
+//  "driveFilePath": "/aliyunpan/Downloads/token.bat",
+//  "driveFileSha1": "08FBE28A5B8791A2F50225E2EC5CEEC3C7955A11",
+//  "driveFileSize": 125330,
+//  "driveFileType": "file",
+//  "driveFileUpdatedAt": "2022-04-14 07:05:12"
+// }
+// driveId - 网盘ID
+// driveFileName - 网盘文件名
+// driveFilePath - 网盘文件绝对完整路径
+// driveFileSize - 网盘文件大小，单位B
+// driveFileSha1 - 网盘文件SHA1
+// driveFileType - 网盘文件类型，file-文件，folder-文件夹
+// driveFileUpdatedAt - 网盘文件修改时间
+// 
+// 返回值说明
+// {
+//  "syncScanPanApproved": "yes"
+// }
+// syncScanPanApproved - 该文件是否确认扫描，yes-允许扫描，no-禁止扫描。
+//                       禁止扫描的文件不会执行后续的动作，例如上传，下载。
+// ------------------------------------------------------------------------------------------
+function syncScanPanFilePrepareCallback(context, params) {
+    console.log(params);
+
+    var result = {
+        "syncScanPanApproved": "yes"
+    };
+
+    // 禁止.开头文件下载
+    if (params["driveFileName"].indexOf(".") == 0) {
+        result["syncScanPanApproved"] = "no";
+    }
+
+    // 禁止~$开头文件下载（office暂存临时文件）
+    if (params["driveFileName"].indexOf("~$") == 0) {
+        result["syncScanPanApproved"] = "no";
+    }
+
+    // 禁止.txt文件下载（正则表达式方式）
+    // if (params["driveFileName"].search(/.txt$/i) >= 0) {
+    //     result["syncScanPanApproved"] = "no";
+    // }
+
+    return result;
+}
+
+// ------------------------------------------------------------------------------------------
+// 函数说明：同步备份-同步文件后的回调函数
+//
+// 参数说明
+// context - 当前调用的上下文信息
+// {
+//  "appName": "aliyunpan",
+//  "version": "v0.1.3",
+//  "userId": "11001d48564f43b3bc5662874f04bb11",
+//  "nickname": "tickstep",
+//  "fileDriveId": "19519111",
+//  "resourceDriveId": "29519122"
+// }
+// appName - 应用名称，当前固定为aliyunpan
+// version - 版本号
+// userId - 当前登录用户的ID
+// nickname - 用户昵称
+// fileDriveId - 用户备份网盘ID
+// resourceDriveId - 用户资源网盘ID
+//
+// params - 同步文件后的参数
+// {
+//  "action": "upload",
+//  "actionResult": "success",
+//  "driveId": "19519221",
+//  "driveFileId": "65ebb9396d66dfcd9f25414bbdd81594ecb9fcd6",
+//  "fileName": "1.txt",
+//  "filePath": "D:/goprojects/dev/upload/1.txt",
+//  "fileSha1": "294C8F24C56042710813E95C55A0B018299BA9A7",
+//  "fileSize": "28077",
+//  "fileType": "file",
+//  "fileUpdatedAt": "2022-03-04 15:19:47"
+// }
+// action - 同步动作，download-下载文件，upload-上传文件
+// actionResult - 同步结果，success-成功，fail-失败
+// driveId - 网盘ID
+// driveFileId - 网盘文件ID，只有download模式才会有这个字段
+// fileName - 文件名称
+// filePath - 文件完整路径
+// fileSha1 - 文件SHA1
+// fileSize - 文件大小，单位B
+// fileType - 文件类型，file-文件，folder-文件夹
+// fileUpdatedAt - 文件修改时间
+//
+// 返回值说明
+// （无）
+// ------------------------------------------------------------------------------------------
+function syncFileFinishCallback(context, params) {
+    console.log(params)
+    // 云盘文件成功下载到本地后，删除云盘的文件
+    // if (params["action"] == "download") {
+    //     if (params["actionResult"] == "success" && params["fileType"] == "file") {
+    //         // 文件下载成功，删除该云盘文件
+    //         var userId = context["userId"]
+    //         var driveId = params["driveId"]
+    //         var driveFileId = params["driveFileId"]
+    //         if (PluginUtil.PanFS.deleteFile(userId, driveId, driveFileId)) {
+    //             console.println("插件删除云盘文件成功：" + params["filePath"])
+    //         }
+    //     }
+    // }
+}
+
+// ------------------------------------------------------------------------------------------
+// 函数说明：同步备份-同步任务同步全部文件完成时的回调函数（目前只有"只运行一次备份"的任务模式才有该回调）
+//
+// 参数说明
+// context - 当前调用的上下文信息
+// {
+//  "appName": "aliyunpan",
+//  "version": "v0.1.3",
+//  "userId": "11001d48564f43b3bc5662874f04bb11",
+//  "nickname": "tickstep",
+//  "fileDriveId": "19519111",
+//  "resourceDriveId": "29519122"
+// }
+// appName - 应用名称，当前固定为aliyunpan
+// version - 版本号
+// userId - 当前登录用户的ID
+// nickname - 用户昵称
+// fileDriveId - 用户备份网盘ID
+// resourceDriveId - 用户资源网盘ID
+//
+// params - 任务完成的回调参数
+// {
+//  "name": "备份相册",
+//  "id": "2e959a34-8435-4773-9a3e-687f2692ddc1",
+//  "userId": "4d001d48564f43b3bc5662874114bbe6",
+//  "driveName": "backup",
+//  "driveId": "19519221",
+//  "localFolderPath": "/Volumes/DataDisk3T/Games/Switch/图库备份",
+//  "panFolderPath": "/备份盘/Switch游戏/Album",
+//  "mode": "upload",
+//  "policy": "upload",
+// }
+// name - 任务名称
+// id - 任务ID
+// userId - 登录的用户ID
+// driveName - 网盘名称，backup-备份盘，resource-资源盘
+// driveId - 目标网盘ID
+// localFolderPath - 本地目录
+// panFolderPath - 云盘目录
+// mode - 备份模式，upload-备份本地文件到云盘，download-备份云盘文件到本地
+// policy - 备份策略，increment-增量备份，exclusive-排他备份
+//
+// 返回值说明
+// 无
+// ------------------------------------------------------------------------------------------
+function syncAllFileFinishCallback(context, params) {
+    console.log(params)
+}
