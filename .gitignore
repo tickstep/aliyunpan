@@ -45,3 +45,7 @@ git_pull.sh
 docker/sync/data
 clear_docker.sh
 upload.sh
+
+# The bare "aliyunpan" rule above targets the compiled binary.
+# Allow the agent skill directory to be tracked.
+!skills/aliyunpan/
