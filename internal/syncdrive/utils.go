@@ -24,7 +24,12 @@ func GetLocalFileFullPathFromPanPath(panFilePath, localRootPath, panRootPath str
 	panRootPath = strings.ReplaceAll(panRootPath, "\\", "/")
 
 	relativePath := strings.TrimPrefix(panFilePath, panRootPath)
-	return path.Join(path.Clean(localRootPath), relativePath)
+	localRoot := path.Clean(localRootPath)
+	resolved := path.Join(localRoot, relativePath)
+	if resolved != localRoot && !strings.HasPrefix(resolved, localRoot+"/") {
+		return localRoot + "/.sync_rejected_traversal"
+	}
+	return resolved
 }
 
 // IsSymlinkFile 是否是软链接文件

@@ -362,7 +362,13 @@ func (item *SyncFileItem) getLocalFileFullPath() string {
 	panRootPath := strings.ReplaceAll(item.PanFolderPath, "\\", "/")
 
 	relativePath := strings.TrimPrefix(panPath, panRootPath)
-	return path.Join(path.Clean(item.LocalFolderPath), relativePath)
+	localRoot := path.Clean(item.LocalFolderPath)
+	resolved := path.Join(localRoot, relativePath)
+	if resolved != localRoot && !strings.HasPrefix(resolved, localRoot+"/") {
+		// remote path escapes the configured local sync root; refuse it
+		return localRoot + "/.sync_rejected_traversal"
+	}
+	return resolved
 }
 
 // getLocalFileDownloadingFullPath 获取本地文件下载时的路径
